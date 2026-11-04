@@ -20,7 +20,7 @@ android {
 
         // Dipakai UpdateChecker untuk tahu repo GitHub mana yang dicek.
         // Ganti nilai ini sesuai repo Anda sendiri.
-        buildConfigField("String", "GITHUB_OWNER", "\"ALK-99\"")
+        buildConfigField("String", "KKN_AL-MUSLIH", "\"ALK-99\"")
         buildConfigField("String", "GITHUB_REPO", "\"Aplikasi-KKN-v1\"")
     }
 
