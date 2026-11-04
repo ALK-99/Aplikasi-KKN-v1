@@ -1,0 +1,57 @@
+name: Build & Release APK
+
+# Cara rilis versi baru (dari terminal/GitHub Desktop):
+#   git tag v1.0.1
+#   git push origin v1.0.1
+# GitHub otomatis build APK dan menempelkannya ke halaman Releases.
+# Aplikasi di HP akan mendeteksinya dan memunculkan pop-up update.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.6'
+
+      - name: Tentukan versi
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=1.0.0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build APK rilis
+        run: gradle assembleRelease -PappVersionName=${{ steps.ver.outputs.name }} -PappVersionCode=${{ github.run_number }} --no-daemon
+
+      - name: Ganti nama APK
+        run: cp app/build/outputs/apk/release/app-release.apk SekretarisKKN-v${{ steps.ver.outputs.name }}.apk
+
+      - name: Simpan sebagai artifact (untuk jalankan manual)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SekretarisKKN-apk
+          path: SekretarisKKN-v${{ steps.ver.outputs.name }}.apk
+
+      - name: Buat GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: SekretarisKKN-v${{ steps.ver.outputs.name }}.apk
+          generate_release_notes: true
