@@ -11,7 +11,8 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     SURAT("surat", "Surat Masuk/Keluar", Icons.Default.Mail),
     PROKER("proker", "Program Kerja", Icons.Default.Checklist),
     ARSIP("arsip", "Arsip Nota", Icons.Default.Receipt),
-    INVENTARIS("inventaris", "Inventaris Posko", Icons.Default.Inventory2);
+    INVENTARIS("inventaris", "Inventaris Posko", Icons.Default.Inventory2),
+    PENGATURAN("pengaturan", "Pengaturan", Icons.Default.Settings);
 
     companion object {
         val menuUtama: List<Tujuan> = entries

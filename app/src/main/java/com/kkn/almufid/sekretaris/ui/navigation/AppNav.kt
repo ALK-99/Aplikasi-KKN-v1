@@ -24,6 +24,7 @@ import com.kkn.almufid.sekretaris.ui.screens.inventaris.InventarisScreen
 import com.kkn.almufid.sekretaris.ui.screens.inventaris.InventarisViewModel
 import com.kkn.almufid.sekretaris.ui.screens.jurnal.JurnalScreen
 import com.kkn.almufid.sekretaris.ui.screens.jurnal.JurnalViewModel
+import com.kkn.almufid.sekretaris.ui.screens.pengaturan.PengaturanScreen
 import com.kkn.almufid.sekretaris.ui.screens.proker.ProkerScreen
 import com.kkn.almufid.sekretaris.ui.screens.proker.ProkerViewModel
 import com.kkn.almufid.sekretaris.ui.screens.surat.SuratScreen
@@ -97,6 +98,9 @@ fun AppNav() {
                 composable(Tujuan.INVENTARIS.rute) {
                     val vm: InventarisViewModel = viewModel(factory = GenericViewModelFactory { InventarisViewModel(db.inventarisDao()) })
                     InventarisScreen(vm)
+                }
+                composable(Tujuan.PENGATURAN.rute) {
+                    PengaturanScreen()
                 }
             }
         }

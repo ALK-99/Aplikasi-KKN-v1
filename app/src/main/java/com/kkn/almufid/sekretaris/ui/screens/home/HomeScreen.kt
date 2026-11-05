@@ -151,6 +151,7 @@ private fun MenuKartu(tujuan: Tujuan, modifier: Modifier, onClick: () -> Unit) {
         Tujuan.PROKER -> Color(0xFF2E7BD6) to Color(0xFF6BB6FF)
         Tujuan.ARSIP -> Pink to Color(0xFFFF7A9E)
         Tujuan.INVENTARIS -> Color(0xFF7A4BD6) to Color(0xFFC08BFF)
+        Tujuan.PENGATURAN -> Color(0xFF5A6072) to Color(0xFF9AA0BF)
     }
     KartuGelap(
         modifier.tekanPegas(onClick).height(112.dp),
