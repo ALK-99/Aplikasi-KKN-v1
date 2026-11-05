@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.kkn.almufid.sekretaris.app-debug-57:/xml_file_paths.xml.flat",
+        "source": "com.kkn.almufid.sekretaris.app-main-59:/xml/file_paths.xml"
+    },
+    {
+        "merged": "com.kkn.almufid.sekretaris.app-debug-57:/drawable_ic_launcher.xml.flat",
+        "source": "com.kkn.almufid.sekretaris.app-main-59:/drawable/ic_launcher.xml"
+    }
+]
