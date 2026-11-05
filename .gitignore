@@ -1,0 +1,23 @@
+*.iml
+.gradle/
+local.properties
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.DS_Store
+**/build/
+/captures
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+
+# Keystore: jangan commit keystore produksi sungguhan.
+# app/sekretaris-kkn.jks saat ini TETAP ditrack (lihat catatan di
+# build.gradle.kts) karena dipakai GitHub Actions untuk build rilis
+# dengan tanda tangan yang konsisten antar build. Jika nanti keystore
+# dipindah ke GitHub Secrets, hapus baris pengecualian di bawah ini.
+!app/sekretaris-kkn.jks
