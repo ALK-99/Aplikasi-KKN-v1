@@ -13,38 +13,70 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kkn.almufid.sekretaris.data.entity.ProkerEntry
 import com.kkn.almufid.sekretaris.data.entity.StatusProker
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.kkn.almufid.sekretaris.ui.components.*
+import com.kkn.almufid.sekretaris.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+private fun warnaStatus(status: StatusProker): Color = when (status) {
+    StatusProker.BELUM_MULAI -> TeksRedup
+    StatusProker.BERJALAN -> Gold
+    StatusProker.SELESAI -> Mint
+    StatusProker.BATAL -> Merah
+}
+
+private fun labelStatus(status: StatusProker): String = when (status) {
+    StatusProker.BELUM_MULAI -> "Belum mulai"
+    StatusProker.BERJALAN -> "Berjalan"
+    StatusProker.SELESAI -> "Selesai"
+    StatusProker.BATAL -> "Batal"
+}
+
 @Composable
 fun ProkerScreen(viewModel: ProkerViewModel) {
     val daftar by viewModel.daftarProker.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
+    val selesai = daftar.count { it.status == StatusProker.SELESAI }
+    val aktif = daftar.count { it.status != StatusProker.BATAL }
+    val frac by animateFloatAsState(if (aktif == 0) 0f else selesai.toFloat() / aktif, tween(800), label = "proker")
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { dialogTerbuka = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah proker")
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            KartuGelap(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp)) {
+                Text("$selesai dari $aktif proker selesai", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                Spacer(Modifier.height(10.dp))
+                BatangProgres(frac)
             }
-        }
-    ) { padding ->
-        if (daftar.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Belum ada program kerja. Tekan + untuk menambahkan.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(daftar, key = { it.id }) { proker ->
-                    KartuProker(
-                        proker = proker,
-                        onUbahStatus = { status -> viewModel.ubahStatus(proker, status) },
-                        onHapus = { viewModel.hapusProker(proker) }
-                    )
+            if (daftar.isEmpty()) {
+                KosongState("Belum ada program kerja. Tekan + untuk menambahkan.")
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(18.dp, 10.dp, 18.dp, 110.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    itemsIndexed(daftar, key = { _, p -> p.id }) { i, p ->
+                        KartuProker(
+                            proker = p,
+                            modifier = Modifier.munculBertahap(i),
+                            onUbahStatus = { status -> viewModel.ubahStatus(p, status) },
+                            onHapus = { viewModel.hapusProker(p) }
+                        )
+                    }
                 }
             }
+        }
+        FabGradien(Icons.Default.Add, "Tambah proker", Modifier.align(Alignment.BottomEnd).padding(20.dp)) {
+            dialogTerbuka = true
         }
     }
 
@@ -59,58 +91,33 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
     }
 }
 
-private fun warnaStatus(status: StatusProker): androidx.compose.ui.graphics.Color = when (status) {
-    StatusProker.BELUM_MULAI -> androidx.compose.ui.graphics.Color(0xFF9E9E9E)
-    StatusProker.BERJALAN -> androidx.compose.ui.graphics.Color(0xFFF9A825)
-    StatusProker.SELESAI -> androidx.compose.ui.graphics.Color(0xFF2E7D32)
-    StatusProker.BATAL -> androidx.compose.ui.graphics.Color(0xFFC62828)
-}
-
-private fun labelStatus(status: StatusProker): String = when (status) {
-    StatusProker.BELUM_MULAI -> "Belum Mulai"
-    StatusProker.BERJALAN -> "Berjalan"
-    StatusProker.SELESAI -> "Selesai"
-    StatusProker.BATAL -> "Batal"
-}
-
 @Composable
 private fun KartuProker(
     proker: ProkerEntry,
+    modifier: Modifier,
     onUbahStatus: (StatusProker) -> Unit,
     onHapus: () -> Unit
 ) {
     var menuTerbuka by remember { mutableStateOf(false) }
-
-    ElevatedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(proker.namaProker, style = MaterialTheme.typography.titleMedium)
-                    if (proker.divisiPenanggungJawab.isNotBlank()) {
-                        Text("PJ: ${proker.divisiPenanggungJawab}", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-                IconButton(onClick = onHapus) {
-                    Icon(Icons.Default.Delete, contentDescription = "Hapus")
+    KartuGelap(modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(proker.namaProker, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                if (proker.divisiPenanggungJawab.isNotBlank()) {
+                    Text("PJ: ${proker.divisiPenanggungJawab}", color = TeksRedup, fontSize = 12.sp)
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Box {
-                AssistChip(
-                    onClick = { menuTerbuka = true },
-                    label = { Text(labelStatus(proker.status)) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = warnaStatus(proker.status).copy(alpha = 0.15f),
-                        labelColor = warnaStatus(proker.status)
+            IconButton(onClick = onHapus) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
+        }
+        Spacer(Modifier.height(10.dp))
+        Box {
+            TagKecil(labelStatus(proker.status), warnaStatus(proker.status), Modifier.tekanPegas { menuTerbuka = true })
+            DropdownMenu(expanded = menuTerbuka, onDismissRequest = { menuTerbuka = false }) {
+                StatusProker.entries.forEach { status ->
+                    DropdownMenuItem(
+                        text = { Text(labelStatus(status)) },
+                        onClick = { onUbahStatus(status); menuTerbuka = false }
                     )
-                )
-                DropdownMenu(expanded = menuTerbuka, onDismissRequest = { menuTerbuka = false }) {
-                    StatusProker.entries.forEach { status ->
-                        DropdownMenuItem(
-                            text = { Text(labelStatus(status)) },
-                            onClick = { onUbahStatus(status); menuTerbuka = false }
-                        )
-                    }
                 }
             }
         }

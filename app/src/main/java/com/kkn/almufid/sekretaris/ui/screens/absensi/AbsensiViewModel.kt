@@ -12,7 +12,7 @@ import java.util.Calendar
 
 /** Membulatkan sebuah waktu ke jam 00:00 di hari yang sama, dipakai
  * sebagai kunci tanggal yang konsisten untuk tabel absensi. */
-private fun awalHari(millis: Long): Long {
+fun awalHari(millis: Long): Long {
     val kalender = Calendar.getInstance()
     kalender.timeInMillis = millis
     kalender.set(Calendar.HOUR_OF_DAY, 0)

@@ -23,41 +23,54 @@ import com.kkn.almufid.sekretaris.data.entity.NotaEntry
 import com.kkn.almufid.sekretaris.ui.formatRupiah
 import com.kkn.almufid.sekretaris.ui.formatTanggal
 import java.io.File
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.kkn.almufid.sekretaris.ui.components.*
+import com.kkn.almufid.sekretaris.ui.theme.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ArsipScreen(viewModel: NotaViewModel) {
     val daftar by viewModel.daftarNota.collectAsState()
     val total by viewModel.totalPengeluaran.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { dialogTerbuka = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah nota")
+    Box(Modifier.fillMaxSize()) {
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Fixed(2),
+            contentPadding = PaddingValues(18.dp, 4.dp, 18.dp, 110.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalItemSpacing = 12.dp
+        ) {
+            item(span = StaggeredGridItemSpan.FullLine) { KartuTotal(total, daftar.size) }
+            if (daftar.isEmpty()) {
+                item(span = StaggeredGridItemSpan.FullLine) {
+                    KosongState("Belum ada nota tersimpan. Tekan + lalu ambil foto nota.")
+                }
+            }
+            itemsIndexed(daftar, key = { _, n -> n.id }) { i, nota ->
+                TileNota(nota, if (i % 3 == 0) 0.8f else 1.1f, Modifier.munculBertahap(i)) {
+                    viewModel.hapusNota(nota)
+                }
             }
         }
-    ) { padding ->
-        if (daftar.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Belum ada nota/kwitansi tersimpan.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                item {
-                    Text(
-                        "Total pengeluaran: ${formatRupiah(total)}",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                items(daftar, key = { it.id }) { nota ->
-                    KartuNota(nota = nota, onHapus = { viewModel.hapusNota(nota) })
-                }
-            }
+        FabGradien(Icons.Default.Add, "Tambah nota", Modifier.align(Alignment.BottomEnd).padding(20.dp)) {
+            dialogTerbuka = true
         }
     }
 
@@ -73,33 +86,48 @@ fun ArsipScreen(viewModel: NotaViewModel) {
 }
 
 @Composable
-private fun KartuNota(nota: NotaEntry, onHapus: () -> Unit) {
-    ElevatedCard(Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (nota.fotoPath != null && File(nota.fotoPath).exists()) {
-                AsyncImage(
-                    model = File(nota.fotoPath),
-                    contentDescription = "Foto nota",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(56.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-            }
-            Column(Modifier.weight(1f)) {
-                Text(nota.keterangan, style = MaterialTheme.typography.titleMedium)
-                Text(formatRupiah(nota.nominal), style = MaterialTheme.typography.bodyMedium)
-                if (nota.prokerTerkait.isNotBlank()) {
-                    Text("Proker: ${nota.prokerTerkait}", style = MaterialTheme.typography.labelSmall)
-                }
-                Text(
-                    formatTanggal(nota.tanggalMillis),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            }
-            IconButton(onClick = onHapus) {
-                Icon(Icons.Default.Delete, contentDescription = "Hapus")
-            }
+private fun KartuTotal(total: Long, jumlah: Int) {
+    val bentuk = RoundedCornerShape(26.dp)
+    Box(
+        Modifier.fillMaxWidth().shadow(20.dp, bentuk, ambientColor = Pink, spotColor = Pink)
+            .clip(bentuk).background(GradUtama).padding(20.dp)
+    ) {
+        Box(
+            Modifier.align(Alignment.TopEnd).offset(40.dp, (-40).dp).size(120.dp)
+                .clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
+        )
+        Column {
+            Text("Total pengeluaran", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(formatRupiah(total), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+            Text("$jumlah nota tersimpan", fontSize = 12.sp, color = Color.White.copy(alpha = 0.9f))
+        }
+    }
+}
+
+@Composable
+private fun TileNota(nota: NotaEntry, rasio: Float, modifier: Modifier, onHapus: () -> Unit) {
+    val bentuk = RoundedCornerShape(20.dp)
+    Box(
+        modifier.fillMaxWidth().aspectRatio(rasio).shadow(10.dp, bentuk).clip(bentuk)
+            .background(Brush.linearGradient(listOf(Surface2, Violet)))
+    ) {
+        if (nota.fotoPath != null && File(nota.fotoPath).exists()) {
+            AsyncImage(
+                model = File(nota.fotoPath), contentDescription = "Foto nota",
+                contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text("Tanpa foto", Modifier.align(Alignment.Center), color = TeksSoft, fontSize = 12.sp)
+        }
+        Column(
+            Modifier.align(Alignment.BottomStart).padding(10.dp).clip(RoundedCornerShape(12.dp))
+                .background(Ground.copy(alpha = 0.82f)).padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            Text(formatRupiah(nota.nominal), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            Text(nota.keterangan, color = TeksSoft, fontSize = 11.sp, maxLines = 1)
+        }
+        IconButton(onClick = onHapus, modifier = Modifier.align(Alignment.TopEnd)) {
+            Icon(Icons.Default.Delete, "Hapus", tint = Color.White)
         }
     }
 }

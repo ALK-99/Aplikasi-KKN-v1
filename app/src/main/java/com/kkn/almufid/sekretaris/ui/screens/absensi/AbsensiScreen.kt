@@ -11,8 +11,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kkn.almufid.sekretaris.ui.formatTanggal
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.kkn.almufid.sekretaris.ui.components.*
+import com.kkn.almufid.sekretaris.ui.theme.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AbsensiScreen(viewModel: AbsensiViewModel) {
     val anggota by viewModel.daftarAnggota.collectAsState()
@@ -21,40 +44,69 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
     var dialogTambahAnggota by remember { mutableStateOf(false) }
 
     val statusPerAnggota = remember(absensi) { absensi.associateBy { it.anggotaId } }
+    val hadir = absensi.count { it.hadir }
+    val persen = if (anggota.isEmpty()) 0f else (hadir.toFloat() / anggota.size).coerceIn(0f, 1f)
+    val hariIni = remember { awalHari(System.currentTimeMillis()) }
+    val daftarHari = remember { (6 downTo 0).map { hariIni - it * 86_400_000L } }
+    val fmtHari = remember { SimpleDateFormat("EEE", Locale("id", "ID")) }
+    val fmtAngka = remember { SimpleDateFormat("d", Locale("id", "ID")) }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { dialogTambahAnggota = true }) {
-                Icon(Icons.Default.PersonAdd, contentDescription = "Tambah anggota")
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                daftarHari.forEach { hari ->
+                    val dipilih = hari == tanggal
+                    Column(
+                        Modifier.weight(1f).tekanPegas { viewModel.pilihTanggal(hari) }
+                            .height(64.dp).clip(RoundedCornerShape(16.dp))
+                            .then(if (dipilih) Modifier.background(GradUtama) else Modifier.background(Surface1)),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            fmtHari.format(Date(hari)), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                            color = if (dipilih) Color.White else TeksRedup
+                        )
+                        Text(
+                            fmtAngka.format(Date(hari)), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold,
+                            color = if (dipilih) Color.White else TeksUtama
+                        )
+                    }
+                }
+            }
+            KartuGelap(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CincinPersen(persen)
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text("$hadir dari ${anggota.size} hadir", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+                        Text(formatTanggal(tanggal).substringBeforeLast(","), color = TeksRedup, fontSize = 12.sp)
+                    }
+                }
+            }
+            if (anggota.isEmpty()) {
+                KosongState("Belum ada anggota. Tekan tombol di kanan bawah untuk menambah anggota kelompok.")
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(18.dp, 0.dp, 18.dp, 110.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    itemsIndexed(anggota, key = { _, a -> a.id }) { i, orang ->
+                        BarisAbsensi(
+                            nama = orang.nama, divisi = orang.divisi,
+                            hadir = statusPerAnggota[orang.id]?.hadir,
+                            modifier = Modifier.munculBertahap(i),
+                            onUbah = { status -> viewModel.tandaiKehadiran(orang.id, status) }
+                        )
+                    }
+                }
             }
         }
-    ) { padding ->
-        if (anggota.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Belum ada anggota. Tekan tombol + untuk menambah anggota kelompok.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    Text(
-                        "Tanggal: ${formatTanggal(tanggal).substringBeforeLast(",")}",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                items(anggota, key = { it.id }) { orang ->
-                    val statusSaatIni = statusPerAnggota[orang.id]
-                    BarisAbsensi(
-                        nama = orang.nama,
-                        divisi = orang.divisi,
-                        hadir = statusSaatIni?.hadir,
-                        onUbah = { hadir -> viewModel.tandaiKehadiran(orang.id, hadir) }
-                    )
-                }
-            }
+        FabGradien(Icons.Default.PersonAdd, "Tambah anggota", Modifier.align(Alignment.BottomEnd).padding(20.dp)) {
+            dialogTambahAnggota = true
         }
     }
 
@@ -70,35 +122,41 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
 }
 
 @Composable
+private fun CincinPersen(persen: Float) {
+    val sapuan by animateFloatAsState(persen * 360f, tween(800), label = "sapuan")
+    Box(Modifier.size(68.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val lebar = 9.dp.toPx()
+            val ukuran = Size(size.width - lebar, size.height - lebar)
+            val pojok = Offset(lebar / 2, lebar / 2)
+            drawArc(Surface2, 0f, 360f, false, pojok, ukuran, style = Stroke(lebar, cap = StrokeCap.Round))
+            drawArc(Mint, -90f, sapuan, false, pojok, ukuran, style = Stroke(lebar, cap = StrokeCap.Round))
+        }
+        Text("${(persen * 100).toInt()}%", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+    }
+}
+
+@Composable
 private fun BarisAbsensi(
     nama: String,
     divisi: String,
     hadir: Boolean?,
+    modifier: Modifier,
     onUbah: (Boolean) -> Unit
 ) {
-    ElevatedCard {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(nama, style = MaterialTheme.typography.titleMedium)
-                if (divisi.isNotBlank()) {
-                    Text(divisi, style = MaterialTheme.typography.labelSmall)
-                }
-            }
-            FilterChip(
-                selected = hadir == true,
-                onClick = { onUbah(true) },
-                label = { Text("Hadir") }
-            )
-            Spacer(Modifier.width(6.dp))
-            FilterChip(
-                selected = hadir == false,
-                onClick = { onUbah(false) },
-                label = { Text("Absen") }
-            )
+    Row(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Surface1).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AvatarGradien(inisialDari(nama), 42.dp)
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(nama, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+            if (divisi.isNotBlank()) Text(divisi, color = TeksRedup, fontSize = 11.sp)
         }
+        PilKecil("Hadir", hadir == true, HijauTua) { onUbah(true) }
+        Spacer(Modifier.width(6.dp))
+        PilKecil("Absen", hadir == false, Pink) { onUbah(false) }
     }
 }
 

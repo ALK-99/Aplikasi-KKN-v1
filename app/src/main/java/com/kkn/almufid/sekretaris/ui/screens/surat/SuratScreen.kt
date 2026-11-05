@@ -14,34 +14,50 @@ import androidx.compose.ui.unit.dp
 import com.kkn.almufid.sekretaris.data.entity.JenisSurat
 import com.kkn.almufid.sekretaris.data.entity.SuratEntry
 import com.kkn.almufid.sekretaris.ui.formatTanggal
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.kkn.almufid.sekretaris.ui.components.*
+import com.kkn.almufid.sekretaris.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SuratScreen(viewModel: SuratViewModel) {
     val daftar by viewModel.daftarSurat.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
+    var filter by remember { mutableStateOf<JenisSurat?>(null) }
+    val tampil = remember(daftar, filter) { if (filter == null) daftar else daftar.filter { it.jenis == filter } }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { dialogTerbuka = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah surat")
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.padding(horizontal = 18.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PilChip("Semua", filter == null, { filter = null })
+                PilChip("Masuk", filter == JenisSurat.MASUK, { filter = JenisSurat.MASUK })
+                PilChip("Keluar", filter == JenisSurat.KELUAR, { filter = JenisSurat.KELUAR })
             }
-        }
-    ) { padding ->
-        if (daftar.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Belum ada surat tercatat.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(daftar, key = { it.id }) { surat ->
-                    KartuSurat(surat = surat, onHapus = { viewModel.hapusSurat(surat) })
+            if (tampil.isEmpty()) {
+                KosongState("Belum ada surat tercatat. Tekan + untuk menambah.")
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(18.dp, 8.dp, 18.dp, 110.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    itemsIndexed(tampil, key = { _, s -> s.id }) { i, s ->
+                        KartuSurat(s, Modifier.munculBertahap(i)) { viewModel.hapusSurat(s) }
+                    }
                 }
             }
+        }
+        FabGradien(Icons.Default.Add, "Tambah surat", Modifier.align(Alignment.BottomEnd).padding(20.dp)) {
+            dialogTerbuka = true
         }
     }
 
@@ -57,35 +73,25 @@ fun SuratScreen(viewModel: SuratViewModel) {
 }
 
 @Composable
-private fun KartuSurat(surat: SuratEntry, onHapus: () -> Unit) {
-    ElevatedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AssistChip(
-                    onClick = {},
-                    label = { Text(if (surat.jenis == JenisSurat.MASUK) "Surat Masuk" else "Surat Keluar") }
-                )
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onHapus) {
-                    Icon(Icons.Default.Delete, contentDescription = "Hapus")
-                }
-            }
-            if (surat.nomorSurat.isNotBlank()) {
-                Text("No: ${surat.nomorSurat}", style = MaterialTheme.typography.labelSmall)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(surat.perihal, style = MaterialTheme.typography.titleMedium)
-            Text(
-                if (surat.jenis == JenisSurat.MASUK) "Dari: ${surat.tujuanAtauPengirim}" else "Kepada: ${surat.tujuanAtauPengirim}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                formatTanggal(surat.tanggalMillis),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
-            )
+private fun KartuSurat(surat: SuratEntry, modifier: Modifier, onHapus: () -> Unit) {
+    val masuk = surat.jenis == JenisSurat.MASUK
+    KartuGelap(modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TagKecil(if (masuk) "Surat masuk" else "Surat keluar", if (masuk) Mint else Gold)
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onHapus) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
         }
+        if (surat.nomorSurat.isNotBlank()) {
+            Text("No. ${surat.nomorSurat}", color = TeksRedup, fontSize = 11.sp)
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(surat.perihal, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Text(
+            if (masuk) "Dari: ${surat.tujuanAtauPengirim}" else "Kepada: ${surat.tujuanAtauPengirim}",
+            color = TeksSoft, fontSize = 14.sp
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(formatTanggal(surat.tanggalMillis), color = TeksRedup, fontSize = 11.sp)
     }
 }
 

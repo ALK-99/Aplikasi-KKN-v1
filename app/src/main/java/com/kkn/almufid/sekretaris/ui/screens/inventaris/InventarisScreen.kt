@@ -12,33 +12,41 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kkn.almufid.sekretaris.data.entity.InventarisEntry
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.kkn.almufid.sekretaris.ui.components.*
+import com.kkn.almufid.sekretaris.ui.theme.*
 
 @Composable
 fun InventarisScreen(viewModel: InventarisViewModel) {
     val daftar by viewModel.daftarBarang.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { dialogTerbuka = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah barang")
-            }
-        }
-    ) { padding ->
+    Box(Modifier.fillMaxSize()) {
         if (daftar.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Belum ada barang inventaris posko.")
-            }
+            KosongState("Belum ada barang inventaris posko. Tekan + untuk menambah.")
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                contentPadding = PaddingValues(18.dp, 8.dp, 18.dp, 110.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                items(daftar, key = { it.id }) { barang ->
-                    KartuBarang(barang = barang, onHapus = { viewModel.hapusBarang(barang) })
+                itemsIndexed(daftar, key = { _, b -> b.id }) { i, b ->
+                    KartuBarang(b, Modifier.munculBertahap(i)) { viewModel.hapusBarang(b) }
                 }
             }
+        }
+        FabGradien(Icons.Default.Add, "Tambah barang", Modifier.align(Alignment.BottomEnd).padding(20.dp)) {
+            dialogTerbuka = true
         }
     }
 
@@ -54,19 +62,24 @@ fun InventarisScreen(viewModel: InventarisViewModel) {
 }
 
 @Composable
-private fun KartuBarang(barang: InventarisEntry, onHapus: () -> Unit) {
-    ElevatedCard(Modifier.fillMaxWidth()) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun KartuBarang(barang: InventarisEntry, modifier: Modifier, onHapus: () -> Unit) {
+    KartuGelap(modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(GradUtama),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("${barang.jumlah}", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+            }
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(barang.namaBarang, style = MaterialTheme.typography.titleMedium)
-                Text("Jumlah: ${barang.jumlah} • Kondisi: ${barang.kondisi}", style = MaterialTheme.typography.bodyMedium)
+                Text(barang.namaBarang, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Kondisi: ${barang.kondisi}", color = TeksSoft, fontSize = 13.sp)
                 if (barang.keterangan.isNotBlank()) {
-                    Text(barang.keterangan, style = MaterialTheme.typography.labelSmall)
+                    Text(barang.keterangan, color = TeksRedup, fontSize = 12.sp)
                 }
             }
-            IconButton(onClick = onHapus) {
-                Icon(Icons.Default.Delete, contentDescription = "Hapus")
-            }
+            IconButton(onClick = onHapus) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
         }
     }
 }

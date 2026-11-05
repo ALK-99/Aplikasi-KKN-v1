@@ -1,15 +1,21 @@
 package com.kkn.almufid.sekretaris.ui.theme
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Biru dipilih mengikuti makna logo Kukerta (ketenangan, kepercayaan)
-val BiruUtama = Color(0xFF1E5BA8)
-val BiruGelap = Color(0xFF0D3B73)
-val BiruMuda = Color(0xFFD6E6F7)
+val Ground = Color(0xFF0E1020)
+val Surface1 = Color(0xFF181B30)
+val Surface2 = Color(0xFF232846)
+val Violet = Color(0xFF5B4BDB)
+val VioletTerang = Color(0xFF8B7BFF)
+val Pink = Color(0xFFD92B6B)
+val Gold = Color(0xFFFFB84D)
+val Mint = Color(0xFF2BD4A0)
+val HijauTua = Color(0xFF0B7A5C)
+val Merah = Color(0xFFFF6B6B)
+val TeksUtama = Color(0xFFF4F5FB)
+val TeksSoft = Color(0xFFC3C8E3)
+val TeksRedup = Color(0xFF9AA0BF)
 
-val HijauSukses = Color(0xFF2E7D32)
-val KuningPeringatan = Color(0xFFF9A825)
-val MerahError = Color(0xFFC62828)
-
-val AbuTerang = Color(0xFFF5F6F8)
-val AbuGelap = Color(0xFF1C1F24)
+val GradUtama = Brush.linearGradient(listOf(Violet, Pink))
+val GradStory = Brush.linearGradient(listOf(Gold, Pink, Violet))
