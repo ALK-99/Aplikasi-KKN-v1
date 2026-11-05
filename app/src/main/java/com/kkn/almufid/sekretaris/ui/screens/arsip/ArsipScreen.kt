@@ -124,7 +124,7 @@ private fun DialogTambahNota(
         title = { Text("Tambah Nota/Kwitansi") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { peluncurKamera.launch() }) {
+                OutlinedButton(onClick = { peluncurKamera.launch(null) }) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
                     Text(if (foto == null) "Ambil Foto Nota" else "Ganti Foto")
