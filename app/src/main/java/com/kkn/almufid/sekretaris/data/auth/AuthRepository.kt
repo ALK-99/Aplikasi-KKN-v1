@@ -6,7 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
 /** Batas jumlah akun yang boleh terdaftar (poin B.10 permintaan pengguna). */
-const val KUOTA_PENDAFTARAN = 50
+const val KUOTA_PENDAFTARAN = 20
 
 private const val KOLEKSI_USERS = "users"
 private const val KOLEKSI_NIM_INDEX = "nim_index"
@@ -65,7 +65,7 @@ class AuthRepository(
 
         // 2) Jatah kuota + keunikan NIM dicek & "direservasi" dalam satu
         //    transaksi Firestore, supaya dua pendaftar tidak bisa lolos
-        //    sekaligus memakai NIM yang sama atau menembus kuota 50 akun
+        //    sekaligus memakai NIM yang sama atau menembus kuota 20 akun
         //    akibat race condition (dua orang daftar persis bersamaan).
         //    Kalau gagal di sini (NIM dipakai / kuota penuh), akun Auth
         //    yang baru dibuat di atas langsung dihapus lagi (rollback)

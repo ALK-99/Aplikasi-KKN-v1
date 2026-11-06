@@ -9,7 +9,7 @@ rules_version = '2';
 // `firebase login` dan `firebase init` ke project ini.)
 //
 // Struktur data:
-//   meta/pendaftaran            { total: number }               -- penghitung kuota 50 akun
+//   meta/pendaftaran            { total: number }               -- penghitung kuota 20 akun
 //   nim_index/{nim}              { uid, email } atau { reserved: true } sementara saat daftar
 //   users/{uid}                  profil akun (lihat ProfilPengguna.kt)
 //   users/{uid}/uploads/{id}     metadata file yang diunggah pengguna (poin B.5)
@@ -78,7 +78,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Penghitung kuota 50 akun (poin B.10). Siapa saja yang sedang proses
+    // Penghitung kuota 20 akun (poin B.10). Siapa saja yang sedang proses
     // daftar boleh menaikkan angkanya lewat transaksi, tidak boleh
     // menurunkannya sembarangan di luar alur rollback bawaan app.
     match /meta/pendaftaran {

@@ -66,7 +66,7 @@ Supaya APK hasil GitHub Actions (lihat bagian 3 di bawah) juga punya Firebase ak
   (email yang didaftarkan + sandi buatan sendiri).
 - Verifikasi akun memakai **tautan di email** (klik link, bukan kode angka) — setelah
   klik, kembali ke app dan tekan "Saya Sudah Verifikasi".
-- Pendaftaran dibatasi **50 akun**. Untuk menaikkan atau mereset batas ini, buka
+- Pendaftaran dibatasi **20 akun**. Untuk menaikkan atau mereset batas ini, buka
   Firestore Console -> dokumen `meta/pendaftaran` -> ubah field `total` secara manual.
 - "Lupa sandi" & limit 3x gagal login mengarahkan ke WhatsApp admin (081384725967),
   bukan reset sandi otomatis — sesuai permintaan awal. Admin bisa reset sandi pengguna
