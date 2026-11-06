@@ -50,10 +50,26 @@ class AuthRepository(
         val nimBersih = nim.trim()
         if (nimBersih.isBlank()) return HasilAuth.Gagal("NIM wajib diisi")
 
-        // 1) Jatah kuota + keunikan NIM dicek & "direservasi" dalam satu
+        // 1) Buat akun Firebase Auth LEBIH DULU. Ini supaya langkah
+        //    berikutnya (transaksi Firestore) sudah punya request.auth
+        //    terisi -> sesuai firestore.rules yang mewajibkan login untuk
+        //    menulis ke meta/pendaftaran & nim_index (mencegah orang luar
+        //    nge-spam kuota pendaftaran tanpa pernah bikin akun beneran).
+        val uid: String
+        try {
+            val hasil = auth.createUserWithEmailAndPassword(emailGoogle.trim(), password).await()
+            uid = hasil.user?.uid ?: throw IllegalStateException("UID_KOSONG")
+        } catch (e: Exception) {
+            return HasilAuth.Gagal(pesanErrorAuth(e, "mendaftar"))
+        }
+
+        // 2) Jatah kuota + keunikan NIM dicek & "direservasi" dalam satu
         //    transaksi Firestore, supaya dua pendaftar tidak bisa lolos
         //    sekaligus memakai NIM yang sama atau menembus kuota 50 akun
         //    akibat race condition (dua orang daftar persis bersamaan).
+        //    Kalau gagal di sini (NIM dipakai / kuota penuh), akun Auth
+        //    yang baru dibuat di atas langsung dihapus lagi (rollback)
+        //    supaya tidak nyangkut jadi akun yatim tanpa profil.
         try {
             db.runTransaction { tx ->
                 val metaRef = db.document(DOC_META_PENDAFTARAN)
@@ -74,6 +90,7 @@ class AuthRepository(
                 tx.set(nimRef, mapOf("reserved" to true))
             }.await()
         } catch (e: Exception) {
+            batalkanAkunBaru()
             return HasilAuth.Gagal(
                 when (e.message) {
                     "NIM_DIPAKAI" -> "NIM ini sudah terdaftar. Gunakan NIM lain atau hubungi admin."
@@ -81,18 +98,6 @@ class AuthRepository(
                     else -> "Gagal memeriksa kuota pendaftaran: ${e.message}"
                 }
             )
-        }
-
-        // 2) Buat akun Firebase Auth. Kalau gagal di sini (mis. email
-        //    sudah dipakai akun lain), lepaskan reservasi NIM & kuota
-        //    yang sudah dipesan tadi (best-effort rollback).
-        val uid: String
-        try {
-            val hasil = auth.createUserWithEmailAndPassword(emailGoogle.trim(), password).await()
-            uid = hasil.user?.uid ?: throw IllegalStateException("UID_KOSONG")
-        } catch (e: Exception) {
-            batalkanReservasiNim(nimBersih)
-            return HasilAuth.Gagal(pesanErrorAuth(e, "mendaftar"))
         }
 
         // 3) Kirim email verifikasi (tautan klik, bukan kode).
@@ -126,20 +131,20 @@ class AuthRepository(
         }
     }
 
-    private suspend fun batalkanReservasiNim(nim: String) {
+    /**
+     * Hapus akun Firebase Auth yang baru saja dibuat di langkah 1 [daftar],
+     * dipanggil kalau transaksi kuota/NIM di langkah 2 gagal. Best-effort:
+     * kalau penghapusan ini sendiri gagal (mis. koneksi putus di saat
+     * yang sangat tidak beruntung), admin bisa menghapus akun yatim itu
+     * manual lewat Firebase Console -> Authentication. Tidak melempar
+     * error ke pengguna di sini karena error ASLI (kegagalan daftar)
+     * sudah dilaporkan oleh pemanggil.
+     */
+    private suspend fun batalkanAkunBaru() {
         try {
-            db.runTransaction { tx ->
-                val metaRef = db.document(DOC_META_PENDAFTARAN)
-                val nimRef = db.collection(KOLEKSI_NIM_INDEX).document(nim)
-                val total = tx.get(metaRef).getLong("total") ?: 1L
-                tx.delete(nimRef)
-                tx.set(metaRef, mapOf("total" to maxOf(0L, total - 1)))
-            }.await()
+            auth.currentUser?.delete()?.await()
         } catch (_: Exception) {
-            // Best-effort: kalau rollback ini sendiri gagal, admin bisa
-            // membereskan dokumen nim_index yatim secara manual dari
-            // Firebase Console. Tidak melempar error ke pengguna di sini
-            // karena error ASLI (kegagalan daftar) sudah dilaporkan.
+            try { auth.signOut() } catch (_: Exception) {}
         }
     }
 
