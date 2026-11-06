@@ -3,9 +3,9 @@ package com.kkn.almufid.sekretaris.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kkn.almufid.sekretaris.data.auth.AuthRepository
-import com.kkn.almufid.sekretaris.data.auth.BATAS_GAGAL_LOGIN
 import com.kkn.almufid.sekretaris.data.auth.HasilAuth
 import com.kkn.almufid.sekretaris.data.auth.Peran
+import com.kkn.almufid.sekretaris.data.local.BATAS_GAGAL_LOGIN
 import com.kkn.almufid.sekretaris.data.local.SesiLokal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

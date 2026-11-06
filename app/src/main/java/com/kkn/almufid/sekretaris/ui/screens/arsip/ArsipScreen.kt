@@ -3,7 +3,7 @@ package com.kkn.almufid.sekretaris.ui.screens.arsip
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Image as GambarPratinjau
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,7 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Image as IkonGaleri
+import androidx.compose.material.icons.filled.Image
 import com.kkn.almufid.sekretaris.ui.permissions.rememberPemicuGaleri
 import com.kkn.almufid.sekretaris.ui.permissions.rememberPemicuKamera
 import androidx.compose.material3.*
@@ -185,7 +185,7 @@ private fun DialogTambahNota(
                         Text(if (foto == null) "Kamera" else "Ganti")
                     }
                     OutlinedButton(onClick = bukaGaleri, modifier = Modifier.weight(1f)) {
-                        Icon(IkonGaleri, contentDescription = null)
+                        Icon(Icons.Default.Image, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
                         Text("Galeri")
                     }
@@ -194,7 +194,7 @@ private fun DialogTambahNota(
                     Text(it, color = Merah, fontSize = 11.sp)
                 }
                 foto?.let {
-                    Image(
+                    GambarPratinjau(
                         bitmap = it.asImageBitmap(),
                         contentDescription = "Pratinjau foto nota",
                         modifier = Modifier.fillMaxWidth().height(120.dp),

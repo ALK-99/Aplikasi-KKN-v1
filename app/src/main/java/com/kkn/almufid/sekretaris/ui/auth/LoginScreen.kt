@@ -23,8 +23,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kkn.almufid.sekretaris.data.auth.BATAS_GAGAL_LOGIN
 import com.kkn.almufid.sekretaris.data.auth.Peran
+import com.kkn.almufid.sekretaris.data.local.BATAS_GAGAL_LOGIN
 import com.kkn.almufid.sekretaris.ui.components.KartuGelap
 import com.kkn.almufid.sekretaris.ui.components.tekanPegas
 import com.kkn.almufid.sekretaris.ui.theme.*
