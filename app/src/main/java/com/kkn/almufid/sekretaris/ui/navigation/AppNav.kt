@@ -50,7 +50,7 @@ import com.kkn.almufid.sekretaris.ui.screens.home.HomeViewModel
 import com.kkn.almufid.sekretaris.ui.theme.*
 
 @Composable
-fun AppNav() {
+fun AppNav(onLogout: () -> Unit = {}) {
     val navController = rememberNavController()
     val app = LocalContext.current.applicationContext as SekretarisApp
     val db = app.database
@@ -100,7 +100,7 @@ fun AppNav() {
                     InventarisScreen(vm)
                 }
                 composable(Tujuan.PENGATURAN.rute) {
-                    PengaturanScreen()
+                    PengaturanScreen(onLogout = onLogout)
                 }
             }
         }

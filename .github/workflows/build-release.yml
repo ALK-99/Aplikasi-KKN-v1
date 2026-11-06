@@ -28,6 +28,16 @@ jobs:
         with:
           gradle-version: '8.6'
 
+      - name: Siapkan konfigurasi Firebase (google-services.json)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::Secret GOOGLE_SERVICES_JSON belum diisi — build jalan tanpa Firebase (fitur akun tidak akan berfungsi di APK ini)."
+          else
+            echo "$GOOGLE_SERVICES_JSON" | base64 -d > app/google-services.json
+          fi
+
       - name: Tentukan versi
         id: ver
         run: |

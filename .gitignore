@@ -15,6 +15,11 @@ local.properties
 *.apk
 *.aab
 
+# Config Firebase per-environment. JANGAN commit langsung — ambil dari
+# Firebase Console lalu taruh manual di app/google-services.json, atau
+# (untuk CI) lewat GitHub Secret GOOGLE_SERVICES_JSON (lihat workflow).
+app/google-services.json
+
 # Keystore: jangan commit keystore produksi sungguhan.
 # app/sekretaris-kkn.jks saat ini TETAP ditrack (lihat catatan di
 # build.gradle.kts) karena dipakai GitHub Actions untuk build rilis

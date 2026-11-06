@@ -11,6 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Image as IkonGaleri
+import com.kkn.almufid.sekretaris.ui.permissions.rememberPemicuGaleri
+import com.kkn.almufid.sekretaris.ui.permissions.rememberPemicuKamera
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -142,20 +145,53 @@ private fun DialogTambahNota(
     var nominalTeks by remember { mutableStateOf("") }
     var proker by remember { mutableStateOf("") }
     var foto by remember { mutableStateOf<Bitmap?>(null) }
+    var izinDitolakPesan by remember { mutableStateOf<String?>(null) }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
     val peluncurKamera = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicturePreview()
     ) { bitmap -> foto = bitmap }
+    val peluncurGaleri = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            foto = try {
+                context.contentResolver.openInputStream(it)?.use { input ->
+                    android.graphics.BitmapFactory.decodeStream(input)
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+    val bukaKamera = rememberPemicuKamera(
+        onDiizinkan = { peluncurKamera.launch(null) },
+        onDitolak = { izinDitolakPesan = "Izin kamera ditolak. Aktifkan lewat Pengaturan HP > Aplikasi > Sekretaris KKN > Izin." }
+    )
+    val bukaGaleri = rememberPemicuGaleri(
+        onDiizinkan = { peluncurGaleri.launch("image/*") },
+        onDitolak = { izinDitolakPesan = "Izin galeri ditolak. Aktifkan lewat Pengaturan HP > Aplikasi > Sekretaris KKN > Izin." }
+    )
 
     AlertDialog(
         onDismissRequest = onTutup,
         title = { Text("Tambah Nota/Kwitansi") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { peluncurKamera.launch(null) }) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (foto == null) "Ambil Foto Nota" else "Ganti Foto")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = bukaKamera, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (foto == null) "Kamera" else "Ganti")
+                    }
+                    OutlinedButton(onClick = bukaGaleri, modifier = Modifier.weight(1f)) {
+                        Icon(IkonGaleri, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Galeri")
+                    }
+                }
+                izinDitolakPesan?.let {
+                    Text(it, color = Merah, fontSize = 11.sp)
                 }
                 foto?.let {
                     Image(

@@ -4,6 +4,24 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// google-services.json BELUM ditrack di git (lihat .gitignore) karena isinya
+// spesifik per-project Firebase dan harus didownload sendiri dari Firebase
+// Console (Project settings > Your apps > google-services.json), lalu
+// ditaruh di folder app/ ini. Plugin hanya diterapkan jika file itu ADA,
+// supaya `gradle build` tidak langsung gagal total di mesin/CI yang belum
+// punya file tersebut — build tetap jalan, hanya fitur Firebase yang akan
+// crash saat runtime sampai file-nya ditambahkan.
+val adaGoogleServices = file("google-services.json").exists()
+if (adaGoogleServices) {
+    apply(plugin = "com.google.gms.google-services")
+} else {
+    logger.warn(
+        "PERINGATAN: app/google-services.json tidak ditemukan — fitur " +
+            "Firebase (akun, database cloud) TIDAK akan berfungsi sampai " +
+            "file itu ditambahkan. Lihat README untuk cara setup."
+    )
+}
+
 android {
     namespace = "com.kkn.almufid.sekretaris"
     compileSdk = 34
@@ -103,11 +121,24 @@ dependencies {
 
     // Coroutines untuk operasi database & jaringan asinkron
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // Jembatan Task (Firebase/Google Play Services) <-> suspend fun (.await())
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
     // Coil — memuat foto nota dari file lokal ke Composable secara efisien
     // (auto-caching & downsampling, menghindari OutOfMemoryError kalau
     // foto nota beresolusi besar).
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Firebase — akun (Auth), database cloud per-akun (Firestore).
+    // BoM mengunci semua versi library Firebase agar saling kompatibel.
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+
+    // EncryptedSharedPreferences — penyimpanan lokal terenkripsi untuk
+    // status "ingat saya" & penghitung percobaan login gagal.
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

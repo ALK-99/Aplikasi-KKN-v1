@@ -1,0 +1,97 @@
+rules_version = '2';
+
+// Aturan keamanan Firestore untuk Sekretaris KKN.
+//
+// CARA PASANG: Firebase Console > Firestore Database > Rules, tempel isi
+// file ini, lalu Publish. (Belum ada CI otomatis untuk deploy rules ini —
+// harus ditempel manual tiap kali file ini berubah, atau pakai Firebase
+// CLI: `firebase deploy --only firestore:rules` dari komputer yang sudah
+// `firebase login` dan `firebase init` ke project ini.)
+//
+// Struktur data:
+//   meta/pendaftaran            { total: number }               -- penghitung kuota 50 akun
+//   nim_index/{nim}              { uid, email } atau { reserved: true } sementara saat daftar
+//   users/{uid}                  profil akun (lihat ProfilPengguna.kt)
+//   users/{uid}/uploads/{id}     metadata file yang diunggah pengguna (poin B.5)
+//   users/{uid}/inputs/{id}      input data non-upload milik pengguna (poin B.5)
+//   users/{uid}/security_log/{id} log keamanan akun (poin B.5), ditulis sistem, dibaca pemilik saja
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function sudahLogin() { return request.auth != null; }
+    function pemilik(uid) { return sudahLogin() && request.auth.uid == uid; }
+
+    // Profil pengguna: siapa saja yang login boleh baca profil dasar
+    // (dipakai untuk menampilkan nama anggota lain, mis. di Anggota/Absensi),
+    // tapi hanya pemilik akun yang boleh mengubah profilnya sendiri, dan
+    // field akunDiblokir / peran tidak boleh pengguna ubah sendiri (hanya
+    // lewat Firebase Console oleh developer).
+    match /users/{uid} {
+      allow read: if sudahLogin();
+      allow create: if pemilik(uid)
+        && request.resource.data.akunDiblokir == false
+        && request.resource.data.uid == uid;
+      allow update: if pemilik(uid)
+        && request.resource.data.akunDiblokir == resource.data.akunDiblokir
+        && request.resource.data.peran == resource.data.peran;
+      allow delete: if false; // penghapusan akun hanya lewat Firebase Console oleh developer
+
+      // Data per-akun: upload, input non-upload, dan log keamanan — semua
+      // privat untuk pemiliknya sendiri (poin B.5 & B.7). Soft-delete:
+      // dokumen ditandai `deletedByUser: true`, TIDAK benar-benar
+      // dihapus dari server oleh klien (poin B.7) — hanya field update,
+      // bukan delete, yang diizinkan dari sisi aplikasi.
+      match /uploads/{docId} {
+        allow read: if pemilik(uid);
+        allow create: if pemilik(uid);
+        allow update: if pemilik(uid);
+        allow delete: if false;
+      }
+      match /inputs/{docId} {
+        allow read: if pemilik(uid);
+        allow create: if pemilik(uid);
+        allow update: if pemilik(uid);
+        allow delete: if false;
+      }
+      match /security_log/{docId} {
+        allow read: if pemilik(uid);
+        allow write: if false; // hanya ditulis lewat Cloud Functions/Console, bukan klien
+      }
+    }
+
+    // Pemetaan NIM -> email, dipakai saat login (resolusi NIM ke email
+    // sebelum signInWithEmailAndPassword). Harus bisa dibaca TANPA login
+    // karena dibutuhkan sebelum proses login selesai. Hanya boleh dibuat
+    // sekali oleh pemilik uid yang baru dibuat, dan tidak boleh diubah
+    // nilainya sesudahnya (mencegah orang lain membajak NIM orang lain).
+    match /nim_index/{nim} {
+      allow read: if true;
+      allow create: if sudahLogin()
+        && (
+          (request.resource.data.keys().hasOnly(['reserved']) && request.resource.data.reserved == true) ||
+          (request.resource.data.keys().hasOnly(['uid', 'email']) && request.resource.data.uid == request.auth.uid)
+        );
+      allow update: if sudahLogin()
+        && resource.data.get('reserved', false) == true
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // Penghitung kuota 50 akun (poin B.10). Siapa saja yang sedang proses
+    // daftar boleh menaikkan angkanya lewat transaksi, tidak boleh
+    // menurunkannya sembarangan di luar alur rollback bawaan app.
+    match /meta/pendaftaran {
+      allow read: if true;
+      allow write: if sudahLogin();
+    }
+
+    // Saran & masukan dari menu Pengaturan (poin A.3) — siapa saja yang
+    // login boleh menambah, tidak ada yang boleh membaca/mengubah punya
+    // orang lain lewat aplikasi (hanya lewat Firebase Console).
+    match /feedback/{docId} {
+      allow create: if sudahLogin();
+      allow read, update, delete: if false;
+    }
+  }
+}

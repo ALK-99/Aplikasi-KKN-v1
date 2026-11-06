@@ -7,7 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kkn.almufid.sekretaris.ui.GenericViewModelFactory
-import com.kkn.almufid.sekretaris.ui.navigation.AppNav
+import com.kkn.almufid.sekretaris.ui.RootApp
 import com.kkn.almufid.sekretaris.ui.theme.SekretarisKKNTheme
 import com.kkn.almufid.sekretaris.update.UpdateDialog
 import com.kkn.almufid.sekretaris.update.UpdateViewModel
@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
                 )
                 LaunchedEffect(Unit) { updateVm.cekSekaliSaatBuka() }
 
-                AppNav()
+                RootApp()
                 UpdateDialog(updateVm)
             }
         }

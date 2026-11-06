@@ -33,10 +33,15 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.rememberCoroutineScope
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.kkn.almufid.sekretaris.BuildConfig
 import com.kkn.almufid.sekretaris.ui.components.KartuGelap
 import com.kkn.almufid.sekretaris.ui.components.tekanPegas
 import com.kkn.almufid.sekretaris.ui.theme.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Nomor kontak admin aplikasi (bukan admin desa/KKN). Dipakai untuk
@@ -44,11 +49,31 @@ import com.kkn.almufid.sekretaris.ui.theme.*
  */
 private const val NOMOR_ADMIN = "081384725967"
 
+/**
+ * Best-effort: kirim saran ke Firestore koleksi `feedback` kalau pengguna
+ * sedang login (lihat firestore.rules). Gagal diam-diam (mis. offline)
+ * karena jalur utama penyampaian saran tetap WhatsApp — Firestore di
+ * sini hanya salinan arsip untuk developer.
+ */
+private fun simpanSaranKeFirestore(teks: String, scope: CoroutineScope) {
+    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+    scope.launch {
+        try {
+            FirebaseFirestore.getInstance().collection("feedback").add(
+                mapOf("uid" to uid, "isi" to teks.trim(), "dikirimPadaMillis" to System.currentTimeMillis())
+            )
+        } catch (_: Exception) {
+            // diam-diam saja, lihat catatan di atas
+        }
+    }
+}
+
 private enum class SubHalaman { DAFTAR, NOMOR_DARURAT, TENTANG, SARAN, LEGALITAS, FAQ }
 
 @Composable
-fun PengaturanScreen() {
+fun PengaturanScreen(onLogout: () -> Unit = {}) {
     var halaman by remember { mutableStateOf(SubHalaman.DAFTAR) }
+    var dialogKeluarTerbuka by remember { mutableStateOf(false) }
     BackHandler(enabled = halaman != SubHalaman.DAFTAR) { halaman = SubHalaman.DAFTAR }
 
     val kembali = { halaman = SubHalaman.DAFTAR }
@@ -59,13 +84,32 @@ fun PengaturanScreen() {
         label = "pengaturan"
     ) { h ->
         when (h) {
-            SubHalaman.DAFTAR -> DaftarPengaturan { halaman = it }
+            SubHalaman.DAFTAR -> DaftarPengaturan(onBuka = { halaman = it }, onMintaKeluar = { dialogKeluarTerbuka = true })
             SubHalaman.NOMOR_DARURAT -> SubHalamanBerjudul("Nomor Darurat", kembali) { NomorDaruratIsi() }
             SubHalaman.TENTANG -> SubHalamanBerjudul("Versi Aplikasi", kembali) { TentangIsi() }
             SubHalaman.SARAN -> SubHalamanBerjudul("Saran & Masukan", kembali) { SaranIsi() }
             SubHalaman.LEGALITAS -> SubHalamanBerjudul("Hak Legalitas & Ketentuan", kembali) { LegalitasIsi() }
             SubHalaman.FAQ -> SubHalamanBerjudul("FAQ", kembali) { FaqIsi() }
         }
+    }
+
+    if (dialogKeluarTerbuka) {
+        AlertDialog(
+            onDismissRequest = { dialogKeluarTerbuka = false },
+            containerColor = Surface1,
+            titleContentColor = TeksUtama,
+            textContentColor = TeksSoft,
+            title = { Text("Keluar Akun?", fontWeight = FontWeight.ExtraBold) },
+            text = { Text("Anda akan kembali ke halaman login. Data yang sudah tersimpan tidak akan hilang.") },
+            confirmButton = {
+                TextButton(onClick = { dialogKeluarTerbuka = false; onLogout() }) {
+                    Text("Keluar", color = Merah, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { dialogKeluarTerbuka = false }) { Text("Batal", color = TeksRedup) }
+            }
+        )
     }
 }
 
@@ -91,7 +135,7 @@ private fun SubHalamanBerjudul(judul: String, onKembali: () -> Unit, konten: @Co
 }
 
 @Composable
-private fun DaftarPengaturan(onBuka: (SubHalaman) -> Unit) {
+private fun DaftarPengaturan(onBuka: (SubHalaman) -> Unit, onMintaKeluar: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp)) {
         Text("Info, bantuan, dan kontak darurat", color = TeksRedup, fontSize = 13.sp)
         Spacer(Modifier.height(20.dp))
@@ -111,22 +155,23 @@ private fun DaftarPengaturan(onBuka: (SubHalaman) -> Unit) {
         ItemPengaturan(Icons.AutoMirrored.Filled.HelpOutline, "FAQ", "Pertanyaan yang sering ditanyakan") {
             onBuka(SubHalaman.FAQ)
         }
+        ItemPengaturan(Icons.Default.Logout, "Keluar Akun", "Kembali ke halaman login", warna = Merah, onClick = onMintaKeluar)
     }
 }
 
 @Composable
-private fun ItemPengaturan(ikon: ImageVector, judul: String, sub: String, onClick: () -> Unit) {
+private fun ItemPengaturan(ikon: ImageVector, judul: String, sub: String, warna: Color = VioletTerang, onClick: () -> Unit) {
     KartuGelap(Modifier.fillMaxWidth().padding(bottom = 12.dp).tekanPegas(onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(Surface2),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(ikon, null, tint = VioletTerang, modifier = Modifier.size(22.dp))
+                Icon(ikon, null, tint = warna, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(judul, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(judul, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (warna == Merah) Merah else TeksUtama)
                 Text(sub, fontSize = 12.sp, color = TeksRedup)
             }
             Icon(Icons.Default.ChevronRight, null, tint = TeksRedup)
@@ -245,6 +290,7 @@ private fun BarisInfo(label: String, nilai: String) {
 @Composable
 private fun ColumnScope.SaranIsi() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var teks by remember { mutableStateOf("") }
     Column(Modifier.padding(18.dp)) {
         Text(
@@ -266,6 +312,7 @@ private fun ColumnScope.SaranIsi() {
         KartuGelap(
             Modifier.fillMaxWidth().tekanPegas {
                 if (teks.isNotBlank()) {
+                    simpanSaranKeFirestore(teks, scope)
                     val pesan = Uri.encode("Saran/masukan untuk Sekretaris KKN:\n\n$teks")
                     context.startActivity(
                         Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/62${NOMOR_ADMIN.removePrefix("0")}?text=$pesan"))
