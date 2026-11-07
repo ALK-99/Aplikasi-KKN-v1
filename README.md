@@ -1,4 +1,4 @@
-# Sekretaris KKN
+# KKN Al-Mushlih 2027
 
 Aplikasi Android untuk tugas sekretaris & wakil kepala desa selama KKN:
 Jurnal & Notulen, Absensi, Surat Masuk/Keluar, Program Kerja, Arsip Nota (foto), Inventaris Posko.
@@ -18,7 +18,7 @@ Tanpa langkah ini aplikasi tetap ter-build, tapi halaman Daftar/Login tidak akan
 berfungsi (akan muncul error "tidak bisa menghubungi server").
 
 1. Buka [Firebase Console](https://console.firebase.google.com) -> **Add project** ->
-   beri nama bebas (mis. "Sekretaris KKN").
+   beri nama bebas (mis. "KKN Al-Mushlih 2027").
 2. Di dalam project, klik ikon Android -> **Add app** -> isi
    **Android package name** persis: `com.kkn.almufid.sekretaris` -> Register app.
 3. Unduh file `google-services.json` yang ditawarkan, taruh persis di folder `app/`

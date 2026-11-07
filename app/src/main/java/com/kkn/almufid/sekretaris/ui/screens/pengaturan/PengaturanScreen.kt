@@ -252,7 +252,7 @@ private fun ColumnScope.TentangIsi() {
     val uriHandler = LocalUriHandler.current
     Column(Modifier.padding(18.dp)) {
         KartuGelap(Modifier.fillMaxWidth()) {
-            BarisInfo("Nama Aplikasi", "Sekretaris KKN")
+            BarisInfo("Nama Aplikasi", "KKN Al-Mushlih 2027")
             BarisInfo("Versi", BuildConfig.VERSION_NAME)
             BarisInfo("Kode Versi", BuildConfig.VERSION_CODE.toString())
             BarisInfo("Pemilik / Developer", BuildConfig.GITHUB_OWNER)
@@ -313,7 +313,7 @@ private fun ColumnScope.SaranIsi() {
             Modifier.fillMaxWidth().tekanPegas {
                 if (teks.isNotBlank()) {
                     simpanSaranKeFirestore(teks, scope)
-                    val pesan = Uri.encode("Saran/masukan untuk Sekretaris KKN:\n\n$teks")
+                    val pesan = Uri.encode("Saran/masukan untuk KKN Al-Mushlih 2027:\n\n$teks")
                     context.startActivity(
                         Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/62${NOMOR_ADMIN.removePrefix("0")}?text=$pesan"))
                     )
@@ -338,7 +338,7 @@ private fun ColumnScope.LegalitasIsi() {
     Column(Modifier.padding(18.dp).verticalScroll(rememberScrollState())) {
         TeksLegal(
             "Hak Cipta",
-            "Aplikasi Sekretaris KKN dikembangkan untuk keperluan administrasi internal kelompok KKN. " +
+            "Aplikasi KKN Al-Mushlih 2027 dikembangkan untuk keperluan administrasi internal kelompok KKN. " +
                 "Kode sumber dan desain aplikasi adalah milik pengembang (${BuildConfig.GITHUB_OWNER}) kecuali dinyatakan lain."
         )
         TeksLegal(

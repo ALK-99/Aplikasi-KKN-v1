@@ -3,6 +3,7 @@ package com.kkn.almufid.sekretaris.ui.screens.home
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kkn.almufid.sekretaris.ui.components.*
@@ -48,8 +50,13 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
                 }
             }
             Spacer(Modifier.height(22.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                r.anggota.take(4).forEach { orang ->
+            // Bisa digeser ke samping supaya tidak terpotong di layar sempit
+            // (5 lingkaran 62dp + jarak melebihi lebar layar HP kecil).
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                r.anggota.take(8).forEach { orang ->
                     StoryCincin(inisialDari(orang.nama), orang.nama.take(7)) { onBuka(Tujuan.ABSENSI) }
                 }
                 StoryCincin("+", "Anggota") { onBuka(Tujuan.ABSENSI) }
@@ -67,6 +74,9 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
                     pasang.forEachIndexed { k, tujuan ->
                         MenuKartu(tujuan, Modifier.weight(1f).munculBertahap(baris * 2 + k)) { onBuka(tujuan) }
                     }
+                    // Baris terakhir ganjil: sisakan ruang kosong supaya kartu
+                    // tidak melebar penuh dan ukurannya sama dengan baris lain.
+                    if (pasang.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
         }
@@ -97,7 +107,7 @@ private fun StoryCincin(inisial: String, nama: String, onClick: () -> Unit) {
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(nama, fontSize = 11.sp, color = TeksRedup)
+        Text(nama, fontSize = 11.sp, color = TeksRedup, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -178,7 +188,7 @@ private fun NavMelayang(modifier: Modifier, onBuka: (Tujuan) -> Unit) {
         horizontalArrangement = Arrangement.SpaceAround
     ) {
         Icon(Icons.Default.Home, "Beranda", tint = Color.White, modifier = Modifier.size(26.dp))
-        ItemNav(Tujuan.JURNAL, onBuka)
+        ItemNav(Tujuan.PROKER, onBuka)
         Box(
             Modifier.tekanPegas { onBuka(Tujuan.JURNAL) }.offset(y = (-14).dp).size(56.dp)
                 .shadow(14.dp, CircleShape, ambientColor = Pink, spotColor = Pink)

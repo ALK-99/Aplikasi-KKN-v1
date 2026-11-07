@@ -51,7 +51,7 @@ fun LoginScreen(vm: AuthViewModel, onMasuk: (Peran) -> Unit) {
         Spacer(Modifier.height(72.dp))
         LogoBulat()
         Spacer(Modifier.height(18.dp))
-        Text("Sekretaris KKN", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        Text("KKN Al-Mushlih 2027", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(4.dp))
         Text("Masuk untuk melanjutkan", color = TeksRedup, fontSize = 13.sp)
         Spacer(Modifier.height(32.dp))
@@ -95,7 +95,7 @@ fun LoginScreen(vm: AuthViewModel, onMasuk: (Peran) -> Unit) {
             Text(
                 "Lupa sandi?", fontSize = 13.sp, color = VioletTerang, fontWeight = FontWeight.Bold,
                 modifier = Modifier.tekanPegas {
-                    val pesan = Uri.encode("Halo admin, saya lupa sandi akun Sekretaris KKN. Mohon bantuannya.")
+                    val pesan = Uri.encode("Halo admin, saya lupa sandi akun KKN Al-Mushlih 2027. Mohon bantuannya.")
                     context.startActivity(
                         Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/62${NOMOR_ADMIN.removePrefix("0")}?text=$pesan"))
                     )

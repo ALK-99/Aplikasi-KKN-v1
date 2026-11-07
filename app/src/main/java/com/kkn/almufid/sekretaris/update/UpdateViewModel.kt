@@ -48,7 +48,7 @@ class UpdateViewModel(private val appContext: Context) : ViewModel() {
 
     fun gagalIzin() {
         _status.value = StatusUpdate.Gagal(
-            "Aktifkan izin \"Pasang aplikasi tidak dikenal\" untuk Sekretaris KKN di halaman pengaturan yang baru terbuka, " +
+            "Aktifkan izin \"Pasang aplikasi tidak dikenal\" untuk KKN Al-Mushlih 2027 di halaman pengaturan yang baru terbuka, " +
                 "lalu buka ulang aplikasi — pop-up update akan muncul lagi."
         )
     }

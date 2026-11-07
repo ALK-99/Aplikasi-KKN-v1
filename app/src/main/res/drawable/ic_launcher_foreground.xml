@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lapisan depan ikon: gunung dengan matahari terbit di balik lereng.
+  Semua bentuk utama ditaruh di zona aman adaptive icon (sekitar 21..87
+  dari 108) supaya tidak terpotong oleh mask bulat/squircle/kotak.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Matahari (separuh tertutup lereng gunung utama) -->
+    <path android:fillColor="#FFB84D"
+        android:pathData="M70,46m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+
+    <!-- Gunung belakang (lebih kecil, transparan) -->
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.5"
+        android:pathData="M22,82 L38,48 L54,82 Z" />
+
+    <!-- Gunung utama -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M32,84 L56,30 L84,84 Z" />
+
+    <!-- Sisi bayangan gunung utama (memberi kesan 3D) -->
+    <path android:fillColor="#D6CFFF"
+        android:pathData="M56,30 L84,84 L60,84 Z" />
+
+    <!-- Tanah/bukit di depan -->
+    <path android:fillColor="#1B1740"
+        android:pathData="M0,80 C22,72 40,86 58,80 C76,74 92,84 108,78 L108,108 L0,108 Z" />
+</vector>

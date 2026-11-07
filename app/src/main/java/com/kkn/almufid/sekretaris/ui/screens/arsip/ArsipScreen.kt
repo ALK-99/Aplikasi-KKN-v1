@@ -166,11 +166,11 @@ private fun DialogTambahNota(
     }
     val bukaKamera = rememberPemicuKamera(
         onDiizinkan = { peluncurKamera.launch(null) },
-        onDitolak = { izinDitolakPesan = "Izin kamera ditolak. Aktifkan lewat Pengaturan HP > Aplikasi > Sekretaris KKN > Izin." }
+        onDitolak = { izinDitolakPesan = "Izin kamera ditolak. Aktifkan lewat Pengaturan HP > Aplikasi > KKN Al-Mushlih 2027 > Izin." }
     )
     val bukaGaleri = rememberPemicuGaleri(
         onDiizinkan = { peluncurGaleri.launch("image/*") },
-        onDitolak = { izinDitolakPesan = "Izin galeri ditolak. Aktifkan lewat Pengaturan HP > Aplikasi > Sekretaris KKN > Izin." }
+        onDitolak = { izinDitolakPesan = "Izin galeri ditolak. Aktifkan lewat Pengaturan HP > Aplikasi > KKN Al-Mushlih 2027 > Izin." }
     )
 
     AlertDialog(
