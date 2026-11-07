@@ -47,6 +47,9 @@ class AuthViewModel(
     private val _popupLimitLogin = MutableStateFlow(false)
     val popupLimitLogin: StateFlow<Boolean> = _popupLimitLogin.asStateFlow()
 
+    private val _pesanInfo = MutableStateFlow<String?>(null)
+    val pesanInfo: StateFlow<String?> = _pesanInfo.asStateFlow()
+
     var dataPendaftaran: DataPendaftaran = DataPendaftaran()
         private set
 
@@ -59,6 +62,26 @@ class AuthViewModel(
     }
 
     fun tutupError() { _pesanError.value = null }
+    fun tutupInfo() { _pesanInfo.value = null }
+
+    /** "Lupa sandi?": kirim email reset ke alamat yang terdaftar untuk NIM ini. */
+    fun kirimResetSandi(nim: String) {
+        if (nim.isBlank()) {
+            _pesanError.value = "Isi NIM dulu untuk reset sandi"
+            return
+        }
+        _sedangProses.value = true
+        viewModelScope.launch {
+            val hasil = repo.kirimResetSandi(nim)
+            _sedangProses.value = false
+            when (hasil) {
+                is HasilAuth.Sukses -> _pesanInfo.value =
+                    "Tautan untuk membuat sandi baru sudah dikirim ke ${hasil.data}. " +
+                        "Buka email itu (cek juga folder Spam), klik tautannya, lalu masuk dengan sandi baru."
+                is HasilAuth.Gagal -> _pesanError.value = hasil.pesan
+            }
+        }
+    }
     fun tutupPopupSukses() { _popupSukses.value = false }
     fun tutupPopupGagalLogin() { _popupGagalLogin.value = false }
     fun tutupPopupLimitLogin() { _popupLimitLogin.value = false }

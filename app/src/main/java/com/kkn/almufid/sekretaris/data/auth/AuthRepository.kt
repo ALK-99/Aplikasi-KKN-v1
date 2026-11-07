@@ -10,6 +10,7 @@ const val KUOTA_PENDAFTARAN = 20
 
 private const val KOLEKSI_USERS = "users"
 private const val KOLEKSI_NIM_INDEX = "nim_index"
+private const val KOLEKSI_ADMINS = "admins"
 private const val DOC_META_PENDAFTARAN = "meta/pendaftaran"
 
 sealed class HasilAuth<out T> {
@@ -193,6 +194,102 @@ class AuthRepository(
     }
 
     fun logout() = auth.signOut()
+
+    /**
+     * Kirim email "buat sandi baru" ke email yang dipakai saat daftar.
+     * Pengguna hanya mengetik NIM; emailnya dicari lewat `nim_index`.
+     * Hasil sukses berisi email yang sudah disamarkan (a***@gmail.com)
+     * supaya orang lain tidak bisa memakai fitur ini untuk membocorkan
+     * alamat email pemilik NIM.
+     */
+    suspend fun kirimResetSandi(nim: String): HasilAuth<String> {
+        val nimBersih = nim.trim()
+        if (nimBersih.isBlank()) return HasilAuth.Gagal("NIM wajib diisi")
+        val email = try {
+            db.collection(KOLEKSI_NIM_INDEX).document(nimBersih).get().await().getString("email")
+        } catch (e: Exception) {
+            return HasilAuth.Gagal("Tidak bisa menghubungi server. Periksa koneksi internet.")
+        } ?: return HasilAuth.Gagal("NIM tidak ditemukan")
+        return try {
+            auth.sendPasswordResetEmail(email).await()
+            HasilAuth.Sukses(samarkanEmail(email))
+        } catch (e: Exception) {
+            HasilAuth.Gagal(pesanErrorAuth(e, "mengirim email reset sandi"))
+        }
+    }
+
+    /** Sama seperti [kirimResetSandi], tapi untuk akun yang sedang login (dari halaman Profil). */
+    suspend fun kirimResetSandiAkunIni(): HasilAuth<String> {
+        val email = auth.currentUser?.email ?: return HasilAuth.Gagal("Akun tidak ditemukan. Coba login ulang.")
+        return try {
+            auth.sendPasswordResetEmail(email).await()
+            HasilAuth.Sukses(samarkanEmail(email))
+        } catch (e: Exception) {
+            HasilAuth.Gagal(pesanErrorAuth(e, "mengirim email ganti sandi"))
+        }
+    }
+
+    /** Ubah data profil yang boleh diubah sendiri (peran & status blokir tidak termasuk). */
+    suspend fun perbaruiProfil(uid: String, nama: String, desa: String, divisi: String): HasilAuth<Unit> = try {
+        db.collection(KOLEKSI_USERS).document(uid).update(
+            mapOf(
+                "namaLengkap" to nama.trim(),
+                "desa" to desa.trim(),
+                "divisi" to divisi.trim(),
+            )
+        ).await()
+        HasilAuth.Sukses(Unit)
+    } catch (e: Exception) {
+        HasilAuth.Gagal("Gagal menyimpan profil: ${e.message ?: "kesalahan tidak diketahui"}")
+    }
+
+    // ---- Khusus lobi developer ----
+
+    /** Semua profil akun terdaftar, diurutkan berdasarkan nama. */
+    suspend fun ambilSemuaProfil(): HasilAuth<List<ProfilPengguna>> = try {
+        val snap = db.collection(KOLEKSI_USERS).get().await()
+        val daftar = snap.documents
+            .mapNotNull { it.toObject(ProfilPengguna::class.java) }
+            .sortedBy { it.namaLengkap.lowercase() }
+        HasilAuth.Sukses(daftar)
+    } catch (e: Exception) {
+        HasilAuth.Gagal("Gagal memuat daftar anggota: ${e.message ?: "kesalahan tidak diketahui"}")
+    }
+
+    /** Angka penghitung kuota pendaftaran (dokumen meta/pendaftaran). */
+    suspend fun ambilTotalPendaftaran(): Long = try {
+        db.document(DOC_META_PENDAFTARAN).get().await().getLong("total") ?: 0L
+    } catch (e: Exception) {
+        0L
+    }
+
+    /**
+     * Admin = punya dokumen `admins/{uid}` yang dibuat MANUAL lewat Firebase
+     * Console (klien tidak boleh menulisnya, lihat firestore.rules). Dengan
+     * begitu memilih "Developer" saat daftar tidak otomatis memberi hak
+     * memblokir akun orang lain.
+     */
+    suspend fun apakahAdmin(uid: String): Boolean = try {
+        db.collection(KOLEKSI_ADMINS).document(uid).get().await().exists()
+    } catch (e: Exception) {
+        false
+    }
+
+    suspend fun aturBlokir(uid: String, blokir: Boolean): HasilAuth<Unit> = try {
+        db.collection(KOLEKSI_USERS).document(uid).update("akunDiblokir", blokir).await()
+        HasilAuth.Sukses(Unit)
+    } catch (e: Exception) {
+        HasilAuth.Gagal("Gagal mengubah status blokir. Pastikan akun ini sudah terdaftar sebagai admin di Firebase Console.")
+    }
+
+    private fun samarkanEmail(email: String): String {
+        val at = email.indexOf('@')
+        if (at <= 1) return email
+        val depan = email.substring(0, 1)
+        val bintang = "*".repeat(at - 1)
+        val belakang = email.substring(at)
+        return depan + bintang + belakang
+    }
 
     private fun pesanErrorAuth(e: Exception, konteks: String): String {
         val kode = (e as? FirebaseAuthException)?.errorCode

@@ -41,7 +41,10 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
             Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                 .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 120.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.tekanPegas { onBuka(Tujuan.PROFIL) },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 AvatarGradien("SK", 46.dp)
                 Spacer(Modifier.width(12.dp))
                 Column {
@@ -161,6 +164,7 @@ private fun MenuKartu(tujuan: Tujuan, modifier: Modifier, onClick: () -> Unit) {
         Tujuan.PROKER -> Color(0xFF2E7BD6) to Color(0xFF6BB6FF)
         Tujuan.ARSIP -> Pink to Color(0xFFFF7A9E)
         Tujuan.INVENTARIS -> Color(0xFF7A4BD6) to Color(0xFFC08BFF)
+        Tujuan.PROFIL -> Color(0xFF0E7C9A) to Color(0xFF4FD1E8)
         Tujuan.PENGATURAN -> Color(0xFF5A6072) to Color(0xFF9AA0BF)
     }
     KartuGelap(

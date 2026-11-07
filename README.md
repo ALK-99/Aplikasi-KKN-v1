@@ -81,3 +81,17 @@ Supaya APK hasil GitHub Actions (lihat bagian 3 di bawah) juga punya Firebase ak
 - **Jangan hapus/ganti keystore.** Android hanya mau meng-update jika tanda tangan APK sama.
 - Pertama kali memasang update, Android meminta izin "Pasang aplikasi tidak dikenal" - izinkan, lalu buka ulang app.
 - Backup data: salin HP secara berkala atau tunggu fitur Google Drive/Telegram (ditunda).
+
+## Akun admin (developer)
+
+Memilih peran "Developer" saat daftar hanya mengubah tampilan lobi. Supaya
+akun developer boleh **memblokir/membuka blokir** akun lain dari dalam app:
+
+1. Login sekali sebagai developer, lalu buka Firebase Console > Authentication
+   dan salin **UID** akun itu.
+2. Firestore Database > Start collection > ID koleksi `admins`.
+3. Document ID = UID tadi, isi satu field apa saja (mis. `aktif` = true).
+4. Tempel ulang isi `firestore.rules` ke tab Rules, lalu Publish.
+
+Tanpa langkah ini lobi developer tetap bisa dibuka, tapi hanya mode lihat saja.
+

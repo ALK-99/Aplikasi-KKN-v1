@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Aturan keamanan Firestore untuk Sekretaris KKN.
+// Aturan keamanan Firestore untuk KKN Al-Mushlih 2027.
 //
 // CARA PASANG: Firebase Console > Firestore Database > Rules, tempel isi
 // file ini, lalu Publish. (Belum ada CI otomatis untuk deploy rules ini —
@@ -11,6 +11,7 @@ rules_version = '2';
 // Struktur data:
 //   meta/pendaftaran            { total: number }               -- penghitung kuota 20 akun
 //   nim_index/{nim}              { uid, email } atau { reserved: true } sementara saat daftar
+//   admins/{uid}                 penanda admin, dibuat manual di Console (boleh blokir akun)
 //   users/{uid}                  profil akun (lihat ProfilPengguna.kt)
 //   users/{uid}/uploads/{id}     metadata file yang diunggah pengguna (poin B.5)
 //   users/{uid}/inputs/{id}      input data non-upload milik pengguna (poin B.5)
@@ -22,6 +23,13 @@ service cloud.firestore {
     function sudahLogin() { return request.auth != null; }
     function pemilik(uid) { return sudahLogin() && request.auth.uid == uid; }
 
+    // Admin = akun yang punya dokumen admins/{uid}. Dokumen itu dibuat
+    // MANUAL lewat Firebase Console (klien tidak boleh menulisnya), jadi
+    // memilih peran "Developer" saat daftar tidak otomatis memberi kuasa.
+    function adalahAdmin() {
+      return sudahLogin() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
     // Profil pengguna: siapa saja yang login boleh baca profil dasar
     // (dipakai untuk menampilkan nama anggota lain, mis. di Anggota/Absensi),
     // tapi hanya pemilik akun yang boleh mengubah profilnya sendiri, dan
@@ -32,9 +40,16 @@ service cloud.firestore {
       allow create: if pemilik(uid)
         && request.resource.data.akunDiblokir == false
         && request.resource.data.uid == uid;
-      allow update: if pemilik(uid)
-        && request.resource.data.akunDiblokir == resource.data.akunDiblokir
-        && request.resource.data.peran == resource.data.peran;
+      allow update: if (
+          pemilik(uid)
+          && request.resource.data.akunDiblokir == resource.data.akunDiblokir
+          && request.resource.data.peran == resource.data.peran
+        )
+        // Admin hanya boleh mengubah status blokir, bukan data lain.
+        || (
+          adalahAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['akunDiblokir'])
+        );
       allow delete: if false; // penghapusan akun hanya lewat Firebase Console oleh developer
 
       // Data per-akun: upload, input non-upload, dan log keamanan — semua
@@ -58,6 +73,13 @@ service cloud.firestore {
         allow read: if pemilik(uid);
         allow write: if false; // hanya ditulis lewat Cloud Functions/Console, bukan klien
       }
+    }
+
+    // Daftar admin: pemilik hanya boleh membaca dokumennya sendiri (untuk
+    // tahu apakah dirinya admin). Tidak ada yang boleh menulis dari app.
+    match /admins/{uid} {
+      allow read: if pemilik(uid);
+      allow write: if false;
     }
 
     // Pemetaan NIM -> email, dipakai saat login (resolusi NIM ke email

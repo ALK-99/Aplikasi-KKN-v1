@@ -20,6 +20,7 @@ import com.kkn.almufid.sekretaris.data.local.SesiLokal
 import com.kkn.almufid.sekretaris.ui.auth.AuthFlow
 import com.kkn.almufid.sekretaris.ui.auth.AuthViewModel
 import com.kkn.almufid.sekretaris.ui.developer.DeveloperLobbyScreen
+import com.kkn.almufid.sekretaris.ui.developer.DeveloperViewModel
 import com.kkn.almufid.sekretaris.ui.navigation.AppNav
 import com.kkn.almufid.sekretaris.ui.theme.Ground
 import com.kkn.almufid.sekretaris.ui.theme.TeksUtama
@@ -62,10 +63,15 @@ fun RootApp() {
                     authRepo.logout()
                     status = StatusRoot.PerluAuth
                 })
-                Peran.DEVELOPER -> DeveloperLobbyScreen(onLogout = {
-                    authRepo.logout()
-                    status = StatusRoot.PerluAuth
-                })
+                Peran.DEVELOPER -> {
+                    val devVm: DeveloperViewModel = viewModel(
+                        factory = GenericViewModelFactory { DeveloperViewModel(authRepo) }
+                    )
+                    DeveloperLobbyScreen(devVm, onLogout = {
+                        authRepo.logout()
+                        status = StatusRoot.PerluAuth
+                    })
+                }
             }
         }
     }

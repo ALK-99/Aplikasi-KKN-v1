@@ -43,6 +43,8 @@ fun LoginScreen(vm: AuthViewModel, onMasuk: (Peran) -> Unit) {
     var password by remember { mutableStateOf("") }
     var ingatSaya by remember { mutableStateOf(vm.ingatSayaDisimpan) }
     var sandiTerlihat by remember { mutableStateOf(false) }
+    var dialogReset by remember { mutableStateOf(false) }
+    val pesanInfo by vm.pesanInfo.collectAsState()
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 26.dp),
@@ -94,12 +96,7 @@ fun LoginScreen(vm: AuthViewModel, onMasuk: (Peran) -> Unit) {
             }
             Text(
                 "Lupa sandi?", fontSize = 13.sp, color = VioletTerang, fontWeight = FontWeight.Bold,
-                modifier = Modifier.tekanPegas {
-                    val pesan = Uri.encode("Halo admin, saya lupa sandi akun KKN Al-Mushlih 2027. Mohon bantuannya.")
-                    context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/62${NOMOR_ADMIN.removePrefix("0")}?text=$pesan"))
-                    )
-                }
+                modifier = Modifier.tekanPegas { dialogReset = true }
             )
         }
 
@@ -120,6 +117,36 @@ fun LoginScreen(vm: AuthViewModel, onMasuk: (Peran) -> Unit) {
     }
 
     pesanError?.let { DialogInfo(judul = "Tidak bisa masuk", pesan = it, onTutup = vm::tutupError) }
+    pesanInfo?.let { DialogInfo(judul = "Cek email Anda", pesan = it, onTutup = vm::tutupInfo) }
+    if (dialogReset) {
+        var nimReset by remember { mutableStateOf(nim) }
+        AlertDialog(
+            onDismissRequest = { dialogReset = false },
+            containerColor = Surface1,
+            titleContentColor = TeksUtama,
+            textContentColor = TeksSoft,
+            title = { Text("Reset sandi", fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Column {
+                    Text("Masukkan NIM Anda. Tautan untuk membuat sandi baru akan dikirim ke email yang dipakai saat daftar.")
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = nimReset, onValueChange = { nimReset = it },
+                        label = { Text("NIM") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth(), colors = kolomWarna(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { dialogReset = false; vm.kirimResetSandi(nimReset) }) {
+                    Text("Kirim Email", color = VioletTerang, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { dialogReset = false }) { Text("Batal", color = TeksRedup) }
+            }
+        )
+    }
     if (popupGagal) DialogInfo(judul = "Gagal Login!", pesan = "NIM atau sandi salah. Coba periksa lagi.", onTutup = vm::tutupPopupGagalLogin)
     if (popupLimit) {
         DialogInfo(

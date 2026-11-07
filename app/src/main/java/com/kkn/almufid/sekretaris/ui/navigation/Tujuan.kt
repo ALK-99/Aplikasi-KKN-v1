@@ -12,6 +12,7 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     PROKER("proker", "Program Kerja", Icons.Default.Checklist),
     ARSIP("arsip", "Arsip Nota", Icons.Default.Receipt),
     INVENTARIS("inventaris", "Inventaris Posko", Icons.Default.Inventory2),
+    PROFIL("profil", "Profil Saya", Icons.Default.Person),
     PENGATURAN("pengaturan", "Pengaturan", Icons.Default.Settings);
 
     companion object {
