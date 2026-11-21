@@ -25,6 +25,7 @@ import com.kkn.almufid.sekretaris.ui.screens.inventaris.InventarisViewModel
 import com.kkn.almufid.sekretaris.ui.screens.jurnal.JurnalScreen
 import com.kkn.almufid.sekretaris.ui.screens.jurnal.JurnalViewModel
 import com.kkn.almufid.sekretaris.data.auth.AuthRepository
+import com.kkn.almufid.sekretaris.data.cloud.JurnalBersamaRepository
 import com.kkn.almufid.sekretaris.ui.screens.pengaturan.PengaturanScreen
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilScreen
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilViewModel
@@ -79,7 +80,7 @@ fun AppNav(onLogout: () -> Unit = {}) {
                     HomeScreen(vm, onBuka = { navController.navigate(it.rute) { launchSingleTop = true } })
                 }
                 composable(Tujuan.JURNAL.rute) {
-                    val vm: JurnalViewModel = viewModel(factory = GenericViewModelFactory { JurnalViewModel(db.jurnalDao()) })
+                    val vm: JurnalViewModel = viewModel(factory = GenericViewModelFactory { JurnalViewModel(db.jurnalDao(), JurnalBersamaRepository(), AuthRepository()) })
                     JurnalScreen(vm)
                 }
                 composable(Tujuan.ABSENSI.rute) {

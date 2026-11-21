@@ -11,6 +11,7 @@ rules_version = '2';
 // Struktur data:
 //   meta/pendaftaran            { total: number }               -- penghitung kuota 20 akun
 //   nim_index/{nim}              { uid, email } atau { reserved: true } sementara saat daftar
+//   jurnal_bersama/{id}          jurnal yang dibagikan ke semua pengguna (ubah hanya oleh penulis)
 //   admins/{uid}                 penanda admin, dibuat manual di Console (boleh blokir akun)
 //   users/{uid}                  profil akun (lihat ProfilPengguna.kt)
 //   users/{uid}/uploads/{id}     metadata file yang diunggah pengguna (poin B.5)
@@ -106,6 +107,18 @@ service cloud.firestore {
     match /meta/pendaftaran {
       allow read: if true;
       allow write: if sudahLogin();
+    }
+
+    // Jurnal Bersama: semua pengguna yang login boleh membaca dan menambah
+    // (atas nama dirinya sendiri). Hanya PENULIS yang boleh mengubah/
+    // menandai-hapus entrinya, dan penulisUid tidak boleh dialihkan.
+    match /jurnal_bersama/{id} {
+      allow read: if sudahLogin();
+      allow create: if sudahLogin() && request.resource.data.penulisUid == request.auth.uid;
+      allow update: if sudahLogin()
+        && resource.data.penulisUid == request.auth.uid
+        && request.resource.data.penulisUid == resource.data.penulisUid;
+      allow delete: if false;
     }
 
     // Saran & masukan dari menu Pengaturan (poin A.3) — siapa saja yang
