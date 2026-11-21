@@ -2,6 +2,7 @@ package com.kkn.almufid.sekretaris
 
 import android.app.Application
 import com.kkn.almufid.sekretaris.data.AppDatabase
+import com.kkn.almufid.sekretaris.update.UpdateWorker
 
 /**
  * Sengaja TIDAK memakai Hilt/Dagger. Untuk aplikasi seukuran ini,
@@ -12,4 +13,10 @@ import com.kkn.almufid.sekretaris.data.AppDatabase
  */
 class SekretarisApp : Application() {
     val database: AppDatabase by lazy { AppDatabase.getInstance(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        // Cek update berkala di latar belakang (senyap, hanya saat ada internet).
+        try { UpdateWorker.jadwalkan(this) } catch (e: Exception) { /* jangan crash karena ini */ }
+    }
 }

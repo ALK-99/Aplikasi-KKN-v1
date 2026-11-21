@@ -41,6 +41,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Menerima hasil pemasangan update senyap dari sistem -->
+        <receiver
+            android:name=".update.HasilUpdateReceiver"
+            android:exported="false" />
+
         <!-- FileProvider: dipakai untuk membagikan foto nota (share) dan
              untuk membuka file APK hasil unduhan update agar bisa diinstal. -->
         <provider

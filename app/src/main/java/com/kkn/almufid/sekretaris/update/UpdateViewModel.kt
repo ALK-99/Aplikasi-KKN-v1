@@ -28,7 +28,19 @@ class UpdateViewModel(private val appContext: Context) : ViewModel() {
         if (sudahCek) return
         sudahCek = true
         viewModelScope.launch {
-            UpdateChecker.cek()?.let { _status.value = StatusUpdate.Tersedia(it) }
+            val info = UpdateChecker.cek()
+            if (info == null) {
+                PrefUpdate.setMenunggu(appContext, false)
+                return@launch
+            }
+            if (PrefUpdate.menunggu(appContext)) {
+                // Pemasangan senyap tidak berhasil (mis. pertama kali / HP menolak):
+                // tampilkan pop-up manual sebagai cadangan.
+                _status.value = StatusUpdate.Tersedia(info)
+            } else {
+                // Normal: unduh & pasang diam-diam di latar belakang, tanpa pop-up.
+                UpdateWorker.jalankanSekarang(appContext)
+            }
         }
     }
 

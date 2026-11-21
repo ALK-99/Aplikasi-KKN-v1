@@ -128,6 +128,9 @@ object UpdateChecker {
             )
             return false
         }
+        // Pasang lewat sesi PackageInstaller milik app ini, supaya app tercatat
+        // sebagai pemasang dan update berikutnya bisa berjalan senyap.
+        if (UpdateInstaller.pasangSenyap(context, apk)) return true
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apk)
         context.startActivity(
             Intent(Intent.ACTION_VIEW)
