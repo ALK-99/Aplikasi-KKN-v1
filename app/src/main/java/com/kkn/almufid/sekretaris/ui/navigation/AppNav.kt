@@ -26,6 +26,15 @@ import com.kkn.almufid.sekretaris.ui.screens.jurnal.JurnalScreen
 import com.kkn.almufid.sekretaris.ui.screens.jurnal.JurnalViewModel
 import com.kkn.almufid.sekretaris.data.auth.AuthRepository
 import com.kkn.almufid.sekretaris.data.cloud.JurnalBersamaRepository
+import com.kkn.almufid.sekretaris.data.cloud.KoordinasiRepository
+import com.kkn.almufid.sekretaris.ui.screens.ibadah.IbadahScreen
+import com.kkn.almufid.sekretaris.ui.screens.laporan.LaporanScreen
+import com.kkn.almufid.sekretaris.ui.screens.laporan.LaporanViewModel
+import com.kkn.almufid.sekretaris.ui.screens.koordinasi.KasScreen
+import com.kkn.almufid.sekretaris.ui.screens.koordinasi.KoordinasiViewModel
+import com.kkn.almufid.sekretaris.ui.screens.koordinasi.PengumumanScreen
+import com.kkn.almufid.sekretaris.ui.screens.koordinasi.PollingScreen
+import com.kkn.almufid.sekretaris.ui.screens.koordinasi.TugasScreen
 import com.kkn.almufid.sekretaris.ui.screens.pengaturan.PengaturanScreen
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilScreen
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilViewModel
@@ -102,6 +111,29 @@ fun AppNav(onLogout: () -> Unit = {}) {
                 composable(Tujuan.INVENTARIS.rute) {
                     val vm: InventarisViewModel = viewModel(factory = GenericViewModelFactory { InventarisViewModel(db.inventarisDao()) })
                     InventarisScreen(vm)
+                }
+                composable(Tujuan.PENGUMUMAN.rute) {
+                    val vm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })
+                    PengumumanScreen(vm)
+                }
+                composable(Tujuan.POLLING.rute) {
+                    val vm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })
+                    PollingScreen(vm)
+                }
+                composable(Tujuan.TUGAS.rute) {
+                    val vm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })
+                    TugasScreen(vm)
+                }
+                composable(Tujuan.KAS.rute) {
+                    val vm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })
+                    KasScreen(vm)
+                }
+                composable(Tujuan.IBADAH.rute) { IbadahScreen() }
+                composable(Tujuan.LAPORAN.rute) {
+                    val vm: LaporanViewModel = viewModel(factory = GenericViewModelFactory {
+                        LaporanViewModel(app.applicationContext, db, JurnalBersamaRepository(), KoordinasiRepository())
+                    })
+                    LaporanScreen(vm)
                 }
                 composable(Tujuan.PROFIL.rute) {
                     val vm: ProfilViewModel = viewModel(factory = GenericViewModelFactory { ProfilViewModel(AuthRepository()) })

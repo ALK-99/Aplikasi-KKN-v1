@@ -21,6 +21,8 @@ import com.kkn.almufid.sekretaris.ui.auth.AuthFlow
 import com.kkn.almufid.sekretaris.ui.auth.AuthViewModel
 import com.kkn.almufid.sekretaris.ui.developer.DeveloperLobbyScreen
 import com.kkn.almufid.sekretaris.ui.developer.DeveloperViewModel
+import com.kkn.almufid.sekretaris.data.cloud.JurnalBersamaRepository
+import com.kkn.almufid.sekretaris.data.cloud.KoordinasiRepository
 import com.kkn.almufid.sekretaris.ui.navigation.AppNav
 import com.kkn.almufid.sekretaris.ui.theme.Ground
 import com.kkn.almufid.sekretaris.ui.theme.TeksUtama
@@ -65,7 +67,7 @@ fun RootApp() {
                 })
                 Peran.DEVELOPER -> {
                     val devVm: DeveloperViewModel = viewModel(
-                        factory = GenericViewModelFactory { DeveloperViewModel(authRepo) }
+                        factory = GenericViewModelFactory { DeveloperViewModel(authRepo, KoordinasiRepository(), JurnalBersamaRepository()) }
                     )
                     DeveloperLobbyScreen(devVm, onLogout = {
                         authRepo.logout()

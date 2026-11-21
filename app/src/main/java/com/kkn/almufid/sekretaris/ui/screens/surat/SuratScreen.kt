@@ -63,6 +63,7 @@ fun SuratScreen(viewModel: SuratViewModel) {
 
     if (dialogTerbuka) {
         DialogTambahSurat(
+            saranNomor = { viewModel.nomorBerikutnya(it) },
             onTutup = { dialogTerbuka = false },
             onSimpan = { jenis, nomor, perihal, tujuan ->
                 viewModel.tambahSurat(jenis, nomor, perihal, tujuan)
@@ -97,6 +98,7 @@ private fun KartuSurat(surat: SuratEntry, modifier: Modifier, onHapus: () -> Uni
 
 @Composable
 private fun DialogTambahSurat(
+    saranNomor: (JenisSurat) -> String,
     onTutup: () -> Unit,
     onSimpan: (JenisSurat, String, String, String) -> Unit
 ) {
@@ -120,6 +122,7 @@ private fun DialogTambahSurat(
                     label = { Text("Nomor surat (opsional)") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                TextButton(onClick = { nomor = saranNomor(jenis) }) { Text("Isi nomor otomatis") }
                 OutlinedTextField(
                     value = perihal, onValueChange = { perihal = it },
                     label = { Text("Perihal") }, modifier = Modifier.fillMaxWidth()

@@ -26,6 +26,7 @@ import com.kkn.almufid.sekretaris.ui.components.AvatarGradien
 import com.kkn.almufid.sekretaris.ui.components.KartuGelap
 import com.kkn.almufid.sekretaris.ui.components.inisialDari
 import com.kkn.almufid.sekretaris.ui.components.tekanPegas
+import com.kkn.almufid.sekretaris.ui.formatRupiah
 import com.kkn.almufid.sekretaris.ui.theme.*
 
 /**
@@ -37,6 +38,10 @@ import com.kkn.almufid.sekretaris.ui.theme.*
 fun DeveloperLobbyScreen(vm: DeveloperViewModel, onLogout: () -> Unit) {
     val status by vm.status.collectAsState()
     val pesan by vm.pesan.collectAsState()
+    val jurnal by vm.jurnalBersama.collectAsState()
+    val tugas by vm.tugas.collectAsState()
+    val kas by vm.kas.collectAsState()
+    val saldo = kas.filter { it.masuk }.sumOf { it.jumlah } - kas.filter { !it.masuk }.sumOf { it.jumlah }
     val diblokir = status.daftar.count { it.akunDiblokir }
     val aktif = status.daftar.size - diblokir
 
@@ -68,6 +73,13 @@ fun DeveloperLobbyScreen(vm: DeveloperViewModel, onLogout: () -> Unit) {
                 KartuAngka("${status.totalPendaftaran}", "Terdaftar", Modifier.weight(1f))
                 KartuAngka("$aktif", "Aktif", Modifier.weight(1f))
                 KartuAngka("$diblokir", "Diblokir", Modifier.weight(1f))
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                KartuAngka("${jurnal.size}", "Jurnal bersama", Modifier.weight(1f))
+                KartuAngka("${tugas.count { it.selesai }}/${tugas.size}", "Tugas selesai", Modifier.weight(1f))
+                KartuAngka(formatRupiah(saldo), "Saldo kas", Modifier.weight(1f))
             }
         }
         if (!status.sedangMuat && !status.admin) {
@@ -115,7 +127,7 @@ fun DeveloperLobbyScreen(vm: DeveloperViewModel, onLogout: () -> Unit) {
 @Composable
 private fun KartuAngka(angka: String, label: String, modifier: Modifier) {
     KartuGelap(modifier) {
-        Text(angka, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        Text(angka, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(label, fontSize = 11.sp, color = TeksRedup)
     }
 }

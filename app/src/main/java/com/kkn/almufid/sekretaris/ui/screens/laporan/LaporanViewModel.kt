@@ -1,0 +1,213 @@
+package com.kkn.almufid.sekretaris.ui.screens.laporan
+
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.kkn.almufid.sekretaris.data.AppDatabase
+import com.kkn.almufid.sekretaris.data.cloud.JurnalBersamaRepository
+import com.kkn.almufid.sekretaris.data.cloud.KoordinasiRepository
+import com.kkn.almufid.sekretaris.ui.formatRupiah
+import com.kkn.almufid.sekretaris.ui.formatTanggal
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+
+enum class JenisLaporan(val judul: String, val keterangan: String, val mime: String) {
+    JURNAL_BERSAMA_PDF("Jurnal Bersama (PDF)", "Semua jurnal yang dibagikan, urut tanggal", "application/pdf"),
+    JURNAL_PRIBADI_PDF("Jurnal Pribadi (PDF)", "Catatan pribadi di HP ini", "application/pdf"),
+    KAS_PDF("Kas Kelompok (PDF)", "Saldo dan seluruh transaksi", "application/pdf"),
+    REKAP_MINGGUAN_PDF("Rekap 7 Hari Terakhir (PDF)", "Jurnal, tugas, dan kas seminggu ini", "application/pdf"),
+    ABSENSI_CSV("Absensi (CSV)", "Bisa dibuka di Excel", "text/csv"),
+    INVENTARIS_CSV("Inventaris (CSV)", "Daftar barang dan kondisinya", "text/csv"),
+    TUGAS_CSV("Tugas (CSV)", "Semua tugas, penerima, dan status", "text/csv"),
+    BACKUP_JSON("Backup Semua Data (JSON)", "Cadangan data di HP + data bersama", "application/json"),
+}
+
+class LaporanViewModel(
+    private val appContext: Context,
+    private val db: AppDatabase,
+    private val bersama: JurnalBersamaRepository,
+    private val koordinasi: KoordinasiRepository,
+) : ViewModel() {
+
+    private val _sedangProses = MutableStateFlow(false)
+    val sedangProses: StateFlow<Boolean> = _sedangProses.asStateFlow()
+
+    private val _pesan = MutableStateFlow<String?>(null)
+    val pesan: StateFlow<String?> = _pesan.asStateFlow()
+
+    fun tutupPesan() { _pesan.value = null }
+
+    fun buat(jenis: JenisLaporan, onSiap: (File, String) -> Unit) {
+        if (_sedangProses.value) return
+        _sedangProses.value = true
+        viewModelScope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) { bangun(jenis) }
+                onSiap(file, jenis.mime)
+            } catch (e: Exception) {
+                _pesan.value = "Gagal membuat laporan: ${e.message ?: "kesalahan tidak diketahui"}"
+            } finally {
+                _sedangProses.value = false
+            }
+        }
+    }
+
+    /** Data cloud diambil dengan batas waktu supaya tidak menggantung kalau offline dan belum pernah tersinkron. */
+    private suspend fun <T> ambil(alir: Flow<List<T>>): List<T> =
+        withTimeoutOrNull(8000) { alir.first() } ?: emptyList()
+
+    private suspend fun bangun(jenis: JenisLaporan): File {
+        val sekarang = System.currentTimeMillis()
+        val cap = "KKN Al-Mushlih 2027 · dibuat ${formatTanggal(sekarang)}"
+        return when (jenis) {
+            JenisLaporan.JURNAL_BERSAMA_PDF -> {
+                val data = ambil(bersama.alirSemua()).sortedBy { it.tanggalMillis }
+                val baris = data.map {
+                    "${formatTanggal(it.tanggalMillis)} · ${it.penulisNama}${if (it.desa.isNotBlank()) " (${it.desa})" else ""}\n" +
+                        "${it.judul}\n${it.isi}" +
+                        (if (it.pesertaRapat.isNotBlank()) "\nPeserta: ${it.pesertaRapat}" else "") + "\n"
+                }
+                PembuatLaporan.pdf(appContext, "jurnal-bersama.pdf", "Jurnal Bersama", cap, baris.ifEmpty { listOf("Belum ada data.") })
+            }
+            JenisLaporan.JURNAL_PRIBADI_PDF -> {
+                val data = db.jurnalDao().semuaJurnal().first().sortedBy { it.tanggalMillis }
+                val baris = data.map {
+                    "${formatTanggal(it.tanggalMillis)} · ${it.jenis.name}\n${it.judul}\n${it.isi}" +
+                        (if (it.pesertaRapat.isNotBlank()) "\nPeserta: ${it.pesertaRapat}" else "") + "\n"
+                }
+                PembuatLaporan.pdf(appContext, "jurnal-pribadi.pdf", "Jurnal Pribadi", cap, baris.ifEmpty { listOf("Belum ada data.") })
+            }
+            JenisLaporan.KAS_PDF -> {
+                val data = ambil(koordinasi.alirKas()).sortedBy { it.tanggalMillis }
+                val masuk = data.filter { it.masuk }.sumOf { it.jumlah }
+                val keluar = data.filter { !it.masuk }.sumOf { it.jumlah }
+                val baris = mutableListOf(
+                    "Pemasukan : ${formatRupiah(masuk)}",
+                    "Pengeluaran: ${formatRupiah(keluar)}",
+                    "SALDO      : ${formatRupiah(masuk - keluar)}",
+                    ""
+                )
+                data.forEach {
+                    baris += "${formatTanggal(it.tanggalMillis)} | ${if (it.masuk) "MASUK " else "KELUAR"} | " +
+                        "${formatRupiah(it.jumlah)} | ${it.kategori} ${it.keterangan}".trim()
+                }
+                PembuatLaporan.pdf(appContext, "kas.pdf", "Laporan Kas Kelompok", cap, baris)
+            }
+            JenisLaporan.REKAP_MINGGUAN_PDF -> {
+                val batas = sekarang - 7L * 86_400_000L
+                val jurnal = ambil(bersama.alirSemua()).filter { it.tanggalMillis >= batas }.sortedBy { it.tanggalMillis }
+                val tugas = ambil(koordinasi.alirTugas())
+                val kas = ambil(koordinasi.alirKas()).filter { it.tanggalMillis >= batas }
+                val baris = mutableListOf<String>()
+                baris += "KEGIATAN (${jurnal.size} jurnal bersama)"
+                jurnal.forEach { baris += "- ${formatTanggal(it.tanggalMillis)}: ${it.judul} (${it.penulisNama})" }
+                baris += ""
+                baris += "TUGAS"
+                baris += "Selesai ${tugas.count { it.selesai }} dari ${tugas.size} tugas"
+                tugas.filter { !it.selesai && it.deadlineMillis + 86_400_000L < sekarang }
+                    .forEach { baris += "- Terlambat: ${it.judul} (${it.untukNama})" }
+                baris += ""
+                baris += "KAS 7 HARI"
+                baris += "Masuk ${formatRupiah(kas.filter { it.masuk }.sumOf { it.jumlah })}, " +
+                    "keluar ${formatRupiah(kas.filter { !it.masuk }.sumOf { it.jumlah })}"
+                PembuatLaporan.pdf(appContext, "rekap-mingguan.pdf", "Rekap 7 Hari Terakhir", cap, baris)
+            }
+            JenisLaporan.ABSENSI_CSV -> {
+                val nama = db.anggotaDao().semuaAnggota().first().associate { it.id to it.nama }
+                val data = db.absensiDao().semuaAbsensi().first()
+                PembuatLaporan.csv(
+                    appContext, "absensi.csv", listOf("Tanggal", "Nama", "Status", "Keterangan"),
+                    data.map { listOf(formatTanggal(it.tanggalMillis).substringBefore(","), nama[it.anggotaId] ?: "?", if (it.hadir) "Hadir" else "Tidak hadir", it.keterangan) }
+                )
+            }
+            JenisLaporan.INVENTARIS_CSV -> {
+                val data = db.inventarisDao().semuaInventaris().first()
+                PembuatLaporan.csv(
+                    appContext, "inventaris.csv", listOf("Barang", "Jumlah", "Kondisi", "Keterangan"),
+                    data.map { listOf(it.namaBarang, it.jumlah.toString(), it.kondisi, it.keterangan) }
+                )
+            }
+            JenisLaporan.TUGAS_CSV -> {
+                val data = ambil(koordinasi.alirTugas()).sortedBy { it.deadlineMillis }
+                PembuatLaporan.csv(
+                    appContext, "tugas.csv", listOf("Tugas", "Untuk", "Tenggat", "Status", "Keterangan"),
+                    data.map { listOf(it.judul, it.untukNama, formatTanggal(it.deadlineMillis).substringBefore(","), if (it.selesai) "Selesai" else "Belum", it.deskripsi) }
+                )
+            }
+            JenisLaporan.BACKUP_JSON -> {
+                val root = JSONObject()
+                root.put("dibuat", sekarang)
+                root.put("jurnal_pribadi", JSONArray().also { a ->
+                    db.jurnalDao().semuaJurnal().first().forEach {
+                        a.put(JSONObject().put("tanggal", it.tanggalMillis).put("jenis", it.jenis.name)
+                            .put("judul", it.judul).put("isi", it.isi).put("peserta", it.pesertaRapat))
+                    }
+                })
+                root.put("anggota", JSONArray().also { a ->
+                    db.anggotaDao().semuaAnggota().first().forEach {
+                        a.put(JSONObject().put("id", it.id).put("nama", it.nama).put("divisi", it.divisi))
+                    }
+                })
+                root.put("absensi", JSONArray().also { a ->
+                    db.absensiDao().semuaAbsensi().first().forEach {
+                        a.put(JSONObject().put("anggotaId", it.anggotaId).put("tanggal", it.tanggalMillis)
+                            .put("hadir", it.hadir).put("keterangan", it.keterangan))
+                    }
+                })
+                root.put("proker", JSONArray().also { a ->
+                    db.prokerDao().semuaProker().first().forEach {
+                        a.put(JSONObject().put("nama", it.namaProker).put("divisi", it.divisiPenanggungJawab)
+                            .put("status", it.status.name).put("evaluasi", it.catatanEvaluasi))
+                    }
+                })
+                root.put("inventaris", JSONArray().also { a ->
+                    db.inventarisDao().semuaInventaris().first().forEach {
+                        a.put(JSONObject().put("barang", it.namaBarang).put("jumlah", it.jumlah)
+                            .put("kondisi", it.kondisi).put("keterangan", it.keterangan))
+                    }
+                })
+                root.put("surat", JSONArray().also { a ->
+                    db.suratDao().semuaSurat().first().forEach {
+                        a.put(JSONObject().put("tanggal", it.tanggalMillis).put("jenis", it.jenis.name)
+                            .put("nomor", it.nomorSurat).put("perihal", it.perihal).put("pihak", it.tujuanAtauPengirim))
+                    }
+                })
+                root.put("nota", JSONArray().also { a ->
+                    db.notaDao().semuaNota().first().forEach {
+                        a.put(JSONObject().put("tanggal", it.tanggalMillis).put("keterangan", it.keterangan)
+                            .put("nominal", it.nominal).put("proker", it.prokerTerkait))
+                    }
+                })
+                root.put("jurnal_bersama", JSONArray().also { a ->
+                    ambil(bersama.alirSemua()).forEach {
+                        a.put(JSONObject().put("tanggal", it.tanggalMillis).put("penulis", it.penulisNama).put("desa", it.desa)
+                            .put("jenis", it.jenis).put("judul", it.judul).put("isi", it.isi).put("peserta", it.pesertaRapat))
+                    }
+                })
+                root.put("tugas", JSONArray().also { a ->
+                    ambil(koordinasi.alirTugas()).forEach {
+                        a.put(JSONObject().put("judul", it.judul).put("untuk", it.untukNama)
+                            .put("tenggat", it.deadlineMillis).put("selesai", it.selesai))
+                    }
+                })
+                root.put("kas", JSONArray().also { a ->
+                    ambil(koordinasi.alirKas()).forEach {
+                        a.put(JSONObject().put("tanggal", it.tanggalMillis).put("masuk", it.masuk)
+                            .put("jumlah", it.jumlah).put("kategori", it.kategori).put("keterangan", it.keterangan))
+                    }
+                })
+                PembuatLaporan.teks(appContext, "backup-kkn.json", root.toString(2))
+            }
+        }
+    }
+}

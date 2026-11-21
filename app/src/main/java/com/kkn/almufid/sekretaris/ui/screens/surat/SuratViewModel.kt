@@ -30,6 +30,18 @@ class SuratViewModel(private val dao: SuratDao) : ViewModel() {
         }
     }
 
+    /** Saran nomor berurutan per jenis, per tahun: mis. 003/KKN-AM/XI/2026. */
+    fun nomorBerikutnya(jenis: JenisSurat): String {
+        val kal = java.util.Calendar.getInstance()
+        val tahun = kal.get(java.util.Calendar.YEAR)
+        val romawi = listOf("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII")[kal.get(java.util.Calendar.MONTH)]
+        val urut = daftarSurat.value.count {
+            it.jenis == jenis && java.util.Calendar.getInstance().apply { timeInMillis = it.tanggalMillis }.get(java.util.Calendar.YEAR) == tahun
+        } + 1
+        val kode = if (jenis == JenisSurat.KELUAR) "KKN-AM" else "MSK"
+        return "%03d/%s/%s/%d".format(urut, kode, romawi, tahun)
+    }
+
     fun hapusSurat(entry: SuratEntry) {
         viewModelScope.launch { dao.hapus(entry) }
     }

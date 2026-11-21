@@ -12,6 +12,12 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     PROKER("proker", "Program Kerja", Icons.Default.Checklist),
     ARSIP("arsip", "Arsip Nota", Icons.Default.Receipt),
     INVENTARIS("inventaris", "Inventaris Posko", Icons.Default.Inventory2),
+    PENGUMUMAN("pengumuman", "Pengumuman", Icons.Default.Campaign),
+    POLLING("polling", "Polling", Icons.Default.Poll),
+    TUGAS("tugas", "Tugas & Kalender", Icons.Default.Event),
+    KAS("kas", "Kas Kelompok", Icons.Default.AccountBalanceWallet),
+    IBADAH("ibadah", "Waktu Sholat", Icons.Default.AccessTime),
+    LAPORAN("laporan", "Laporan & Backup", Icons.Default.Description),
     PROFIL("profil", "Profil Saya", Icons.Default.Person),
     PENGATURAN("pengaturan", "Pengaturan", Icons.Default.Settings);
 

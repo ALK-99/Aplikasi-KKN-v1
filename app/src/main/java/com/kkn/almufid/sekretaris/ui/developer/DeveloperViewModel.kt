@@ -5,6 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.kkn.almufid.sekretaris.data.auth.AuthRepository
 import com.kkn.almufid.sekretaris.data.auth.HasilAuth
 import com.kkn.almufid.sekretaris.data.auth.ProfilPengguna
+import com.kkn.almufid.sekretaris.data.cloud.JurnalBersama
+import com.kkn.almufid.sekretaris.data.cloud.JurnalBersamaRepository
+import com.kkn.almufid.sekretaris.data.cloud.Kas
+import com.kkn.almufid.sekretaris.data.cloud.KoordinasiRepository
+import com.kkn.almufid.sekretaris.data.cloud.Tugas
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +24,20 @@ data class StatusDeveloper(
     val totalPendaftaran: Long = 0L,
 )
 
-class DeveloperViewModel(private val repo: AuthRepository) : ViewModel() {
+class DeveloperViewModel(
+    private val repo: AuthRepository,
+    koordinasi: KoordinasiRepository,
+    bersama: JurnalBersamaRepository,
+) : ViewModel() {
+
+    // Ringkasan dashboard (real-time dari Firestore).
+    val jurnalBersama: StateFlow<List<JurnalBersama>> = bersama.alirSemua()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val tugas: StateFlow<List<Tugas>> = koordinasi.alirTugas()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val kas: StateFlow<List<Kas>> = koordinasi.alirKas()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
 
     private val _status = MutableStateFlow(StatusDeveloper())
     val status: StateFlow<StatusDeveloper> = _status.asStateFlow()

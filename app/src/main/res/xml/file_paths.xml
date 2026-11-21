@@ -2,6 +2,8 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Foto nota/kwitansi disimpan di sini (internal storage, offline) -->
     <files-path name="nota_photos" path="nota_photos/" />
+    <!-- Berkas laporan (PDF/CSV/JSON) sebelum dibagikan -->
+    <cache-path name="laporan" path="laporan/" />
     <!-- APK update yang diunduh disimpan sementara di sini -->
     <cache-path name="updates" path="updates/" />
 </paths>
