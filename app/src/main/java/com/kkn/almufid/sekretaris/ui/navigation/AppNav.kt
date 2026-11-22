@@ -36,6 +36,7 @@ import com.kkn.almufid.sekretaris.ui.screens.koordinasi.PengumumanScreen
 import com.kkn.almufid.sekretaris.ui.screens.koordinasi.PollingScreen
 import com.kkn.almufid.sekretaris.ui.screens.koordinasi.TugasScreen
 import com.kkn.almufid.sekretaris.ui.screens.pengaturan.PengaturanScreen
+import com.kkn.almufid.sekretaris.ui.screens.peta.PetaScreen
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilScreen
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilViewModel
 import com.kkn.almufid.sekretaris.ui.screens.proker.ProkerScreen
@@ -85,7 +86,9 @@ fun AppNav(onLogout: () -> Unit = {}) {
                 popExitTransition = { slideOutHorizontally(tween(250)) { it / 6 } + fadeOut(tween(250)) }
             ) {
                 composable(Tujuan.RUTE_HOME) {
-                    val vm: HomeViewModel = viewModel(factory = GenericViewModelFactory { HomeViewModel(db.prokerDao(), db.anggotaDao()) })
+                    val vm: HomeViewModel = viewModel(factory = GenericViewModelFactory {
+                        HomeViewModel(db.prokerDao(), db.anggotaDao(), KoordinasiRepository(), AuthRepository())
+                    })
                     HomeScreen(vm, onBuka = { navController.navigate(it.rute) { launchSingleTop = true } })
                 }
                 composable(Tujuan.JURNAL.rute) {
@@ -129,6 +132,7 @@ fun AppNav(onLogout: () -> Unit = {}) {
                     KasScreen(vm)
                 }
                 composable(Tujuan.IBADAH.rute) { IbadahScreen() }
+                composable(Tujuan.PETA.rute) { PetaScreen() }
                 composable(Tujuan.LAPORAN.rute) {
                     val vm: LaporanViewModel = viewModel(factory = GenericViewModelFactory {
                         LaporanViewModel(app.applicationContext, db, JurnalBersamaRepository(), KoordinasiRepository())
