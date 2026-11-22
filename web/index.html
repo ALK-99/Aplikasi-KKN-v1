@@ -42,7 +42,7 @@ tr:last-child td{border-bottom:0}.wrap{overflow:auto;border-radius:14px}
   <button id="masuk" style="width:100%;margin-top:6px">Masuk</button>
 </div>
 <div id="app" hidden>
-  <header><h1>KKN Al-Mushlih 2027 · <span id="desa"></span></h1><small id="siapa"></small><button class="sek" id="keluar">Keluar</button></header>
+  <header><h1>KKN Al-Mushlih 2027 · <span id="desa"></span></h1><small id="siapa"></small><button class="sek" id="gantiCfg" title="Ganti konfigurasi Firebase">Konfigurasi</button><button class="sek" id="keluar">Keluar</button></header>
   <nav id="tab"></nav>
   <main id="isi"></main>
 </div>
@@ -50,8 +50,34 @@ tr:last-child td{border-bottom:0}.wrap{overflow:auto;border-radius:14px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
+<div id="setup" hidden style="max-width:560px;margin:8vh auto;background:var(--s1);padding:26px;border-radius:18px;border:1px solid var(--line)">
+  <h2 style="margin:0 0 6px">Pengaturan awal (sekali saja)</h2>
+  <p style="color:var(--soft)">Tempel konfigurasi Web app dari Firebase Console (Project settings > Your apps > Web > firebaseConfig). Boleh dengan atau tanpa tanda kurung kurawal.</p>
+  <textarea id="cfg" rows="8" style="width:100%;font:12px monospace;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--s2);color:var(--tx)" placeholder='apiKey: "...", authDomain: "...", projectId: "...", appId: "..."'></textarea>
+  <div id="cfgpesan" style="color:var(--red);min-height:20px"></div>
+  <button id="cfgsimpan">Simpan dan mulai</button>
+</div>
 <script>
-firebase.initializeApp(window.KKN_FIREBASE);
+function bacaCfg() {
+  try { const t = localStorage.getItem("kkn_firebase"); if (t) return JSON.parse(t); } catch (e) {}
+  const c = window.KKN_FIREBASE; return c && c.apiKey && !c.apiKey.startsWith("ISI_") ? c : null;
+}
+const CFG = bacaCfg();
+if (!CFG) {
+  document.getElementById("setup").hidden = false;
+  document.getElementById("cfgsimpan").onclick = () => {
+    const t = document.getElementById("cfg").value, o = {};
+    for (const k of ["apiKey","authDomain","projectId","appId","storageBucket","messagingSenderId"]) {
+      const m = t.match(new RegExp(k + '\\s*["\']?\\s*[:=]\\s*["\']([^"\']+)["\']'));
+      if (m) o[k] = m[1];
+    }
+    if (!o.apiKey || !o.projectId) { document.getElementById("cfgpesan").textContent = "apiKey dan projectId tidak ditemukan. Salin ulang konfigurasinya."; return; }
+    if (!o.authDomain) o.authDomain = o.projectId + ".firebaseapp.com";
+    localStorage.setItem("kkn_firebase", JSON.stringify(o)); location.reload();
+  };
+  throw new Error("menunggu konfigurasi");
+}
+firebase.initializeApp(CFG);
 const auth = firebase.auth(), db = firebase.firestore();
 const $ = (id) => document.getElementById(id);
 const rp = (n) => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
@@ -85,6 +111,7 @@ async function masuk() {
 $("masuk").onclick = masuk;
 $("sandi").onkeydown = (e) => { if (e.key === "Enter") masuk(); };
 $("keluar").onclick = () => auth.signOut();
+$("gantiCfg").onclick = () => { if (confirm("Ganti konfigurasi Firebase?")) { localStorage.removeItem("kkn_firebase"); auth.signOut().finally(() => location.reload()); } };
 
 auth.onAuthStateChanged(async (u) => {
   unsub.splice(0).forEach((f) => f());

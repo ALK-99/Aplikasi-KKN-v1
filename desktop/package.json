@@ -1,0 +1,23 @@
+{
+  "name": "kkn-almushlih-pc",
+  "version": "1.0.0",
+  "description": "KKN Al-Mushlih 2027 - Aplikasi PC",
+  "author": "ALK-99",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.kkn.almushlih.pc",
+    "productName": "KKN Al-Mushlih 2027",
+    "files": ["main.js", "app/**/*"],
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true },
+    "artifactName": "KKN-Al-Mushlih-PC-${version}-${target}.${ext}"
+  }
+}

@@ -27,3 +27,6 @@ app/google-services.json
 # dipindah ke GitHub Secrets, hapus baris pengecualian di bawah ini.
 !app/sekretaris-kkn.jks
 app/google-services.json
+desktop/node_modules/
+desktop/dist/
+desktop/app/
