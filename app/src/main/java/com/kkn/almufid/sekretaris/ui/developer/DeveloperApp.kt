@@ -61,7 +61,7 @@ private enum class HalamanDev(val judul: String) {
  * One Eye, mengelola akun, memoderasi jurnal, membaca saran, dan mengekspor data.
  */
 @Composable
-fun DeveloperApp(authRepo: AuthRepository, onLogout: () -> Unit) {
+fun DeveloperApp(authRepo: AuthRepository, onLogout: () -> Unit, onBukaPeserta: () -> Unit = {}) {
     // Kunci per akun supaya ViewModel tidak terbawa ke akun lain setelah ganti login.
     val kunci = authRepo.uidSaatIni ?: "-"
     val devVm: DeveloperViewModel = viewModel(
@@ -87,7 +87,7 @@ fun DeveloperApp(authRepo: AuthRepository, onLogout: () -> Unit) {
         if (halaman != HalamanDev.BERANDA) HeaderDev(halaman.judul) { halaman = HalamanDev.BERANDA }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (halaman) {
-                HalamanDev.BERANDA -> BerandaDeveloper(devVm, data, status, onBuka = { halaman = it }, onLogout = onLogout)
+                HalamanDev.BERANDA -> BerandaDeveloper(devVm, data, status, onBuka = { halaman = it }, onLogout = onLogout, onBukaPeserta = onBukaPeserta)
                 HalamanDev.ONE_EYE -> OneEyeScreen(devVm)
                 HalamanDev.PENGUMUMAN -> PengumumanScreen(koorVm)
                 HalamanDev.POLLING -> PollingScreen(koorVm)
@@ -146,7 +146,7 @@ private val MENU_KELOLA = listOf(
 @Composable
 private fun BerandaDeveloper(
     vm: DeveloperViewModel, data: DataDeveloper, status: StatusDeveloper,
-    onBuka: (HalamanDev) -> Unit, onLogout: () -> Unit
+    onBuka: (HalamanDev) -> Unit, onLogout: () -> Unit, onBukaPeserta: () -> Unit
 ) {
     val sekarang = remember(data) { System.currentTimeMillis() }
     val aktif7 = data.profil.count { it.terakhirAktifMillis >= sekarang - 7 * SATU_HARI }
@@ -179,6 +179,17 @@ private fun BerandaDeveloper(
                     Spacer(Modifier.width(6.dp))
                     Text("Keluar", color = Merah, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
+            }
+        }
+        item {
+            KartuGelap(Modifier.fillMaxWidth().tekanPegas(onBukaPeserta)) {
+                Text("Buka tampilan peserta", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = VioletTerang)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Lihat dan pakai menu seperti peserta: Absensi, Proker, Arsip Nota, Rekonsiliasi Kas, Riwayat, " +
+                        "Laporan & Backup. Tekan Kembali di Beranda untuk pulang ke Pusat Kendali.",
+                    fontSize = 12.sp, color = TeksRedup, lineHeight = 17.sp
+                )
             }
         }
         if (!status.sedangMuat && !status.admin) {

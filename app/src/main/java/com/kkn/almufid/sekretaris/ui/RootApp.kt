@@ -19,6 +19,7 @@ import com.kkn.almufid.sekretaris.data.auth.Peran
 import com.kkn.almufid.sekretaris.data.local.SesiLokal
 import com.kkn.almufid.sekretaris.ui.auth.AuthFlow
 import com.kkn.almufid.sekretaris.ui.auth.AuthViewModel
+import androidx.activity.compose.BackHandler
 import com.kkn.almufid.sekretaris.ui.developer.DeveloperApp
 import com.kkn.almufid.sekretaris.ui.navigation.AppNav
 import com.kkn.almufid.sekretaris.ui.theme.Ground
@@ -43,6 +44,7 @@ fun RootApp() {
     val authRepo = remember { AuthRepository() }
     val sesi = remember { SesiLokal(context) }
     var status by remember { mutableStateOf<StatusRoot>(StatusRoot.Memuat) }
+    var tampilanPeserta by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         status = tentukanStatusAwal(authRepo, sesi)
@@ -65,10 +67,20 @@ fun RootApp() {
                         authRepo.logout()
                         status = StatusRoot.PerluAuth
                     })
-                    Peran.DEVELOPER -> DeveloperApp(authRepo, onLogout = {
-                        authRepo.logout()
-                        status = StatusRoot.PerluAuth
-                    })
+                    Peran.DEVELOPER -> if (tampilanPeserta) {
+                        // Developer boleh memakai semua menu peserta; Kembali di Beranda pulang ke Pusat Kendali.
+                        BackHandler { tampilanPeserta = false }
+                        AppNav(onLogout = {
+                            authRepo.logout()
+                            tampilanPeserta = false
+                            status = StatusRoot.PerluAuth
+                        })
+                    } else {
+                        DeveloperApp(authRepo, onLogout = {
+                            authRepo.logout()
+                            status = StatusRoot.PerluAuth
+                        }, onBukaPeserta = { tampilanPeserta = true })
+                    }
                 }
             }
         }
