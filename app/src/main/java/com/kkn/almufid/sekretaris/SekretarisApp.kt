@@ -16,6 +16,7 @@ class SekretarisApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.kkn.almufid.sekretaris.ui.theme.Palet.muat(this)
         // Cek update berkala di latar belakang (senyap, hanya saat ada internet).
         try { UpdateWorker.jadwalkan(this) } catch (e: Exception) { /* jangan crash karena ini */ }
     }

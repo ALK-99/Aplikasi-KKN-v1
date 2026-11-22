@@ -82,7 +82,11 @@ fun KartuGelap(
     val bentuk = RoundedCornerShape(22.dp)
     Column(
         modifier
-            .shadow(10.dp, bentuk, ambientColor = Color.Black, spotColor = Color.Black)
+            .shadow(
+                10.dp, bentuk,
+                ambientColor = if (Palet.gelap) Color.Black else Color(0x663B4580),
+                spotColor = if (Palet.gelap) Color.Black else Color(0x663B4580)
+            )
             .clip(bentuk).background(Surface1).padding(16.dp),
         verticalArrangement = verticalArrangement,
         content = content

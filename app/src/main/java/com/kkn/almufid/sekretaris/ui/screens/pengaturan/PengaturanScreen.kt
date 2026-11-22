@@ -68,10 +68,10 @@ private fun simpanSaranKeFirestore(teks: String, scope: CoroutineScope) {
     }
 }
 
-private enum class SubHalaman { DAFTAR, NOMOR_DARURAT, TENTANG, SARAN, LEGALITAS, FAQ }
+private enum class SubHalaman { DAFTAR, TAMPILAN, PEMBARUAN, NOMOR_DARURAT, TENTANG, SARAN, LEGALITAS, FAQ }
 
 @Composable
-fun PengaturanScreen(onLogout: () -> Unit = {}) {
+fun PengaturanScreen(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
     var halaman by remember { mutableStateOf(SubHalaman.DAFTAR) }
     var dialogKeluarTerbuka by remember { mutableStateOf(false) }
     BackHandler(enabled = halaman != SubHalaman.DAFTAR) { halaman = SubHalaman.DAFTAR }
@@ -84,7 +84,11 @@ fun PengaturanScreen(onLogout: () -> Unit = {}) {
         label = "pengaturan"
     ) { h ->
         when (h) {
-            SubHalaman.DAFTAR -> DaftarPengaturan(onBuka = { halaman = it }, onMintaKeluar = { dialogKeluarTerbuka = true })
+            SubHalaman.DAFTAR -> DaftarPengaturan(
+                onBuka = { halaman = it }, onPanduan = onPanduan, onMintaKeluar = { dialogKeluarTerbuka = true }
+            )
+            SubHalaman.TAMPILAN -> SubHalamanBerjudul("Tampilan", kembali) { TampilanIsi() }
+            SubHalaman.PEMBARUAN -> SubHalamanBerjudul("Cek Pembaruan", kembali) { PembaruanIsi() }
             SubHalaman.NOMOR_DARURAT -> SubHalamanBerjudul("Nomor Darurat", kembali) { NomorDaruratIsi() }
             SubHalaman.TENTANG -> SubHalamanBerjudul("Versi Aplikasi", kembali) { TentangIsi() }
             SubHalaman.SARAN -> SubHalamanBerjudul("Saran & Masukan", kembali) { SaranIsi() }
@@ -135,11 +139,18 @@ private fun SubHalamanBerjudul(judul: String, onKembali: () -> Unit, konten: @Co
 }
 
 @Composable
-private fun DaftarPengaturan(onBuka: (SubHalaman) -> Unit, onMintaKeluar: () -> Unit) {
+private fun DaftarPengaturan(onBuka: (SubHalaman) -> Unit, onPanduan: () -> Unit, onMintaKeluar: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp)) {
-        Text("Info, bantuan, dan kontak darurat", color = TeksRedup, fontSize = 13.sp)
+        Text("Tampilan, pembaruan, bantuan, dan kontak darurat", color = TeksRedup, fontSize = 13.sp)
         Spacer(Modifier.height(20.dp))
 
+        ItemPengaturan(Icons.Default.Palette, "Tampilan", "Mode terang, gelap, atau ikuti sistem") {
+            onBuka(SubHalaman.TAMPILAN)
+        }
+        ItemPengaturan(Icons.Default.SystemUpdate, "Cek Pembaruan", "Versi terpasang v${BuildConfig.VERSION_NAME}") {
+            onBuka(SubHalaman.PEMBARUAN)
+        }
+        ItemPengaturan(Icons.Default.School, "Panduan Penggunaan", "Lihat lagi pengantar singkat aplikasi", onClick = onPanduan)
         ItemPengaturan(Icons.Default.LocalPolice, "Nomor Darurat", "Polisi, rumah sakit, pemadam kebakaran") {
             onBuka(SubHalaman.NOMOR_DARURAT)
         }
@@ -180,6 +191,99 @@ private fun ItemPengaturan(ikon: ImageVector, judul: String, sub: String, warna:
 }
 
 // ---------------------------------------------------------------------
+// Tampilan & Pembaruan
+// ---------------------------------------------------------------------
+
+@Composable
+private fun ColumnScope.TampilanIsi() {
+    val context = LocalContext.current
+    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        listOf(
+            Triple(Palet.SISTEM, "Ikuti sistem", "Terang atau gelap mengikuti pengaturan HP"),
+            Triple(Palet.TERANG, "Terang", "Latar putih, nyaman di tempat terang"),
+            Triple(Palet.GELAP, "Gelap", "Latar gelap, hemat baterai di layar OLED"),
+        ).forEach { (nilai, judul, ket) ->
+            val dipilih = Palet.mode == nilai
+            KartuGelap(Modifier.fillMaxWidth().tekanPegas { Palet.atur(context, nilai) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(judul, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(ket, fontSize = 12.sp, color = TeksRedup)
+                    }
+                    if (dipilih) Icon(Icons.Default.CheckCircle, "Dipilih", tint = Mint)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.PembaruanIsi() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf("Versi terpasang: v${BuildConfig.VERSION_NAME}") }
+    var sedang by remember { mutableStateOf(false) }
+    var info by remember { mutableStateOf<com.kkn.almufid.sekretaris.update.InfoUpdate?>(null) }
+
+    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        KartuGelap(Modifier.fillMaxWidth()) {
+            Text(status, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            info?.let { i ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Versi terbaru v${i.versiBaru}" + if (i.catatan.isNotBlank()) "\n\n${i.catatan.take(600)}" else "",
+                    fontSize = 12.sp, color = TeksSoft, lineHeight = 17.sp
+                )
+            }
+        }
+        com.kkn.almufid.sekretaris.ui.components.PilKecil(
+            if (sedang) "Memeriksa..." else "Cek sekarang", true, Violet
+        ) {
+            if (sedang) return@PilKecil
+            sedang = true
+            info = null
+            scope.launch {
+                when (val h = com.kkn.almufid.sekretaris.update.UpdateChecker.cekDetail()) {
+                    is com.kkn.almufid.sekretaris.update.UpdateChecker.HasilCek.Ada -> {
+                        info = h.info
+                        status = "Ada pembaruan tersedia"
+                    }
+                    com.kkn.almufid.sekretaris.update.UpdateChecker.HasilCek.Terbaru ->
+                        status = "Sudah versi terbaru (v${BuildConfig.VERSION_NAME})"
+                    com.kkn.almufid.sekretaris.update.UpdateChecker.HasilCek.Gagal ->
+                        status = "Tidak bisa memeriksa. Pastikan internet aktif lalu coba lagi."
+                }
+                sedang = false
+            }
+        }
+        info?.let { i ->
+            com.kkn.almufid.sekretaris.ui.components.PilKecil("Unduh dan pasang v${i.versiBaru}", true, Mint) {
+                if (sedang) return@PilKecil
+                sedang = true
+                scope.launch {
+                    try {
+                        val apk = com.kkn.almufid.sekretaris.update.UpdateChecker.unduh(context, i.urlApk) { p ->
+                            status = if (p >= 0) "Mengunduh... $p%" else "Mengunduh..."
+                        }
+                        status = "Unduhan selesai, membuka pemasang..."
+                        if (!com.kkn.almufid.sekretaris.update.UpdateChecker.pasang(context, apk)) {
+                            status = "Aktifkan izin \"Pasang aplikasi tidak dikenal\" di halaman yang terbuka, lalu coba lagi."
+                        }
+                    } catch (e: Exception) {
+                        status = "Unduhan gagal. Periksa internet lalu coba lagi."
+                    }
+                    sedang = false
+                }
+            }
+        }
+        Text(
+            "Pembaruan juga diperiksa otomatis setiap kali aplikasi dibuka dan berkala di latar belakang.",
+            fontSize = 11.sp, color = TeksRedup
+        )
+    }
+}
+
+// ---------------------------------------------------------------------
 // Nomor Darurat
 // ---------------------------------------------------------------------
 
@@ -197,9 +301,9 @@ private val daftarKontakDarurat = listOf(
     KontakDarurat("Nomor Darurat Terpadu", "NTPD — darurat segala jenis", "112", Icons.Default.Emergency, Pink),
     KontakDarurat("Pemadam Kebakaran (Nasional)", "Call center Damkar 24 jam", "113", Icons.Default.LocalFireDepartment, Color(0xFFC9780A)),
     KontakDarurat("Ambulans / Kemenkes", "Public Safety Center 119", "119", Icons.Default.LocalHospital, Color(0xFF0E8F6E)),
-    KontakDarurat("Polres Gunungkidul", "TODO: isi nomor resmi terverifikasi", "", Icons.Default.LocalPolice, Color(0xFF2E7BD6)),
-    KontakDarurat("RSUD Wonosari", "TODO: isi nomor IGD resmi terverifikasi", "", Icons.Default.LocalHospital, Color(0xFF0E8F6E)),
-    KontakDarurat("Damkar Kab. Gunungkidul", "TODO: isi nomor resmi terverifikasi", "", Icons.Default.LocalFireDepartment, Color(0xFFC9780A)),
+    KontakDarurat("Polres Gunungkidul", "Nomor belum diisi oleh pengembang", "", Icons.Default.LocalPolice, Color(0xFF2E7BD6)),
+    KontakDarurat("RSUD Wonosari", "Nomor IGD belum diisi oleh pengembang", "", Icons.Default.LocalHospital, Color(0xFF0E8F6E)),
+    KontakDarurat("Damkar Kab. Gunungkidul", "Nomor belum diisi oleh pengembang", "", Icons.Default.LocalFireDepartment, Color(0xFFC9780A)),
 )
 
 @Composable
@@ -349,8 +453,10 @@ private fun ColumnScope.LegalitasIsi() {
         )
         TeksLegal(
             "Privasi Data",
-            "Data yang dimasukkan disimpan secara lokal di perangkat pengguna, kecuali dinyatakan lain pada " +
-                "fitur yang secara eksplisit mengunggah data ke server."
+            "Data kerja desa (anggota, absensi, proker, surat, inventaris, nota, dan bukti kegiatan) disimpan di " +
+                "cloud Firebase dan hanya dapat dibaca serta diubah oleh akun dari desa yang sama. Jurnal pribadi " +
+                "disimpan di HP. Jurnal bersama, pengumuman, polling, tugas, dan kas dapat dilihat seluruh pengguna " +
+                "terdaftar. Setiap perubahan data desa dicatat beserta nama pengubahnya."
         )
         TeksLegal(
             "Tanggung Jawab",
@@ -380,17 +486,17 @@ private fun TeksLegal(judul: String, isi: String) {
 
 private val daftarFaq = listOf(
     "Apakah data tersimpan jika HP tidak ada internet?" to
-        "Ya. Semua data operasional (jurnal, absensi, surat, proker, nota, inventaris) disimpan secara lokal di " +
-        "perangkat dan tidak memerlukan internet, kecuali saat mengecek pembaruan aplikasi.",
+        "Ya. Data yang pernah dibuka tersimpan di HP, jadi tetap bisa dilihat dan dicatat tanpa internet. " +
+        "Perubahan terkirim otomatis begitu internet kembali. Di HP baru, internet dibutuhkan sekali agar data desa terunduh.",
     "Bagaimana cara memperbarui aplikasi ke versi terbaru?" to
-        "Aplikasi otomatis mengecek versi terbaru di GitHub setiap kali dibuka. Jika ada versi baru, akan muncul " +
-        "pop-up untuk mengunduh dan memasang pembaruan tanpa perlu hapus-install ulang.",
+        "Aplikasi otomatis mengecek versi terbaru setiap kali dibuka. Kamu juga bisa memeriksa sendiri lewat " +
+        "Pengaturan > Cek Pembaruan, lalu memasang tanpa perlu hapus-install ulang.",
     "Data saya hilang setelah uninstall aplikasi, kenapa?" to
-        "Karena saat ini data disimpan lokal di perangkat. Hindari uninstall sebelum mengekspor/mencadangkan data " +
-        "penting.",
+        "Data desa aman di cloud dan muncul lagi setelah kamu login. Yang hanya ada di HP adalah jurnal pribadi " +
+        "dan foto nota lama, jadi buat Cadangan Lengkap di Laporan & Backup sebelum uninstall.",
     "Bagaimana jika lupa kata sandi akun?" to
-        "Hubungi admin aplikasi melalui WhatsApp di menu Saran & Masukan, atau langsung ke nomor admin yang " +
-        "tertera.",
+        "Kirim pesan lewat menu Saran & Masukan atau hubungi developer. Developer bisa mengirim email reset " +
+        "kata sandi ke akunmu.",
 )
 
 @Composable

@@ -22,36 +22,61 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     RIWAYAT("riwayat", "Riwayat Perubahan", Icons.Default.History),
     LAPORAN("laporan", "Laporan & Backup", Icons.Default.Description),
     PROFIL("profil", "Profil Saya", Icons.Default.Person),
-    PENGATURAN("pengaturan", "Pengaturan", Icons.Default.Settings);
+    PENGATURAN("pengaturan", "Pengaturan", Icons.Default.Settings),
+    PENCARIAN("cari", "Pencarian", Icons.Default.Search);
 
     companion object {
         const val RUTE_HOME = "home"
     }
 }
 
+/** Satu divisi di dalam Menu Utama. [segera] = belum tersedia, tampil sebagai "Segera hadir". */
+class DivisiMenu(
+    val judul: String,
+    val keterangan: String,
+    val ikon: ImageVector,
+    val isi: List<Tujuan>,
+    val segera: Boolean = false
+)
+
+private val SEKRETARIS = DivisiMenu(
+    "Sekretaris", "Absensi, surat, proker, inventaris, tugas", Icons.Default.EditNote,
+    listOf(Tujuan.ABSENSI, Tujuan.SURAT, Tujuan.PROKER, Tujuan.INVENTARIS, Tujuan.TUGAS)
+)
+private val BENDAHARA = DivisiMenu(
+    "Bendahara", "Kas, nota dan kwitansi, rekonsiliasi", Icons.Default.AccountBalanceWallet,
+    listOf(Tujuan.KAS, Tujuan.ARSIP, Tujuan.REKONSILIASI)
+)
+private val MEDIA = DivisiMenu(
+    "Media", "Jurnal dan dokumentasi kegiatan", Icons.Default.PhotoCamera,
+    listOf(Tujuan.JURNAL)
+)
+private val PENDIDIKAN = DivisiMenu(
+    "Pendidikan", "Segera hadir", Icons.Default.School, emptyList(), segera = true
+)
+
 /**
- * Tiga kelompok menu di Beranda. Profil tidak masuk daftar mana pun karena
- * dibuka lewat foto profil di kiri atas.
+ * Tiga kelompok menu di Beranda. Menu Utama dibagi lagi per divisi ([divisi]);
+ * kelompok lain langsung berisi [isi]. Profil dibuka lewat foto profil di kiri atas,
+ * Pencarian lewat ikon kaca pembesar, jadi keduanya tidak masuk daftar mana pun.
  */
 enum class KategoriMenu(
     val judul: String,
     val keterangan: String,
     val ikon: ImageVector,
-    val isi: List<Tujuan>
+    val isi: List<Tujuan>,
+    val divisi: List<DivisiMenu> = emptyList()
 ) {
     UTAMA(
-        "Menu Utama", "Administrasi dan kegiatan harian KKN", Icons.Default.Dashboard,
-        listOf(
-            Tujuan.JURNAL, Tujuan.ABSENSI, Tujuan.SURAT, Tujuan.PROKER, Tujuan.ARSIP,
-            Tujuan.INVENTARIS, Tujuan.PENGUMUMAN, Tujuan.TUGAS, Tujuan.KAS, Tujuan.REKONSILIASI
-        )
+        "Menu Utama", "Per divisi: Sekretaris, Bendahara, Media, Pendidikan", Icons.Default.Dashboard,
+        emptyList(), listOf(SEKRETARIS, BENDAHARA, MEDIA, PENDIDIKAN)
     ),
     UMUM(
-        "Menu Umum", "Polling, jadwal sholat, dan peta", Icons.Default.Public,
-        listOf(Tujuan.POLLING, Tujuan.IBADAH, Tujuan.PETA)
+        "Menu Umum", "Pengumuman, polling, jadwal sholat, dan peta", Icons.Default.Public,
+        listOf(Tujuan.PENGUMUMAN, Tujuan.POLLING, Tujuan.IBADAH, Tujuan.PETA)
     ),
     LAINNYA(
-        "Lainnya", "Laporan, backup, dan pengaturan", Icons.Default.MoreHoriz,
+        "Lainnya", "Riwayat, laporan, backup, dan pengaturan", Icons.Default.MoreHoriz,
         listOf(Tujuan.RIWAYAT, Tujuan.LAPORAN, Tujuan.PENGATURAN)
     )
 }

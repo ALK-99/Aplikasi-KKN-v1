@@ -39,6 +39,8 @@ import com.kkn.almufid.sekretaris.ui.screens.koordinasi.TugasScreen
 import com.kkn.almufid.sekretaris.ui.screens.pengaturan.PengaturanScreen
 import com.kkn.almufid.sekretaris.ui.screens.peta.PetaScreen
 import com.kkn.almufid.sekretaris.data.cloud.DesaRepository
+import com.kkn.almufid.sekretaris.ui.screens.pencarian.PencarianScreen
+import com.kkn.almufid.sekretaris.ui.screens.pencarian.PencarianViewModel
 import com.kkn.almufid.sekretaris.ui.screens.rekonsiliasi.RekonsiliasiScreen
 import com.kkn.almufid.sekretaris.ui.screens.rekonsiliasi.RekonsiliasiViewModel
 import com.kkn.almufid.sekretaris.ui.screens.riwayat.RiwayatScreen
@@ -70,7 +72,7 @@ import com.kkn.almufid.sekretaris.ui.screens.home.HomeViewModel
 import com.kkn.almufid.sekretaris.ui.theme.*
 
 @Composable
-fun AppNav(onLogout: () -> Unit = {}) {
+fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
     val navController = rememberNavController()
     val app = LocalContext.current.applicationContext as SekretarisApp
     val db = app.database
@@ -139,6 +141,10 @@ fun AppNav(onLogout: () -> Unit = {}) {
                     val vm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })
                     KasScreen(vm)
                 }
+                composable(Tujuan.PENCARIAN.rute) {
+                    val vm: PencarianViewModel = viewModel(factory = GenericViewModelFactory { PencarianViewModel(desaRepo, JurnalBersamaRepository()) })
+                    PencarianScreen(vm, onBuka = { navController.navigate(it.rute) { launchSingleTop = true } })
+                }
                 composable(Tujuan.REKONSILIASI.rute) {
                     val vm: RekonsiliasiViewModel = viewModel(factory = GenericViewModelFactory { RekonsiliasiViewModel(desaRepo, KoordinasiRepository()) })
                     RekonsiliasiScreen(vm)
@@ -160,7 +166,7 @@ fun AppNav(onLogout: () -> Unit = {}) {
                     ProfilScreen(vm, onLogout = onLogout)
                 }
                 composable(Tujuan.PENGATURAN.rute) {
-                    PengaturanScreen(onLogout = onLogout)
+                    PengaturanScreen(onLogout = onLogout, onPanduan = onPanduan)
                 }
             }
         }

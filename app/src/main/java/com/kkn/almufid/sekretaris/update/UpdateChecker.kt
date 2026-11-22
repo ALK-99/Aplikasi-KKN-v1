@@ -31,9 +31,18 @@ object UpdateChecker {
 
     private const val PLACEHOLDER_OWNER = "GANTI_USERNAME_GITHUB"
 
+    /** Hasil pengecekan yang membedakan "sudah terbaru" dari "gagal cek" (dipakai layar Pengaturan). */
+    sealed interface HasilCek {
+        data object Terbaru : HasilCek
+        data object Gagal : HasilCek
+        data class Ada(val info: InfoUpdate) : HasilCek
+    }
+
     /** @return info update jika ada versi lebih baru, null jika tidak ada / gagal / belum dikonfigurasi. */
-    suspend fun cek(): InfoUpdate? = withContext(Dispatchers.IO) {
-        if (BuildConfig.GITHUB_OWNER == PLACEHOLDER_OWNER) return@withContext null
+    suspend fun cek(): InfoUpdate? = (cekDetail() as? HasilCek.Ada)?.info
+
+    suspend fun cekDetail(): HasilCek = withContext(Dispatchers.IO) {
+        if (BuildConfig.GITHUB_OWNER == PLACEHOLDER_OWNER) return@withContext HasilCek.Gagal
         try {
             val url = URL("https://api.github.com/repos/${BuildConfig.GITHUB_OWNER}/${BuildConfig.GITHUB_REPO}/releases/latest")
             val koneksi = (url.openConnection() as HttpURLConnection).apply {
@@ -43,12 +52,13 @@ object UpdateChecker {
                 setRequestProperty("User-Agent", "SekretarisKKN-App")
             }
             try {
-                if (koneksi.responseCode != 200) return@withContext null
+                if (koneksi.responseCode != 200) return@withContext HasilCek.Gagal
                 val json = JSONObject(koneksi.inputStream.bufferedReader().use { it.readText() })
                 val tag = json.optString("tag_name").removePrefix("v").removePrefix("V")
-                if (tag.isBlank() || !lebihBaru(tag, BuildConfig.VERSION_NAME)) return@withContext null
+                if (tag.isBlank()) return@withContext HasilCek.Gagal
+                if (!lebihBaru(tag, BuildConfig.VERSION_NAME)) return@withContext HasilCek.Terbaru
 
-                val assets = json.optJSONArray("assets") ?: return@withContext null
+                val assets = json.optJSONArray("assets") ?: return@withContext HasilCek.Terbaru
                 var urlApk: String? = null
                 for (i in 0 until assets.length()) {
                     val aset = assets.getJSONObject(i)
@@ -57,13 +67,13 @@ object UpdateChecker {
                         break
                     }
                 }
-                if (urlApk.isNullOrBlank()) return@withContext null
-                InfoUpdate(tag, json.optString("body").trim(), urlApk)
+                if (urlApk.isNullOrBlank()) return@withContext HasilCek.Terbaru
+                HasilCek.Ada(InfoUpdate(tag, json.optString("body").trim(), urlApk))
             } finally {
                 koneksi.disconnect()
             }
         } catch (e: Exception) {
-            null
+            HasilCek.Gagal
         }
     }
 

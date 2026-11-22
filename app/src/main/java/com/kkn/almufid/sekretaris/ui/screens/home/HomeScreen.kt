@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.kkn.almufid.sekretaris.data.cloud.Pengumuman
 import com.kkn.almufid.sekretaris.ui.auth.DialogInfo
 import com.kkn.almufid.sekretaris.ui.components.*
+import com.kkn.almufid.sekretaris.ui.navigation.DivisiMenu
 import com.kkn.almufid.sekretaris.ui.navigation.KategoriMenu
 import com.kkn.almufid.sekretaris.ui.navigation.Tujuan
 import com.kkn.almufid.sekretaris.ui.screens.ibadah.DAFTAR_KOTA
@@ -50,6 +53,9 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
     val dataLama by viewModel.dataLama.collectAsState()
     val sedangUnggah by viewModel.sedangUnggah.collectAsState()
     val pesan by viewModel.pesan.collectAsState()
+    // Jumlah kolom kartu menu menyesuaikan lebar layar (isi layar dibatasi 720dp di RootApp).
+    val lebar = minOf(LocalConfiguration.current.screenWidthDp, 720)
+    val kolom = if (lebar < 340) 1 else if (lebar >= 560) 3 else 2
     val persen = if (r.prokerTotal == 0) 0 else r.prokerSelesai * 100 / r.prokerTotal
     val frac by animateFloatAsState(persen / 100f, tween(900), label = "persen")
     // -1 = semua kelompok menu tertutup. Disimpan supaya tetap terbuka saat kembali dari halaman lain.
@@ -60,15 +66,23 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
             .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 32.dp)
     ) {
         // Foto profil = pintu ke halaman Profil Saya.
-        Row(
-            Modifier.tekanPegas { onBuka(Tujuan.PROFIL) },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AvatarGradien("SK", 46.dp)
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text("Selamat datang", color = TeksRedup, fontSize = 12.sp)
-                Text("Halo, Sekretaris", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.weight(1f).tekanPegas { onBuka(Tujuan.PROFIL) },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AvatarGradien("SK", 46.dp)
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("Selamat datang", color = TeksRedup, fontSize = 12.sp)
+                    Text("Halo, Sekretaris", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+            Box(
+                Modifier.size(44.dp).tekanPegas { onBuka(Tujuan.PENCARIAN) }.clip(CircleShape).background(Surface1),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Search, "Cari", tint = TeksUtama, modifier = Modifier.size(22.dp))
             }
         }
         Spacer(Modifier.height(20.dp))
@@ -111,6 +125,7 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
             KategoriKartu(
                 kategori = kategori,
                 terbuka = terbuka == i,
+                kolom = kolom,
                 onKlik = { terbuka = if (terbuka == i) -1 else i },
                 onBuka = onBuka
             )
@@ -231,11 +246,11 @@ private fun SholatYogyakarta(onClick: () -> Unit) {
 
 @Composable
 private fun KategoriKartu(
-    kategori: KategoriMenu, terbuka: Boolean, onKlik: () -> Unit, onBuka: (Tujuan) -> Unit
+    kategori: KategoriMenu, terbuka: Boolean, kolom: Int, onKlik: () -> Unit, onBuka: (Tujuan) -> Unit
 ) {
     val (a, b) = when (kategori) {
-        KategoriMenu.UTAMA -> Violet to VioletTerang
-        KategoriMenu.UMUM -> Color(0xFF0E8F6E) to Mint
+        KategoriMenu.UTAMA -> Violet to Color(0xFF8B7BFF)
+        KategoriMenu.UMUM -> Color(0xFF0E8F6E) to Color(0xFF2BD4A0)
         KategoriMenu.LAINNYA -> Color(0xFF5A6072) to Color(0xFF9AA0BF)
     }
     Column {
@@ -261,19 +276,75 @@ private fun KategoriKartu(
         }
         AnimatedVisibility(visible = terbuka) {
             Column(Modifier.padding(top = 12.dp)) {
-                kategori.isi.chunked(2).forEachIndexed { baris, pasang ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(bottom = if (baris == (kategori.isi.size - 1) / 2) 0.dp else 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        pasang.forEach { tujuan ->
-                            MenuKartu(tujuan, Modifier.weight(1f)) { onBuka(tujuan) }
-                        }
-                        // Baris terakhir ganjil: sisakan ruang supaya ukuran kartu tetap sama.
-                        if (pasang.size == 1) Spacer(Modifier.weight(1f))
+                if (kategori.divisi.isEmpty()) {
+                    GridMenu(kategori.isi, kolom, onBuka)
+                } else {
+                    kategori.divisi.forEachIndexed { i, divisi ->
+                        DivisiKartu(divisi, kolom, onBuka)
+                        if (i < kategori.divisi.lastIndex) Spacer(Modifier.height(10.dp))
                     }
                 }
             }
+        }
+    }
+}
+
+/** Satu divisi di dalam Menu Utama. Divisi yang belum jadi tampil redup dengan tanda "Segera hadir". */
+@Composable
+private fun DivisiKartu(divisi: DivisiMenu, kolom: Int, onBuka: (Tujuan) -> Unit) {
+    var buka by rememberSaveable(divisi.judul) { mutableStateOf(false) }
+    Column {
+        KartuGelap(
+            Modifier.fillMaxWidth().then(if (divisi.segera) Modifier else Modifier.tekanPegas { buka = !buka })
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(Surface2),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        divisi.ikon, null, modifier = Modifier.size(20.dp),
+                        tint = if (divisi.segera) TeksRedup else VioletTerang
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        divisi.judul, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                        color = if (divisi.segera) TeksRedup else TeksUtama
+                    )
+                    Text(divisi.keterangan, fontSize = 11.sp, color = TeksRedup)
+                }
+                if (divisi.segera) {
+                    Text(
+                        "Segera", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Gold,
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Surface2)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                } else {
+                    Icon(
+                        if (buka) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        if (buka) "Tutup" else "Buka", tint = TeksRedup
+                    )
+                }
+            }
+        }
+        AnimatedVisibility(visible = buka && !divisi.segera) {
+            Box(Modifier.padding(top = 10.dp)) { GridMenu(divisi.isi, kolom, onBuka) }
+        }
+    }
+}
+
+/** Kartu menu tersusun [kolom] per baris; sisa kolom di baris terakhir dikosongkan agar ukuran kartu sama. */
+@Composable
+private fun GridMenu(isi: List<Tujuan>, kolom: Int, onBuka: (Tujuan) -> Unit) {
+    isi.chunked(kolom).forEachIndexed { baris, kelompok ->
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = if (baris == (isi.size - 1) / kolom) 0.dp else 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            kelompok.forEach { tujuan -> MenuKartu(tujuan, Modifier.weight(1f)) { onBuka(tujuan) } }
+            repeat(kolom - kelompok.size) { Spacer(Modifier.weight(1f)) }
         }
     }
 }
@@ -298,6 +369,7 @@ private fun MenuKartu(tujuan: Tujuan, modifier: Modifier, onClick: () -> Unit) {
         Tujuan.LAPORAN -> Color(0xFF3B5BDB) to Color(0xFF8FA8FF)
         Tujuan.PROFIL -> Color(0xFF0E7C9A) to Color(0xFF4FD1E8)
         Tujuan.PENGATURAN -> Color(0xFF5A6072) to Color(0xFF9AA0BF)
+        Tujuan.PENCARIAN -> Color(0xFF3B5BDB) to Color(0xFF8FA8FF)
     }
     KartuGelap(
         modifier.tekanPegas(onClick).height(112.dp),

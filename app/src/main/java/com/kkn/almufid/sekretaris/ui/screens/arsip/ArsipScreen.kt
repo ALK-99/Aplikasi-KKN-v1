@@ -132,7 +132,7 @@ private fun TileNota(nota: NotaDesa, rasio: Float, modifier: Modifier, onHapus: 
             Modifier.align(Alignment.BottomStart).padding(10.dp).clip(RoundedCornerShape(12.dp))
                 .background(Ground.copy(alpha = 0.82f)).padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
-            Text(formatRupiah(nota.nominal), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+            Text(formatRupiah(nota.nominal), color = TeksUtama, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
             Text("${nota.jenis.lowercase().replaceFirstChar { it.uppercase() }} · ${nota.keterangan}", color = TeksSoft, fontSize = 11.sp, maxLines = 1)
         }
         IconButton(onClick = onHapus, modifier = Modifier.align(Alignment.TopEnd)) {

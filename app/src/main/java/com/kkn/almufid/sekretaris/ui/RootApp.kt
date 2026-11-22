@@ -1,7 +1,11 @@
 package com.kkn.almufid.sekretaris.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -45,12 +49,16 @@ fun RootApp() {
     val sesi = remember { SesiLokal(context) }
     var status by remember { mutableStateOf<StatusRoot>(StatusRoot.Memuat) }
     var tampilanPeserta by remember { mutableStateOf(false) }
+    var panduanTampil by remember { mutableStateOf(!PanduanPref.sudahDilihat(context)) }
 
     LaunchedEffect(Unit) {
         status = tentukanStatusAwal(authRepo, sesi)
     }
 
     Surface(Modifier.fillMaxSize(), color = Ground, contentColor = TeksUtama) {
+      // Di tablet dan layar lebar isi aplikasi dipusatkan dengan lebar maksimal 720dp.
+      Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+       Box(Modifier.fillMaxHeight().widthIn(max = 720.dp).fillMaxWidth()) {
         when (val s = status) {
             StatusRoot.Memuat -> LayarMemuat()
             StatusRoot.PerluAuth -> {
@@ -59,14 +67,16 @@ fun RootApp() {
                 )
                 AuthFlow(authVm) { peran -> status = StatusRoot.MasukSebagai(peran) }
             }
-            is StatusRoot.MasukSebagai -> {
+            is StatusRoot.MasukSebagai -> if (panduanTampil) {
+                Onboarding(onSelesai = { PanduanPref.tandai(context); panduanTampil = false })
+            } else {
                 // Catat kapan akun ini terakhir membuka app (dilihat developer di One Eye).
                 LaunchedEffect(s) { authRepo.uidSaatIni?.let { authRepo.catatAktif(it) } }
                 when (s.peran) {
                     Peran.PESERTA -> AppNav(onLogout = {
                         authRepo.logout()
                         status = StatusRoot.PerluAuth
-                    })
+                    }, onPanduan = { panduanTampil = true })
                     Peran.DEVELOPER -> if (tampilanPeserta) {
                         // Developer boleh memakai semua menu peserta; Kembali di Beranda pulang ke Pusat Kendali.
                         BackHandler { tampilanPeserta = false }
@@ -74,7 +84,7 @@ fun RootApp() {
                             authRepo.logout()
                             tampilanPeserta = false
                             status = StatusRoot.PerluAuth
-                        })
+                        }, onPanduan = { panduanTampil = true })
                     } else {
                         DeveloperApp(authRepo, onLogout = {
                             authRepo.logout()
@@ -84,6 +94,8 @@ fun RootApp() {
                 }
             }
         }
+       }
+      }
     }
 }
 
