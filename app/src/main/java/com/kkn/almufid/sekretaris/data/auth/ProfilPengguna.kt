@@ -20,6 +20,7 @@ data class ProfilPengguna @JvmOverloads constructor(
     val peran: String = Peran.PESERTA.name,
     val akunDiblokir: Boolean = false,
     val dibuatPadaMillis: Long = 0L,
+    val terakhirAktifMillis: Long = 0L,
 ) {
     /** Dipakai Firestore untuk serialisasi: butuh constructor tanpa argumen + getter standar,
      * data class Kotlin dengan nilai default di atas sudah memenuhi syarat itu. */
@@ -33,5 +34,6 @@ data class ProfilPengguna @JvmOverloads constructor(
         "peran" to peran,
         "akunDiblokir" to akunDiblokir,
         "dibuatPadaMillis" to dibuatPadaMillis,
+        "terakhirAktifMillis" to terakhirAktifMillis,
     )
 }

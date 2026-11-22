@@ -13,6 +13,7 @@ rules_version = '2';
 //   nim_index/{nim}              { uid, email } atau { reserved: true } sementara saat daftar
 //   jurnal_bersama/{id}          jurnal yang dibagikan ke semua pengguna (ubah hanya oleh penulis)
 //   pengumuman, polling, tugas, kas   koordinasi kelompok (dibuat admin, dibaca semua)
+//   feedback/{id}                saran dari peserta (tulis: semua, baca: admin)
 //   admins/{uid}                 penanda admin, dibuat manual di Console (boleh blokir akun)
 //   users/{uid}                  profil akun (lihat ProfilPengguna.kt)
 //   users/{uid}/uploads/{id}     metadata file yang diunggah pengguna (poin B.5)
@@ -116,9 +117,16 @@ service cloud.firestore {
     match /jurnal_bersama/{id} {
       allow read: if sudahLogin();
       allow create: if sudahLogin() && request.resource.data.penulisUid == request.auth.uid;
-      allow update: if sudahLogin()
-        && resource.data.penulisUid == request.auth.uid
-        && request.resource.data.penulisUid == resource.data.penulisUid;
+      allow update: if (
+          sudahLogin()
+          && resource.data.penulisUid == request.auth.uid
+          && request.resource.data.penulisUid == resource.data.penulisUid
+        )
+        // Moderasi: admin hanya boleh menyembunyikan (field dihapus), bukan mengubah isi.
+        || (
+          adalahAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dihapus'])
+        );
       allow delete: if false;
     }
 
@@ -168,11 +176,12 @@ service cloud.firestore {
     }
 
     // Saran & masukan dari menu Pengaturan (poin A.3) — siapa saja yang
-    // login boleh menambah, tidak ada yang boleh membaca/mengubah punya
-    // orang lain lewat aplikasi (hanya lewat Firebase Console).
+    // login boleh menambah. Hanya admin (developer) yang boleh membaca
+    // (menu Kotak Masuk). Tidak ada yang boleh mengubah atau menghapus.
     match /feedback/{docId} {
       allow create: if sudahLogin();
-      allow read, update, delete: if false;
+      allow read: if adalahAdmin();
+      allow update, delete: if false;
     }
   }
 }

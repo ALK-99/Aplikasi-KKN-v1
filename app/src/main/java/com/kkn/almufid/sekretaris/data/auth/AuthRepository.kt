@@ -229,6 +229,26 @@ class AuthRepository(
         }
     }
 
+    /** Developer mengirim email reset sandi ke email milik peserta lain. */
+    suspend fun kirimResetSandiKe(email: String): HasilAuth<String> {
+        if (email.isBlank()) return HasilAuth.Gagal("Email peserta ini kosong")
+        return try {
+            auth.sendPasswordResetEmail(email).await()
+            HasilAuth.Sukses(samarkanEmail(email))
+        } catch (e: Exception) {
+            HasilAuth.Gagal(pesanErrorAuth(e, "mengirim email reset sandi"))
+        }
+    }
+
+    /** Catat waktu terakhir akun ini membuka app (dilihat developer di One Eye). Gagal diam-diam. */
+    suspend fun catatAktif(uid: String) {
+        try {
+            db.collection(KOLEKSI_USERS).document(uid)
+                .update("terakhirAktifMillis", System.currentTimeMillis()).await()
+        } catch (_: Exception) {
+        }
+    }
+
     /** Ubah data profil yang boleh diubah sendiri (peran & status blokir tidak termasuk). */
     suspend fun perbaruiProfil(uid: String, nama: String, desa: String, divisi: String): HasilAuth<Unit> = try {
         db.collection(KOLEKSI_USERS).document(uid).update(

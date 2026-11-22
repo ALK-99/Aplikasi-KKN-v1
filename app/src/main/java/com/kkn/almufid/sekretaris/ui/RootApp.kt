@@ -19,10 +19,7 @@ import com.kkn.almufid.sekretaris.data.auth.Peran
 import com.kkn.almufid.sekretaris.data.local.SesiLokal
 import com.kkn.almufid.sekretaris.ui.auth.AuthFlow
 import com.kkn.almufid.sekretaris.ui.auth.AuthViewModel
-import com.kkn.almufid.sekretaris.ui.developer.DeveloperLobbyScreen
-import com.kkn.almufid.sekretaris.ui.developer.DeveloperViewModel
-import com.kkn.almufid.sekretaris.data.cloud.JurnalBersamaRepository
-import com.kkn.almufid.sekretaris.data.cloud.KoordinasiRepository
+import com.kkn.almufid.sekretaris.ui.developer.DeveloperApp
 import com.kkn.almufid.sekretaris.ui.navigation.AppNav
 import com.kkn.almufid.sekretaris.ui.theme.Ground
 import com.kkn.almufid.sekretaris.ui.theme.TeksUtama
@@ -60,16 +57,15 @@ fun RootApp() {
                 )
                 AuthFlow(authVm) { peran -> status = StatusRoot.MasukSebagai(peran) }
             }
-            is StatusRoot.MasukSebagai -> when (s.peran) {
-                Peran.PESERTA -> AppNav(onLogout = {
-                    authRepo.logout()
-                    status = StatusRoot.PerluAuth
-                })
-                Peran.DEVELOPER -> {
-                    val devVm: DeveloperViewModel = viewModel(
-                        factory = GenericViewModelFactory { DeveloperViewModel(authRepo, KoordinasiRepository(), JurnalBersamaRepository()) }
-                    )
-                    DeveloperLobbyScreen(devVm, onLogout = {
+            is StatusRoot.MasukSebagai -> {
+                // Catat kapan akun ini terakhir membuka app (dilihat developer di One Eye).
+                LaunchedEffect(s) { authRepo.uidSaatIni?.let { authRepo.catatAktif(it) } }
+                when (s.peran) {
+                    Peran.PESERTA -> AppNav(onLogout = {
+                        authRepo.logout()
+                        status = StatusRoot.PerluAuth
+                    })
+                    Peran.DEVELOPER -> DeveloperApp(authRepo, onLogout = {
                         authRepo.logout()
                         status = StatusRoot.PerluAuth
                     })

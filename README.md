@@ -95,3 +95,10 @@ akun developer boleh **memblokir/membuka blokir** akun lain dari dalam app:
 
 Tanpa langkah ini lobi developer tetap bisa dibuka, tapi hanya mode lihat saja.
 
+Akun developer punya menu sendiri (Pusat Kendali): One Eye (ringkasan, daftar
+peserta + detail, linimasa aktivitas), Pengumuman, Polling, Tugas, Kas,
+Kelola Akun (blokir, reset sandi), Moderasi Jurnal, Kotak Masuk (saran), dan
+Ekspor Data (CSV/PDF/JSON). Semua gratis (Firestore Spark, tanpa server).
+Setelah memperbarui app, tempel ulang `firestore.rules` terbaru: ada aturan
+baru untuk moderasi jurnal dan pembacaan saran oleh admin.
+

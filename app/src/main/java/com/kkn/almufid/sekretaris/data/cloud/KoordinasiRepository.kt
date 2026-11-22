@@ -52,6 +52,14 @@ data class Kas(
     val penulisNama: String = "",
 )
 
+/** Saran masuk dari menu Pengaturan (koleksi `feedback`), hanya dibaca developer. */
+data class Saran(
+    val id: String = "",
+    val uid: String = "",
+    val isi: String = "",
+    val dikirimMillis: Long = 0L,
+)
+
 /**
  * Pengumuman, polling, tugas, dan kas kelompok. Semua pengguna yang login
  * bisa membaca; yang boleh MEMBUAT hanya admin (akun yang punya dokumen
@@ -114,6 +122,17 @@ class KoordinasiRepository(
     suspend fun hapusPengumuman(id: String) = aman {
         db.collection("pengumuman").document(id).update("dihapus", true).await()
     }
+
+    // ---- Saran masuk (khusus admin) ----
+    fun alirSaran(): Flow<List<Saran>> =
+        db.collection("feedback").orderBy("dikirimPadaMillis", Query.Direction.DESCENDING).pantau { d ->
+            Saran(
+                id = d.id,
+                uid = d.getString("uid") ?: "",
+                isi = d.getString("isi") ?: "",
+                dikirimMillis = d.getLong("dikirimPadaMillis") ?: 0L,
+            )
+        }
 
     // ---- Polling ----
     fun alirPolling(): Flow<List<Polling>> = alir("polling").pantau { d ->
