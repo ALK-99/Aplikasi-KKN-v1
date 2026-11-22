@@ -17,6 +17,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mintaRefreshRateTertinggi()
+        tandaiPengingatDibuka(intent)
+        mintaIzinNotifikasi()
         setContent {
             SekretarisKKNTheme {
                 val updateVm: UpdateViewModel = viewModel(
@@ -28,6 +30,29 @@ class MainActivity : ComponentActivity() {
                 UpdateDialog(updateVm)
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        tandaiPengingatDibuka(intent)
+    }
+
+    /** Membuka app lewat notifikasi pengingat berarti pengingat itu sudah dilihat, jadi tidak diulang lagi. */
+    private fun tandaiPengingatDibuka(intent: android.content.Intent?) {
+        val kunci = intent?.getStringExtra(com.kkn.almufid.sekretaris.pengingat.PengingatWorker.EXTRA_KUNCI) ?: return
+        kunci.split("|").filter { it.isNotBlank() }.forEach {
+            com.kkn.almufid.sekretaris.pengingat.PengingatPref.tandaiDibuka(this, it)
+        }
+        intent.removeExtra(com.kkn.almufid.sekretaris.pengingat.PengingatWorker.EXTRA_KUNCI)
+    }
+
+    private fun mintaIzinNotifikasi() {
+        if (Build.VERSION.SDK_INT < 33) return
+        try {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7001)
+            }
+        } catch (e: Exception) { }
     }
 
     override fun onStart() {

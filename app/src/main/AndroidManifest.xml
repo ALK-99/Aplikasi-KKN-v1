@@ -6,6 +6,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Pengingat tugas, proker, absensi, dan pengumuman (Android 13+ perlu izin notifikasi). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <!-- Dibutuhkan agar app bisa memicu instalasi APK update yang baru diunduh -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
@@ -45,6 +49,18 @@
         <receiver
             android:name=".update.HasilUpdateReceiver"
             android:exported="false" />
+
+        <!-- Widget layar utama -->
+        <receiver
+            android:name=".widget.WidgetKKN"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_kkn_info" />
+        </receiver>
 
         <!-- FileProvider: dipakai untuk membagikan foto nota (share) dan
              untuk membuka file APK hasil unduhan update agar bisa diinstal. -->

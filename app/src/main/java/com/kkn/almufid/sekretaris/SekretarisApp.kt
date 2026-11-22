@@ -19,5 +19,9 @@ class SekretarisApp : Application() {
         com.kkn.almufid.sekretaris.ui.theme.Palet.muat(this)
         // Cek update berkala di latar belakang (senyap, hanya saat ada internet).
         try { UpdateWorker.jadwalkan(this) } catch (e: Exception) { /* jangan crash karena ini */ }
+        try {
+            com.kkn.almufid.sekretaris.pengingat.PengingatWorker.buatSaluran(this)
+            com.kkn.almufid.sekretaris.pengingat.PengingatWorker.jadwalkan(this)
+        } catch (e: Exception) { /* pengingat tidak boleh membuat app crash */ }
     }
 }

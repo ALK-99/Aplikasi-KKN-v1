@@ -113,6 +113,9 @@ fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
                     val vm: SuratViewModel = viewModel(factory = GenericViewModelFactory { SuratViewModel(desaRepo) })
                     SuratScreen(vm)
                 }
+                composable(Tujuan.TEMPLAT_SURAT.rute) {
+                    com.kkn.almufid.sekretaris.ui.screens.templat.TemplatSuratScreen(desaRepo)
+                }
                 composable(Tujuan.PROKER.rute) {
                     val vm: ProkerViewModel = viewModel(factory = GenericViewModelFactory { ProkerViewModel(desaRepo) })
                     ProkerScreen(vm)

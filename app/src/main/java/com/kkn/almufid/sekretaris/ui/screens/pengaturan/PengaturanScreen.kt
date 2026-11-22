@@ -68,7 +68,7 @@ private fun simpanSaranKeFirestore(teks: String, scope: CoroutineScope) {
     }
 }
 
-private enum class SubHalaman { DAFTAR, TAMPILAN, PEMBARUAN, NOMOR_DARURAT, TENTANG, SARAN, LEGALITAS, FAQ }
+private enum class SubHalaman { DAFTAR, TAMPILAN, PENGINGAT, PEMBARUAN, NOMOR_DARURAT, TENTANG, SARAN, LEGALITAS, FAQ }
 
 @Composable
 fun PengaturanScreen(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
@@ -88,6 +88,7 @@ fun PengaturanScreen(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
                 onBuka = { halaman = it }, onPanduan = onPanduan, onMintaKeluar = { dialogKeluarTerbuka = true }
             )
             SubHalaman.TAMPILAN -> SubHalamanBerjudul("Tampilan", kembali) { TampilanIsi() }
+            SubHalaman.PENGINGAT -> SubHalamanBerjudul("Pengingat", kembali) { PengingatIsi() }
             SubHalaman.PEMBARUAN -> SubHalamanBerjudul("Cek Pembaruan", kembali) { PembaruanIsi() }
             SubHalaman.NOMOR_DARURAT -> SubHalamanBerjudul("Nomor Darurat", kembali) { NomorDaruratIsi() }
             SubHalaman.TENTANG -> SubHalamanBerjudul("Versi Aplikasi", kembali) { TentangIsi() }
@@ -146,6 +147,9 @@ private fun DaftarPengaturan(onBuka: (SubHalaman) -> Unit, onPanduan: () -> Unit
 
         ItemPengaturan(Icons.Default.Palette, "Tampilan", "Mode terang, gelap, atau ikuti sistem") {
             onBuka(SubHalaman.TAMPILAN)
+        }
+        ItemPengaturan(Icons.Default.Notifications, "Pengingat", "Notifikasi tugas, proker, absensi, pengumuman") {
+            onBuka(SubHalaman.PENGINGAT)
         }
         ItemPengaturan(Icons.Default.SystemUpdate, "Cek Pembaruan", "Versi terpasang v${BuildConfig.VERSION_NAME}") {
             onBuka(SubHalaman.PEMBARUAN)
@@ -523,3 +527,29 @@ private fun ColumnScope.FaqIsi() {
     }
 }
 
+
+
+@Composable
+private fun PengingatIsi() {
+    val context = LocalContext.current
+    var aktif by remember { mutableStateOf(com.kkn.almufid.sekretaris.pengingat.PengingatPref.aktif(context)) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp)) {
+        KartuGelap(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Pengingat otomatis", color = TeksUtama, fontWeight = FontWeight.Bold)
+                    Text("Aktif: tugasmu yang mendekati tenggat, proker yang akan mulai atau lewat jadwal, absensi hari ini yang belum dicatat, dan pengumuman yang belum dibaca.", color = TeksSoft, fontSize = 12.sp)
+                }
+                Switch(checked = aktif, onCheckedChange = {
+                    aktif = it
+                    com.kkn.almufid.sekretaris.pengingat.PengingatPref.atur(context, it)
+                })
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Text(
+            "Cara kerja: aplikasi memeriksa tiap 15 menit. Selama ada pengingat yang belum kamu buka, notifikasi diulang dengan getar dan lampu berkedip (jika HP punya lampu notifikasi) sampai kamu mengetuk notifikasinya. Jika tidak muncul, buka Pengaturan HP > Aplikasi > KKN Al-Mushlih > Notifikasi, lalu izinkan.",
+            color = TeksRedup, fontSize = 12.sp
+        )
+    }
+}

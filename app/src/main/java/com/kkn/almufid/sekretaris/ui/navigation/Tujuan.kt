@@ -9,6 +9,7 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     JURNAL("jurnal", "Jurnal & Notulen", Icons.Default.MenuBook),
     ABSENSI("absensi", "Absensi", Icons.Default.HowToReg),
     SURAT("surat", "Surat Masuk/Keluar", Icons.Default.Mail),
+    TEMPLAT_SURAT("templat-surat", "Templat Surat PDF", Icons.Default.Description),
     PROKER("proker", "Program Kerja", Icons.Default.Checklist),
     ARSIP("arsip", "Arsip Nota", Icons.Default.Receipt),
     INVENTARIS("inventaris", "Inventaris Posko", Icons.Default.Inventory2),
@@ -41,7 +42,7 @@ class DivisiMenu(
 
 private val SEKRETARIS = DivisiMenu(
     "Sekretaris", "Absensi, surat, proker, inventaris, tugas", Icons.Default.EditNote,
-    listOf(Tujuan.ABSENSI, Tujuan.SURAT, Tujuan.PROKER, Tujuan.INVENTARIS, Tujuan.TUGAS)
+    listOf(Tujuan.ABSENSI, Tujuan.SURAT, Tujuan.TEMPLAT_SURAT, Tujuan.PROKER, Tujuan.INVENTARIS, Tujuan.TUGAS)
 )
 private val BENDAHARA = DivisiMenu(
     "Bendahara", "Kas, nota dan kwitansi, rekonsiliasi", Icons.Default.AccountBalanceWallet,

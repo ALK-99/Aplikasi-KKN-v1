@@ -355,6 +355,7 @@ private fun MenuKartu(tujuan: Tujuan, modifier: Modifier, onClick: () -> Unit) {
         Tujuan.JURNAL -> Violet to VioletTerang
         Tujuan.ABSENSI -> Color(0xFF0E8F6E) to Mint
         Tujuan.SURAT -> Color(0xFFC9780A) to Gold
+        Tujuan.TEMPLAT_SURAT -> Color(0xFFB5651D) to Color(0xFFFFC27A)
         Tujuan.PROKER -> Color(0xFF2E7BD6) to Color(0xFF6BB6FF)
         Tujuan.ARSIP -> Pink to Color(0xFFFF7A9E)
         Tujuan.INVENTARIS -> Color(0xFF7A4BD6) to Color(0xFFC08BFF)

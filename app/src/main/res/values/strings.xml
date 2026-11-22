@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">KKN Al-Mushlih 2027</string>
+    <string name="widget_deskripsi">Waktu sholat berikutnya, progres proker, dan pengingat</string>
 </resources>
