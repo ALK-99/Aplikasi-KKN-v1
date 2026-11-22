@@ -91,6 +91,17 @@ Supaya APK hasil GitHub Actions (lihat bagian 3 di bawah) juga punya Firebase ak
   mengunggah data yang sama.
 - Setelah memperbarui `firestore.rules`, tempel ulang di Console > Firestore > Rules > Publish.
 
+## Cadangan & pemulihan (Tahap B)
+- Menu **Laporan & Backup → Cadangan Lengkap + Foto (ZIP)** membuat satu berkas ZIP berisi: data desa
+  (anggota, absensi, proker, surat, inventaris, riwayat), jurnal pribadi dan nota di HP, foto nota, dan
+  ringkasan mudah dibaca (`baca-saja.json`, termasuk jurnal bersama, tugas, kas). Bagikan ke WhatsApp/Drive.
+- **Pulihkan dari Cadangan**: pilih ZIP, lihat ringkasan, lalu konfirmasi. Data HP yang sudah ada dilewati
+  (tidak ganda); data desa ber-ID sama dikembalikan ke isi cadangan; data baru tidak dihapus.
+  Cadangan milik desa lain ditolak.
+- Jurnal bersama, tugas, kas, pengumuman, dan polling hanya ikut sebagai arsip baca (tidak dipulihkan
+  dari app karena aturan keamanan hanya mengizinkan penulis/admin).
+- Semua gratis: tanpa Firebase Storage, foto hanya di dalam ZIP.
+
 ## Catatan penting
 - **Repo harus Publik** agar pengecekan update jalan tanpa token. Konsekuensi: file keystore
   (`app/sekretaris-kkn.jks`, password di `app/build.gradle.kts`) ikut terlihat publik. Untuk aplikasi

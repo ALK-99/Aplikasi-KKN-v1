@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Source
 import com.kkn.almufid.sekretaris.data.auth.AuthRepository
 import com.kkn.almufid.sekretaris.data.auth.HasilAuth
 import com.kkn.almufid.sekretaris.data.auth.desaIdDari
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Siapa yang sedang bekerja dan di ruang desa mana. */
 class KonteksDesa(val uid: String, val nama: String, val desaId: String, val desaNama: String)
@@ -357,6 +359,72 @@ class DesaRepository(
             HasilAuth.Gagal(
                 if (ditolak) "Ditolak server. Pastikan aturan Firestore terbaru sudah dipublish."
                 else "Gagal mengunggah: ${e.message ?: "kesalahan tidak diketahui"}"
+            )
+        }
+    }
+
+    // ------------------------------------------------------------ cadangan
+
+    /** Koleksi data desa yang ikut dicadangkan dan dipulihkan (riwayat hanya dicadangkan sebagai arsip). */
+    val koleksiCadangan = listOf("anggota", "absensi", "proker", "surat", "inventaris")
+
+    /** Identitas desa untuk berkas cadangan, atau null kalau belum login / desa belum diisi. */
+    suspend fun identitasDesa(): Pair<String, String>? = konteks()?.let { it.desaId to it.desaNama }
+
+    /**
+     * Membaca semua dokumen mentah (termasuk yang ditandai dihapus) satu koleksi.
+     * Mencoba server dulu (maks 10 detik), lalu salinan di HP kalau offline.
+     * Null kalau tidak bisa dibaca sama sekali.
+     */
+    suspend fun ambilMentah(nama: String): List<Pair<String, Map<String, Any?>>>? {
+        val k = konteks() ?: return null
+        val ref = koleksi(k, nama)
+        val snap = try {
+            withTimeoutOrNull(10_000) { ref.get().await() } ?: ref.get(Source.CACHE).await()
+        } catch (e: Exception) {
+            try { ref.get(Source.CACHE).await() } catch (e2: Exception) { return null }
+        }
+        return snap.documents.map { it.id to (it.data ?: emptyMap()) }
+    }
+
+    /**
+     * Memulihkan dokumen dari cadangan. Dokumen dengan ID sama ditimpa isi cadangan,
+     * dokumen yang dibuat setelah cadangan dibiarkan. Satu baris riwayat dicatat.
+     * Ditolak kalau cadangan milik desa lain.
+     */
+    suspend fun pulihkanMentah(
+        desaIdCadangan: String,
+        data: Map<String, List<Pair<String, Map<String, Any?>>>>,
+    ): HasilAuth<Int> {
+        val k = konteks() ?: return HasilAuth.Gagal("Desa akun ini belum diisi atau profil belum terbaca.")
+        if (k.desaId != desaIdCadangan) {
+            return HasilAuth.Gagal("Cadangan ini milik desa lain ($desaIdCadangan), sedangkan akun ini di ${k.desaId}.")
+        }
+        return try {
+            val sekarang = System.currentTimeMillis()
+            val kerja = mutableListOf<Pair<DocumentReference, Map<String, Any>>>()
+            for (nama in koleksiCadangan) {
+                for ((id, isi) in data[nama].orEmpty()) {
+                    val bersih = isi.filterValues { it != null }.mapValues { it.value as Any }.toMutableMap()
+                    bersih["diubahOleh"] = k.uid
+                    bersih["diubahOlehNama"] = k.nama
+                    bersih["diubahPada"] = sekarang
+                    kerja += koleksi(k, nama).document(id) to bersih
+                }
+            }
+            kerja.chunked(400).forEach { bagian ->
+                val batch = db.batch()
+                bagian.forEach { (ref, isi) -> batch.set(ref, isi) }
+                batch.commit().await()
+            }
+            koleksi(k, "riwayat").document()
+                .set(catatan(k, "cadangan", "pulihkan", "${kerja.size} data dipulihkan dari cadangan", sekarang)).await()
+            HasilAuth.Sukses(kerja.size)
+        } catch (e: Exception) {
+            val ditolak = (e as? FirebaseFirestoreException)?.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+            HasilAuth.Gagal(
+                if (ditolak) "Ditolak server. Pastikan aturan Firestore terbaru sudah dipublish."
+                else "Gagal memulihkan: ${e.message ?: "kesalahan tidak diketahui"}"
             )
         }
     }

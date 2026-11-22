@@ -1,9 +1,11 @@
 package com.kkn.almufid.sekretaris.ui.screens.laporan
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kkn.almufid.sekretaris.data.AppDatabase
+import com.kkn.almufid.sekretaris.data.auth.HasilAuth
 import com.kkn.almufid.sekretaris.data.cloud.DesaRepository
 import com.kkn.almufid.sekretaris.data.cloud.JurnalBersamaRepository
 import com.kkn.almufid.sekretaris.data.cloud.KoordinasiRepository
@@ -30,6 +32,7 @@ enum class JenisLaporan(val judul: String, val keterangan: String, val mime: Str
     ABSENSI_CSV("Absensi (CSV)", "Bisa dibuka di Excel", "text/csv"),
     INVENTARIS_CSV("Inventaris (CSV)", "Daftar barang dan kondisinya", "text/csv"),
     TUGAS_CSV("Tugas (CSV)", "Semua tugas, penerima, dan status", "text/csv"),
+    BACKUP_ZIP("Cadangan Lengkap + Foto (ZIP)", "Data desa, jurnal & nota di HP, dan foto. Bisa dipulihkan", "application/zip"),
     BACKUP_JSON("Backup Semua Data (JSON)", "Cadangan data di HP + data bersama", "application/json"),
 }
 
@@ -41,6 +44,14 @@ class LaporanViewModel(
     private val koordinasi: KoordinasiRepository,
 ) : ViewModel() {
 
+    private val prefs = appContext.getSharedPreferences("sinkron_prefs", Context.MODE_PRIVATE)
+
+    private val _cadanganTerakhir = MutableStateFlow(prefs.getLong("cadangan_terakhir", 0L))
+    val cadanganTerakhir: StateFlow<Long> = _cadanganTerakhir.asStateFlow()
+
+    private val _pratinjau = MutableStateFlow<Cadangan.Pratinjau?>(null)
+    val pratinjau: StateFlow<Cadangan.Pratinjau?> = _pratinjau.asStateFlow()
+
     private val _sedangProses = MutableStateFlow(false)
     val sedangProses: StateFlow<Boolean> = _sedangProses.asStateFlow()
 
@@ -48,6 +59,52 @@ class LaporanViewModel(
     val pesan: StateFlow<String?> = _pesan.asStateFlow()
 
     fun tutupPesan() { _pesan.value = null }
+
+    /** Membaca berkas cadangan yang dipilih pengguna dan menampilkan ringkasannya, belum mengubah data. */
+    fun bacaCadangan(uri: Uri) {
+        if (_sedangProses.value) return
+        _sedangProses.value = true
+        viewModelScope.launch {
+            try {
+                _pratinjau.value = withContext(Dispatchers.IO) { Cadangan.baca(appContext, uri) }
+            } catch (e: IllegalArgumentException) {
+                _pesan.value = e.message ?: "Berkas tidak valid."
+            } catch (e: Exception) {
+                _pesan.value = "Gagal membaca berkas: ${e.message ?: "kesalahan tidak diketahui"}"
+            } finally {
+                _sedangProses.value = false
+            }
+        }
+    }
+
+    fun batalPulih() {
+        _pratinjau.value = null
+        Cadangan.bersihkan(appContext)
+    }
+
+    fun pulihkan() {
+        val p = _pratinjau.value ?: return
+        if (_sedangProses.value) return
+        _sedangProses.value = true
+        viewModelScope.launch {
+            try {
+                val (jurnal, nota) = withContext(Dispatchers.IO) { Cadangan.pulihkanLokal(appContext, db, p) }
+                val bagianDesa = if (p.dataDesa > 0) {
+                    when (val h = desa.pulihkanMentah(p.desaId, Cadangan.dataDesa(p.json))) {
+                        is HasilAuth.Sukses -> "${h.data} data desa dipulihkan."
+                        is HasilAuth.Gagal -> "Data desa BELUM dipulihkan: ${h.pesan}"
+                    }
+                } else "Cadangan ini tidak berisi data desa."
+                _pesan.value = "Selesai. $jurnal jurnal dan $nota nota baru dipulihkan di HP ini (yang sudah ada dilewati). $bagianDesa"
+                _pratinjau.value = null
+                Cadangan.bersihkan(appContext)
+            } catch (e: Exception) {
+                _pesan.value = "Gagal memulihkan: ${e.message ?: "kesalahan tidak diketahui"}"
+            } finally {
+                _sedangProses.value = false
+            }
+        }
+    }
 
     fun buat(jenis: JenisLaporan, onSiap: (File, String) -> Unit) {
         if (_sedangProses.value) return
@@ -149,6 +206,13 @@ class LaporanViewModel(
                     appContext, "tugas.csv", listOf("Tugas", "Untuk", "Tenggat", "Status", "Keterangan"),
                     data.map { listOf(it.judul, it.untukNama, formatTanggal(it.deadlineMillis).substringBefore(","), if (it.selesai) "Selesai" else "Belum", it.deskripsi) }
                 )
+            }
+            JenisLaporan.BACKUP_ZIP -> {
+                val ringkasan = bangun(JenisLaporan.BACKUP_JSON)
+                Cadangan.buatZip(appContext, db, desa, ringkasan).also {
+                    prefs.edit().putLong("cadangan_terakhir", sekarang).apply()
+                    _cadanganTerakhir.value = sekarang
+                }
             }
             JenisLaporan.BACKUP_JSON -> {
                 val root = JSONObject()
