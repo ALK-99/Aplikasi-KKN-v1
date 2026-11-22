@@ -35,7 +35,6 @@ fun ProfilScreen(vm: ProfilViewModel, onLogout: () -> Unit) {
         }
     } else {
         var nama by remember(p.uid, p.namaLengkap) { mutableStateOf(p.namaLengkap) }
-        var desa by remember(p.uid, p.desa) { mutableStateOf(p.desa) }
         var divisi by remember(p.uid, p.divisi) { mutableStateOf(p.divisi) }
 
         Column(
@@ -57,6 +56,13 @@ fun ProfilScreen(vm: ProfilViewModel, onLogout: () -> Unit) {
                 BarisData("NIM", p.nim)
                 Spacer(Modifier.height(10.dp))
                 BarisData("Email", p.email)
+                Spacer(Modifier.height(10.dp))
+                BarisData("Desa", p.desa.ifBlank { "-" })
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Desa dikunci supaya data tiap desa tidak tercampur. Kalau salah, minta developer mengubahnya.",
+                    fontSize = 11.sp, color = TeksRedup
+                )
             }
             Spacer(Modifier.height(18.dp))
 
@@ -68,17 +74,12 @@ fun ProfilScreen(vm: ProfilViewModel, onLogout: () -> Unit) {
             )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
-                value = desa, onValueChange = { desa = it }, label = { Text("Desa") },
-                singleLine = true, modifier = Modifier.fillMaxWidth(), colors = kolomWarna()
-            )
-            Spacer(Modifier.height(10.dp))
-            OutlinedTextField(
                 value = divisi, onValueChange = { divisi = it }, label = { Text("Divisi") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(), colors = kolomWarna()
             )
             Spacer(Modifier.height(16.dp))
             TombolUtama(teks = "Simpan Perubahan", sedangProses = sedangProses) {
-                vm.simpan(nama, desa, divisi)
+                vm.simpan(nama, divisi)
             }
 
             Spacer(Modifier.height(22.dp))

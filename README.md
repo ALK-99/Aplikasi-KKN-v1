@@ -74,6 +74,23 @@ Supaya APK hasil GitHub Actions (lihat bagian 3 di bawah) juga punya Firebase ak
 - Untuk memblokir akun tertentu: Firestore Console -> `users/{uid}` -> ubah field
   `akunDiblokir` jadi `true`. Pengguna itu akan otomatis logout & ditolak login berikutnya.
 
+## Data desa & audit hak akses (Tahap A)
+- Anggota, absensi, proker, surat, dan inventaris sekarang tersimpan di Firestore per desa
+  (`desa/{desaId}/...`) dan tampil sama di semua HP satu desa. Firestore menyimpan salinan
+  offline, jadi tetap bisa dibuka tanpa sinyal dan otomatis sinkron saat online.
+- Desa dikunci setelah daftar. Untuk memindahkan peserta ke desa lain, admin mengubah field
+  `desa` dan `desaId` di `users/{uid}` lewat Firebase Console.
+- Anggota tidak pernah dihapus, hanya **dinonaktifkan**; absensi menyimpan salinan nama, jadi
+  laporan lama tetap utuh. Proker/surat/barang yang "dihapus" hanya ditandai `dihapus`.
+- Setiap perubahan menulis satu baris `riwayat` (siapa, kapan, apa) yang tidak bisa diubah/dihapus.
+- Aturan keamanan: hanya anggota desa yang sama (dan tidak diblokir) boleh membaca/menulis data
+  desa; `uid/NIM/email/desa` profil tidak bisa diganti sendiri; `nim_index` tidak bisa di-list;
+  `meta/pendaftaran` hanya boleh naik/turun satu; tidak ada hapus permanen dari aplikasi.
+- Data lama di HP (sebelum v1.11) diunggah lewat kartu **Data lama ditemukan** di Beranda
+  (sekali saja per akun, aman diulang karena ID tetap). **Cukup satu orang per desa** yang
+  mengunggah data yang sama.
+- Setelah memperbarui `firestore.rules`, tempel ulang di Console > Firestore > Rules > Publish.
+
 ## Catatan penting
 - **Repo harus Publik** agar pengecekan update jalan tanpa token. Konsekuensi: file keystore
   (`app/sekretaris-kkn.jks`, password di `app/build.gradle.kts`) ikut terlihat publik. Untuk aplikasi

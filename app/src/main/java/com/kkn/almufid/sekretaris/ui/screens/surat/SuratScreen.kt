@@ -12,7 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kkn.almufid.sekretaris.data.entity.JenisSurat
-import com.kkn.almufid.sekretaris.data.entity.SuratEntry
+import com.kkn.almufid.sekretaris.data.cloud.SuratDesa
+import com.kkn.almufid.sekretaris.ui.auth.DialogInfo
 import com.kkn.almufid.sekretaris.ui.formatTanggal
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -32,6 +33,7 @@ import com.kkn.almufid.sekretaris.ui.theme.*
 @Composable
 fun SuratScreen(viewModel: SuratViewModel) {
     val daftar by viewModel.daftarSurat.collectAsState()
+    val pesan by viewModel.pesan.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
     var filter by remember { mutableStateOf<JenisSurat?>(null) }
     val tampil = remember(daftar, filter) { if (filter == null) daftar else daftar.filter { it.jenis == filter } }
@@ -61,6 +63,8 @@ fun SuratScreen(viewModel: SuratViewModel) {
         }
     }
 
+    pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
+
     if (dialogTerbuka) {
         DialogTambahSurat(
             saranNomor = { viewModel.nomorBerikutnya(it) },
@@ -74,7 +78,7 @@ fun SuratScreen(viewModel: SuratViewModel) {
 }
 
 @Composable
-private fun KartuSurat(surat: SuratEntry, modifier: Modifier, onHapus: () -> Unit) {
+private fun KartuSurat(surat: SuratDesa, modifier: Modifier, onHapus: () -> Unit) {
     val masuk = surat.jenis == JenisSurat.MASUK
     KartuGelap(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -92,7 +96,11 @@ private fun KartuSurat(surat: SuratEntry, modifier: Modifier, onHapus: () -> Uni
             color = TeksSoft, fontSize = 14.sp
         )
         Spacer(Modifier.height(6.dp))
-        Text(formatTanggal(surat.tanggalMillis), color = TeksRedup, fontSize = 11.sp)
+        Text(
+            formatTanggal(surat.tanggalMillis) +
+                if (surat.jejak.dibuatOlehNama.isNotBlank()) " · dicatat ${surat.jejak.dibuatOlehNama}" else "",
+            color = TeksRedup, fontSize = 11.sp
+        )
     }
 }
 

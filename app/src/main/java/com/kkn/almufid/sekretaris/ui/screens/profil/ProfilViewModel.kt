@@ -28,7 +28,7 @@ class ProfilViewModel(private val repo: AuthRepository) : ViewModel() {
         viewModelScope.launch { _profil.value = repo.ambilProfil(uid) }
     }
 
-    fun simpan(nama: String, desa: String, divisi: String) {
+    fun simpan(nama: String, divisi: String) {
         val uid = repo.uidSaatIni ?: return
         if (nama.isBlank()) {
             _pesan.value = "Nama lengkap wajib diisi"
@@ -36,7 +36,7 @@ class ProfilViewModel(private val repo: AuthRepository) : ViewModel() {
         }
         _sedangProses.value = true
         viewModelScope.launch {
-            when (val hasil = repo.perbaruiProfil(uid, nama, desa, divisi)) {
+            when (val hasil = repo.perbaruiProfil(uid, nama, divisi)) {
                 is HasilAuth.Sukses -> {
                     _pesan.value = "Profil berhasil disimpan"
                     muat()

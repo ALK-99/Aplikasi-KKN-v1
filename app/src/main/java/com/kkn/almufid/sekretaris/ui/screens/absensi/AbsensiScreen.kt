@@ -10,6 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kkn.almufid.sekretaris.data.cloud.AnggotaDesa
+import com.kkn.almufid.sekretaris.ui.auth.DialogInfo
 import com.kkn.almufid.sekretaris.ui.formatTanggal
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -41,7 +43,12 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
     val anggota by viewModel.daftarAnggota.collectAsState()
     val absensi by viewModel.absensiHariIni.collectAsState()
     val tanggal by viewModel.tanggalDipilih.collectAsState()
+    val semua by viewModel.semuaAnggota.collectAsState()
+    val pesan by viewModel.pesan.collectAsState()
     var dialogTambahAnggota by remember { mutableStateOf(false) }
+    var konfirmasiNonaktif by remember { mutableStateOf<AnggotaDesa?>(null) }
+    var lihatNonaktif by remember { mutableStateOf(false) }
+    val nonaktifLain = remember(semua, anggota) { semua.filter { s -> !s.aktif && anggota.none { it.id == s.id } } }
 
     val statusPerAnggota = remember(absensi) { absensi.associateBy { it.anggotaId } }
     val hadir = absensi.count { it.hadir }
@@ -98,9 +105,32 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
                         BarisAbsensi(
                             nama = orang.nama, divisi = orang.divisi,
                             hadir = statusPerAnggota[orang.id]?.hadir,
+                            aktif = orang.aktif,
+                            dicatatOleh = statusPerAnggota[orang.id]?.jejak?.diubahOlehNama?.ifBlank { null },
                             modifier = Modifier.munculBertahap(i),
-                            onUbah = { status -> viewModel.tandaiKehadiran(orang.id, status) }
+                            onUbah = { status -> viewModel.tandaiKehadiran(orang, status) },
+                            onAturAktif = {
+                                if (orang.aktif) konfirmasiNonaktif = orang else viewModel.aturAktif(orang, true)
+                            }
                         )
+                    }
+                    if (nonaktifLain.isNotEmpty()) {
+                        item {
+                            Text(
+                                (if (lihatNonaktif) "Sembunyikan" else "Lihat") + " anggota nonaktif (${nonaktifLain.size})",
+                                color = VioletTerang, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                                modifier = Modifier.tekanPegas { lihatNonaktif = !lihatNonaktif }.padding(vertical = 6.dp)
+                            )
+                        }
+                        if (lihatNonaktif) {
+                            items(nonaktifLain) { orang ->
+                                BarisAbsensi(
+                                    nama = orang.nama, divisi = orang.divisi, hadir = null,
+                                    aktif = false, dicatatOleh = null, modifier = Modifier,
+                                    onUbah = {}, onAturAktif = { viewModel.aturAktif(orang, true) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -109,6 +139,24 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
             dialogTambahAnggota = true
         }
     }
+
+    konfirmasiNonaktif?.let { orang ->
+        AlertDialog(
+            onDismissRequest = { konfirmasiNonaktif = null },
+            title = { Text("Nonaktifkan ${orang.nama}?") },
+            text = {
+                Text(
+                    "Anggota tidak muncul lagi di daftar harian, tetapi seluruh riwayat absensinya tetap tersimpan " +
+                        "dan bisa diaktifkan kembali kapan saja."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.aturAktif(orang, false); konfirmasiNonaktif = null }) { Text("Nonaktifkan") }
+            },
+            dismissButton = { TextButton(onClick = { konfirmasiNonaktif = null }) { Text("Batal") } }
+        )
+    }
+    pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
 
     if (dialogTambahAnggota) {
         DialogTambahAnggota(
@@ -141,8 +189,11 @@ private fun BarisAbsensi(
     nama: String,
     divisi: String,
     hadir: Boolean?,
+    aktif: Boolean,
+    dicatatOleh: String?,
     modifier: Modifier,
-    onUbah: (Boolean) -> Unit
+    onUbah: (Boolean) -> Unit,
+    onAturAktif: () -> Unit
 ) {
     Row(
         modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Surface1).padding(12.dp),
@@ -153,10 +204,19 @@ private fun BarisAbsensi(
         Column(Modifier.weight(1f)) {
             Text(nama, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
             if (divisi.isNotBlank()) Text(divisi, color = TeksRedup, fontSize = 11.sp)
+            if (!aktif) Text("Nonaktif", color = Gold, fontSize = 11.sp)
+            if (dicatatOleh != null) Text("dicatat oleh $dicatatOleh", color = TeksRedup, fontSize = 10.sp)
+            Text(
+                if (aktif) "Nonaktifkan" else "Aktifkan kembali", color = VioletTerang, fontSize = 10.sp,
+                fontWeight = FontWeight.Bold, modifier = Modifier.tekanPegas(onAturAktif).padding(top = 2.dp)
+            )
         }
-        PilKecil("Hadir", hadir == true, HijauTua) { onUbah(true) }
-        Spacer(Modifier.width(6.dp))
-        PilKecil("Absen", hadir == false, Pink) { onUbah(false) }
+        if (aktif || hadir != null) {
+            PilKecil("Hadir", hadir == true, HijauTua) { onUbah(true) }
+            Spacer(Modifier.width(6.dp))
+            PilKecil("Absen", hadir == false, Pink) { onUbah(false) }
+        }
+
     }
 }
 

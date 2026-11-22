@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kkn.almufid.sekretaris.data.AppDatabase
+import com.kkn.almufid.sekretaris.data.cloud.DesaRepository
 import com.kkn.almufid.sekretaris.data.cloud.JurnalBersamaRepository
 import com.kkn.almufid.sekretaris.data.cloud.KoordinasiRepository
 import com.kkn.almufid.sekretaris.ui.formatRupiah
@@ -35,6 +36,7 @@ enum class JenisLaporan(val judul: String, val keterangan: String, val mime: Str
 class LaporanViewModel(
     private val appContext: Context,
     private val db: AppDatabase,
+    private val desa: DesaRepository,
     private val bersama: JurnalBersamaRepository,
     private val koordinasi: KoordinasiRepository,
 ) : ViewModel() {
@@ -123,18 +125,22 @@ class LaporanViewModel(
                 PembuatLaporan.pdf(appContext, "rekap-mingguan.pdf", "Rekap 7 Hari Terakhir", cap, baris)
             }
             JenisLaporan.ABSENSI_CSV -> {
-                val nama = db.anggotaDao().semuaAnggota().first().associate { it.id to it.nama }
-                val data = db.absensiDao().semuaAbsensi().first()
+                val data = ambil(desa.alirAbsensi()).sortedWith(compareBy({ it.tanggalMillis }, { it.anggotaNama }))
                 PembuatLaporan.csv(
-                    appContext, "absensi.csv", listOf("Tanggal", "Nama", "Status", "Keterangan"),
-                    data.map { listOf(formatTanggal(it.tanggalMillis).substringBefore(","), nama[it.anggotaId] ?: "?", if (it.hadir) "Hadir" else "Tidak hadir", it.keterangan) }
+                    appContext, "absensi.csv", listOf("Tanggal", "Nama", "Status", "Keterangan", "Dicatat oleh"),
+                    data.map {
+                        listOf(
+                            formatTanggal(it.tanggalMillis).substringBefore(","), it.anggotaNama,
+                            if (it.hadir) "Hadir" else "Tidak hadir", it.keterangan, it.jejak.diubahOlehNama
+                        )
+                    }
                 )
             }
             JenisLaporan.INVENTARIS_CSV -> {
-                val data = db.inventarisDao().semuaInventaris().first()
+                val data = ambil(desa.alirInventaris()).sortedBy { it.namaBarang.lowercase() }
                 PembuatLaporan.csv(
-                    appContext, "inventaris.csv", listOf("Barang", "Jumlah", "Kondisi", "Keterangan"),
-                    data.map { listOf(it.namaBarang, it.jumlah.toString(), it.kondisi, it.keterangan) }
+                    appContext, "inventaris.csv", listOf("Barang", "Jumlah", "Kondisi", "Keterangan", "Dicatat oleh"),
+                    data.map { listOf(it.namaBarang, it.jumlah.toString(), it.kondisi, it.keterangan, it.jejak.dibuatOlehNama) }
                 )
             }
             JenisLaporan.TUGAS_CSV -> {
@@ -153,6 +159,40 @@ class LaporanViewModel(
                             .put("judul", it.judul).put("isi", it.isi).put("peserta", it.pesertaRapat))
                     }
                 })
+                root.put("desa", JSONObject().also { d ->
+                    d.put("anggota", JSONArray().also { a ->
+                        ambil(desa.alirAnggota()).forEach {
+                            a.put(JSONObject().put("id", it.id).put("nama", it.nama).put("divisi", it.divisi)
+                                .put("aktif", it.aktif).put("dibuatOleh", it.jejak.dibuatOlehNama))
+                        }
+                    })
+                    d.put("absensi", JSONArray().also { a ->
+                        ambil(desa.alirAbsensi()).forEach {
+                            a.put(JSONObject().put("anggotaId", it.anggotaId).put("nama", it.anggotaNama)
+                                .put("tanggal", it.tanggalMillis).put("hadir", it.hadir)
+                                .put("keterangan", it.keterangan).put("dicatatOleh", it.jejak.diubahOlehNama))
+                        }
+                    })
+                    d.put("proker", JSONArray().also { a ->
+                        ambil(desa.alirProker()).forEach {
+                            a.put(JSONObject().put("nama", it.namaProker).put("divisi", it.divisiPenanggungJawab)
+                                .put("status", it.status.name).put("evaluasi", it.catatanEvaluasi))
+                        }
+                    })
+                    d.put("surat", JSONArray().also { a ->
+                        ambil(desa.alirSurat()).forEach {
+                            a.put(JSONObject().put("tanggal", it.tanggalMillis).put("jenis", it.jenis.name)
+                                .put("nomor", it.nomorSurat).put("perihal", it.perihal).put("pihak", it.tujuanAtauPengirim))
+                        }
+                    })
+                    d.put("inventaris", JSONArray().also { a ->
+                        ambil(desa.alirInventaris()).forEach {
+                            a.put(JSONObject().put("barang", it.namaBarang).put("jumlah", it.jumlah)
+                                .put("kondisi", it.kondisi).put("keterangan", it.keterangan))
+                        }
+                    })
+                })
+                // Data lama yang masih tersimpan di HP ini (sebelum dipindah ke desa).
                 root.put("anggota", JSONArray().also { a ->
                     db.anggotaDao().semuaAnggota().first().forEach {
                         a.put(JSONObject().put("id", it.id).put("nama", it.nama).put("divisi", it.divisi))

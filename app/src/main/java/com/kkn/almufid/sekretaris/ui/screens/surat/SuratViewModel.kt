@@ -2,35 +2,37 @@ package com.kkn.almufid.sekretaris.ui.screens.surat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kkn.almufid.sekretaris.data.dao.SuratDao
+import com.kkn.almufid.sekretaris.data.auth.HasilAuth
+import com.kkn.almufid.sekretaris.data.cloud.DesaRepository
+import com.kkn.almufid.sekretaris.data.cloud.SuratDesa
 import com.kkn.almufid.sekretaris.data.entity.JenisSurat
-import com.kkn.almufid.sekretaris.data.entity.SuratEntry
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class SuratViewModel(private val dao: SuratDao) : ViewModel() {
+class SuratViewModel(private val desa: DesaRepository) : ViewModel() {
 
-    val daftarSurat: StateFlow<List<SuratEntry>> = dao.semuaSurat()
+    val daftarSurat: StateFlow<List<SuratDesa>> = desa.alirSurat()
+        .map { daftar -> daftar.sortedByDescending { it.tanggalMillis } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _pesan = MutableStateFlow<String?>(null)
+    val pesan: StateFlow<String?> = _pesan.asStateFlow()
+
+    private fun lapor(hasil: HasilAuth<Unit>) {
+        if (hasil is HasilAuth.Gagal) _pesan.value = hasil.pesan
+    }
 
     fun tambahSurat(jenis: JenisSurat, nomor: String, perihal: String, tujuan: String) {
         if (perihal.isBlank()) return
-        viewModelScope.launch {
-            dao.tambah(
-                SuratEntry(
-                    tanggalMillis = System.currentTimeMillis(),
-                    jenis = jenis,
-                    nomorSurat = nomor.trim(),
-                    perihal = perihal.trim(),
-                    tujuanAtauPengirim = tujuan.trim()
-                )
-            )
-        }
+        viewModelScope.launch { lapor(desa.tambahSurat(jenis, nomor, perihal, tujuan)) }
     }
 
-    /** Saran nomor berurutan per jenis, per tahun: mis. 003/KKN-AM/XI/2026. */
+    /** Saran nomor berurutan per jenis, per tahun, dihitung dari surat seluruh desa: mis. 003/KKN-AM/XI/2026. */
     fun nomorBerikutnya(jenis: JenisSurat): String {
         val kal = java.util.Calendar.getInstance()
         val tahun = kal.get(java.util.Calendar.YEAR)
@@ -42,7 +44,9 @@ class SuratViewModel(private val dao: SuratDao) : ViewModel() {
         return "%03d/%s/%s/%d".format(urut, kode, romawi, tahun)
     }
 
-    fun hapusSurat(entry: SuratEntry) {
-        viewModelScope.launch { dao.hapus(entry) }
+    fun hapusSurat(entry: SuratDesa) {
+        viewModelScope.launch { lapor(desa.hapusSurat(entry)) }
     }
+
+    fun tutupPesan() { _pesan.value = null }
 }

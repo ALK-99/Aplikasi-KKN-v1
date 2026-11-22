@@ -21,6 +21,8 @@ data class ProfilPengguna @JvmOverloads constructor(
     val akunDiblokir: Boolean = false,
     val dibuatPadaMillis: Long = 0L,
     val terakhirAktifMillis: Long = 0L,
+    /** Kunci ruang data desa (hasil [desaIdDari]). Dipakai aturan Firestore; tidak diubah sendiri oleh pengguna. */
+    val desaId: String = "",
 ) {
     /** Dipakai Firestore untuk serialisasi: butuh constructor tanpa argumen + getter standar,
      * data class Kotlin dengan nilai default di atas sudah memenuhi syarat itu. */
@@ -35,5 +37,16 @@ data class ProfilPengguna @JvmOverloads constructor(
         "akunDiblokir" to akunDiblokir,
         "dibuatPadaMillis" to dibuatPadaMillis,
         "terakhirAktifMillis" to terakhirAktifMillis,
+        "desaId" to desaId,
     )
 }
+
+/**
+ * Mengubah nama desa yang diketik bebas menjadi kunci seragam, supaya
+ * "Desa Wonosalam", "wonosalam", dan "Wonosalam " masuk ruang data yang sama.
+ */
+fun desaIdDari(desa: String): String =
+    desa.trim().lowercase()
+        .replace(Regex("^(desa|ds\\.?|kelurahan|kel\\.?|dusun|dsn\\.?)\\s+"), "")
+        .replace(Regex("[^a-z0-9]+"), "-")
+        .trim('-')

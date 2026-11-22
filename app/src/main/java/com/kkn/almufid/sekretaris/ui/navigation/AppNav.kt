@@ -37,6 +37,7 @@ import com.kkn.almufid.sekretaris.ui.screens.koordinasi.PollingScreen
 import com.kkn.almufid.sekretaris.ui.screens.koordinasi.TugasScreen
 import com.kkn.almufid.sekretaris.ui.screens.pengaturan.PengaturanScreen
 import com.kkn.almufid.sekretaris.ui.screens.peta.PetaScreen
+import com.kkn.almufid.sekretaris.data.cloud.DesaRepository
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilScreen
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilViewModel
 import com.kkn.almufid.sekretaris.ui.screens.proker.ProkerScreen
@@ -68,6 +69,8 @@ fun AppNav(onLogout: () -> Unit = {}) {
     val navController = rememberNavController()
     val app = LocalContext.current.applicationContext as SekretarisApp
     val db = app.database
+    // Satu instance dipakai bersama supaya identitas & desa pengguna hanya dimuat sekali.
+    val desaRepo = remember { DesaRepository(AuthRepository()) }
 
     val posisi by navController.currentBackStackEntryAsState()
     val rute = posisi?.destination?.route ?: Tujuan.RUTE_HOME
@@ -87,7 +90,7 @@ fun AppNav(onLogout: () -> Unit = {}) {
             ) {
                 composable(Tujuan.RUTE_HOME) {
                     val vm: HomeViewModel = viewModel(factory = GenericViewModelFactory {
-                        HomeViewModel(db.prokerDao(), db.anggotaDao(), KoordinasiRepository(), AuthRepository())
+                        HomeViewModel(app.applicationContext, db, desaRepo, KoordinasiRepository(), AuthRepository())
                     })
                     HomeScreen(vm, onBuka = { navController.navigate(it.rute) { launchSingleTop = true } })
                 }
@@ -96,15 +99,15 @@ fun AppNav(onLogout: () -> Unit = {}) {
                     JurnalScreen(vm)
                 }
                 composable(Tujuan.ABSENSI.rute) {
-                    val vm: AbsensiViewModel = viewModel(factory = GenericViewModelFactory { AbsensiViewModel(db.anggotaDao(), db.absensiDao()) })
+                    val vm: AbsensiViewModel = viewModel(factory = GenericViewModelFactory { AbsensiViewModel(desaRepo) })
                     AbsensiScreen(vm)
                 }
                 composable(Tujuan.SURAT.rute) {
-                    val vm: SuratViewModel = viewModel(factory = GenericViewModelFactory { SuratViewModel(db.suratDao()) })
+                    val vm: SuratViewModel = viewModel(factory = GenericViewModelFactory { SuratViewModel(desaRepo) })
                     SuratScreen(vm)
                 }
                 composable(Tujuan.PROKER.rute) {
-                    val vm: ProkerViewModel = viewModel(factory = GenericViewModelFactory { ProkerViewModel(db.prokerDao()) })
+                    val vm: ProkerViewModel = viewModel(factory = GenericViewModelFactory { ProkerViewModel(desaRepo) })
                     ProkerScreen(vm)
                 }
                 composable(Tujuan.ARSIP.rute) {
@@ -112,7 +115,7 @@ fun AppNav(onLogout: () -> Unit = {}) {
                     ArsipScreen(vm)
                 }
                 composable(Tujuan.INVENTARIS.rute) {
-                    val vm: InventarisViewModel = viewModel(factory = GenericViewModelFactory { InventarisViewModel(db.inventarisDao()) })
+                    val vm: InventarisViewModel = viewModel(factory = GenericViewModelFactory { InventarisViewModel(desaRepo) })
                     InventarisScreen(vm)
                 }
                 composable(Tujuan.PENGUMUMAN.rute) {
@@ -135,7 +138,7 @@ fun AppNav(onLogout: () -> Unit = {}) {
                 composable(Tujuan.PETA.rute) { PetaScreen() }
                 composable(Tujuan.LAPORAN.rute) {
                     val vm: LaporanViewModel = viewModel(factory = GenericViewModelFactory {
-                        LaporanViewModel(app.applicationContext, db, JurnalBersamaRepository(), KoordinasiRepository())
+                        LaporanViewModel(app.applicationContext, db, desaRepo, JurnalBersamaRepository(), KoordinasiRepository())
                     })
                     LaporanScreen(vm)
                 }

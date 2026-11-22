@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kkn.almufid.sekretaris.data.cloud.Pengumuman
+import com.kkn.almufid.sekretaris.ui.auth.DialogInfo
 import com.kkn.almufid.sekretaris.ui.components.*
 import com.kkn.almufid.sekretaris.ui.navigation.KategoriMenu
 import com.kkn.almufid.sekretaris.ui.navigation.Tujuan
@@ -46,6 +47,9 @@ private const val TINGGI_KARTU_ATAS = 112
 fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
     val r by viewModel.ringkasan.collectAsState()
     val pengumuman by viewModel.pengumumanTerbaru.collectAsState()
+    val dataLama by viewModel.dataLama.collectAsState()
+    val sedangUnggah by viewModel.sedangUnggah.collectAsState()
+    val pesan by viewModel.pesan.collectAsState()
     val persen = if (r.prokerTotal == 0) 0 else r.prokerSelesai * 100 / r.prokerTotal
     val frac by animateFloatAsState(persen / 100f, tween(900), label = "persen")
     // -1 = semua kelompok menu tertutup. Disimpan supaya tetap terbuka saat kembali dari halaman lain.
@@ -79,6 +83,26 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         SholatYogyakarta { onBuka(Tujuan.IBADAH) }
+        dataLama?.let { j ->
+            Spacer(Modifier.height(12.dp))
+            KartuGelap(Modifier.fillMaxWidth()) {
+                Text("Data lama ditemukan di HP ini", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Gold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "${j.anggota} anggota, ${j.absensi} absensi, ${j.proker} proker, ${j.surat} surat, ${j.inventaris} barang. " +
+                        "Unggah supaya teman satu desa ikut melihatnya. Kalau teman sudah mengunggah data yang sama, " +
+                        "pilih Lewati agar tidak ganda. Data di HP tidak dihapus.",
+                    fontSize = 12.sp, color = TeksRedup, lineHeight = 17.sp
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PilKecil(if (sedangUnggah) "Mengunggah..." else "Unggah ke desa", true, Violet) {
+                        if (!sedangUnggah) viewModel.unggahDataLama()
+                    }
+                    PilKecil("Lewati", false, Surface2) { if (!sedangUnggah) viewModel.lewatiDataLama() }
+                }
+            }
+        }
 
         Spacer(Modifier.height(24.dp))
         Text("Menu", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
@@ -93,6 +117,7 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
             Spacer(Modifier.height(12.dp))
         }
     }
+    pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
 }
 
 /** Kotak kecil ringkasan program kerja (menggantikan kartu besar sebelumnya). */

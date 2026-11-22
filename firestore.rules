@@ -19,6 +19,8 @@ rules_version = '2';
 //   users/{uid}/uploads/{id}     metadata file yang diunggah pengguna (poin B.5)
 //   users/{uid}/inputs/{id}      input data non-upload milik pengguna (poin B.5)
 //   users/{uid}/security_log/{id} log keamanan akun (poin B.5), ditulis sistem, dibaca pemilik saja
+//   desa/{desaId}/anggota|absensi|proker|surat|inventaris/{id}  data kerja satu desa (hanya anggota desa itu)
+//   desa/{desaId}/riwayat/{id}   catatan perubahan, hanya bisa ditambah (tidak bisa diubah/dihapus)
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -31,6 +33,15 @@ service cloud.firestore {
     // memilih peran "Developer" saat daftar tidak otomatis memberi kuasa.
     function adalahAdmin() {
       return sudahLogin() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Desa akun yang sedang login (kosong kalau profil belum punya desaId).
+    function desaSaya() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('desaId', '');
+    }
+    function anggotaDesa(desaId) {
+      return sudahLogin() && desaId != '' && desaSaya() == desaId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('akunDiblokir', false) == false;
     }
 
     // Profil pengguna: siapa saja yang login boleh baca profil dasar
@@ -47,11 +58,19 @@ service cloud.firestore {
           pemilik(uid)
           && request.resource.data.akunDiblokir == resource.data.akunDiblokir
           && request.resource.data.peran == resource.data.peran
+          // Identitas tetap: uid, NIM, email, dan desa tidak boleh diganti sendiri.
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.get('nim', '') == resource.data.get('nim', '')
+          && request.resource.data.get('email', '') == resource.data.get('email', '')
+          && request.resource.data.get('desa', '') == resource.data.get('desa', '')
+          // desaId hanya boleh diisi sekali (akun lama yang belum punya).
+          && (resource.data.get('desaId', '') == ''
+              || request.resource.data.get('desaId', '') == resource.data.get('desaId', ''))
         )
-        // Admin hanya boleh mengubah status blokir, bukan data lain.
+        // Admin hanya boleh mengubah status blokir, dan memindahkan desa peserta.
         || (
           adalahAdmin()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['akunDiblokir'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['akunDiblokir', 'desa', 'desaId'])
         );
       allow delete: if false; // penghapusan akun hanya lewat Firebase Console oleh developer
 
@@ -91,7 +110,8 @@ service cloud.firestore {
     // sekali oleh pemilik uid yang baru dibuat, dan tidak boleh diubah
     // nilainya sesudahnya (mencegah orang lain membajak NIM orang lain).
     match /nim_index/{nim} {
-      allow read: if true;
+      allow get: if true;       // login butuh baca satu NIM
+      allow list: if false;     // daftar seluruh NIM tidak boleh diambil
       allow create: if sudahLogin()
         && (
           (request.resource.data.keys().hasOnly(['reserved']) && request.resource.data.reserved == true) ||
@@ -108,7 +128,39 @@ service cloud.firestore {
     // menurunkannya sembarangan di luar alur rollback bawaan app.
     match /meta/pendaftaran {
       allow read: if true;
-      allow write: if sudahLogin();
+      // Hanya field total, naik/turun satu per langkah, tidak boleh negatif.
+      allow create: if sudahLogin()
+        && request.resource.data.keys().hasOnly(['total'])
+        && request.resource.data.total == 1;
+      allow update: if sudahLogin()
+        && request.resource.data.keys().hasOnly(['total'])
+        && request.resource.data.total >= 0
+        && (request.resource.data.total == resource.data.total + 1
+            || request.resource.data.total == resource.data.total - 1);
+      allow delete: if false;
+    }
+
+    // Ruang kerja desa. Hanya akun yang desaId-nya sama (dan tidak diblokir)
+    // yang boleh membaca dan menulis. Dokumen data tidak pernah dihapus
+    // sungguhan (pakai `dihapus` / `aktif`), dan setiap tulis harus atas nama
+    // akun yang login sendiri (diubahOleh == uid), jadi jejak tidak bisa dipalsukan.
+    match /desa/{desaId}/{koleksi}/{id} {
+      allow read: if anggotaDesa(desaId);
+      allow create: if anggotaDesa(desaId)
+        && koleksi != 'riwayat'
+        && request.resource.data.diubahOleh == request.auth.uid;
+      allow update: if anggotaDesa(desaId)
+        && koleksi != 'riwayat'
+        && request.resource.data.diubahOleh == request.auth.uid
+        && request.resource.data.get('dibuatOleh', '') == resource.data.get('dibuatOleh', '');
+      allow delete: if false;
+    }
+
+    // Riwayat perubahan: hanya bisa ditambah, atas nama sendiri; tidak bisa diubah/dihapus.
+    match /desa/{desaId}/riwayat/{id} {
+      allow read: if anggotaDesa(desaId);
+      allow create: if anggotaDesa(desaId) && request.resource.data.oleh == request.auth.uid;
+      allow update, delete: if false;
     }
 
     // Jurnal Bersama: semua pengguna yang login boleh membaca dan menambah

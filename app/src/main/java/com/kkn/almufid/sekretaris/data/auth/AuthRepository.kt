@@ -121,6 +121,7 @@ class AuthRepository(
             peran = peran.name,
             akunDiblokir = false,
             dibuatPadaMillis = System.currentTimeMillis(),
+            desaId = desaIdDari(desa),
         )
         return try {
             db.collection(KOLEKSI_USERS).document(uid).set(profil.keMap()).await()
@@ -249,12 +250,22 @@ class AuthRepository(
         }
     }
 
+    /**
+     * Mengisi kunci ruang desa untuk akun lama yang dibuat sebelum fitur sinkronisasi.
+     * Aturan Firestore hanya mengizinkan pengisian SEKALI (saat masih kosong).
+     */
+    suspend fun simpanDesaId(uid: String, desaId: String): Boolean = try {
+        db.collection(KOLEKSI_USERS).document(uid).update("desaId", desaId).await()
+        true
+    } catch (e: Exception) {
+        false
+    }
+
     /** Ubah data profil yang boleh diubah sendiri (peran & status blokir tidak termasuk). */
-    suspend fun perbaruiProfil(uid: String, nama: String, desa: String, divisi: String): HasilAuth<Unit> = try {
+    suspend fun perbaruiProfil(uid: String, nama: String, divisi: String): HasilAuth<Unit> = try {
         db.collection(KOLEKSI_USERS).document(uid).update(
             mapOf(
                 "namaLengkap" to nama.trim(),
-                "desa" to desa.trim(),
                 "divisi" to divisi.trim(),
             )
         ).await()

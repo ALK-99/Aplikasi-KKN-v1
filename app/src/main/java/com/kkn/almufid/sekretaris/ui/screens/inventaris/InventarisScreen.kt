@@ -11,7 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.kkn.almufid.sekretaris.data.entity.InventarisEntry
+import com.kkn.almufid.sekretaris.data.cloud.InventarisDesa
+import com.kkn.almufid.sekretaris.ui.auth.DialogInfo
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -30,6 +31,7 @@ import com.kkn.almufid.sekretaris.ui.theme.*
 @Composable
 fun InventarisScreen(viewModel: InventarisViewModel) {
     val daftar by viewModel.daftarBarang.collectAsState()
+    val pesan by viewModel.pesan.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
@@ -50,6 +52,8 @@ fun InventarisScreen(viewModel: InventarisViewModel) {
         }
     }
 
+    pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
+
     if (dialogTerbuka) {
         DialogTambahBarang(
             onTutup = { dialogTerbuka = false },
@@ -62,7 +66,7 @@ fun InventarisScreen(viewModel: InventarisViewModel) {
 }
 
 @Composable
-private fun KartuBarang(barang: InventarisEntry, modifier: Modifier, onHapus: () -> Unit) {
+private fun KartuBarang(barang: InventarisDesa, modifier: Modifier, onHapus: () -> Unit) {
     KartuGelap(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -77,6 +81,9 @@ private fun KartuBarang(barang: InventarisEntry, modifier: Modifier, onHapus: ()
                 Text("Kondisi: ${barang.kondisi}", color = TeksSoft, fontSize = 13.sp)
                 if (barang.keterangan.isNotBlank()) {
                     Text(barang.keterangan, color = TeksRedup, fontSize = 12.sp)
+                }
+                if (barang.jejak.diubahOlehNama.isNotBlank()) {
+                    Text("Dicatat ${barang.jejak.dibuatOlehNama}", color = TeksRedup, fontSize = 10.sp)
                 }
             }
             IconButton(onClick = onHapus) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }

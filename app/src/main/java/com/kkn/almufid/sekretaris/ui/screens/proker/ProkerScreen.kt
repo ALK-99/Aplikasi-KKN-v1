@@ -11,7 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.kkn.almufid.sekretaris.data.entity.ProkerEntry
+import com.kkn.almufid.sekretaris.data.cloud.ProkerDesa
+import com.kkn.almufid.sekretaris.ui.auth.DialogInfo
 import com.kkn.almufid.sekretaris.data.entity.StatusProker
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -45,6 +46,7 @@ private fun labelStatus(status: StatusProker): String = when (status) {
 @Composable
 fun ProkerScreen(viewModel: ProkerViewModel) {
     val daftar by viewModel.daftarProker.collectAsState()
+    val pesan by viewModel.pesan.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
     val selesai = daftar.count { it.status == StatusProker.SELESAI }
     val aktif = daftar.count { it.status != StatusProker.BATAL }
@@ -80,6 +82,8 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
         }
     }
 
+    pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
+
     if (dialogTerbuka) {
         DialogTambahProker(
             onTutup = { dialogTerbuka = false },
@@ -93,7 +97,7 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
 
 @Composable
 private fun KartuProker(
-    proker: ProkerEntry,
+    proker: ProkerDesa,
     modifier: Modifier,
     onUbahStatus: (StatusProker) -> Unit,
     onHapus: () -> Unit
@@ -105,6 +109,9 @@ private fun KartuProker(
                 Text(proker.namaProker, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 if (proker.divisiPenanggungJawab.isNotBlank()) {
                     Text("PJ: ${proker.divisiPenanggungJawab}", color = TeksRedup, fontSize = 12.sp)
+                }
+                if (proker.jejak.diubahOlehNama.isNotBlank()) {
+                    Text("Diubah oleh ${proker.jejak.diubahOlehNama}", color = TeksRedup, fontSize = 10.sp)
                 }
             }
             IconButton(onClick = onHapus) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
