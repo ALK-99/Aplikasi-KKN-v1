@@ -11,6 +11,8 @@ import com.kkn.almufid.sekretaris.data.cloud.JurnalBersamaRepository
 import com.kkn.almufid.sekretaris.data.cloud.KoordinasiRepository
 import com.kkn.almufid.sekretaris.ui.formatRupiah
 import com.kkn.almufid.sekretaris.ui.formatTanggal
+import com.kkn.almufid.sekretaris.ui.screens.proker.ringkasTanggal
+import com.kkn.almufid.sekretaris.ui.screens.rekonsiliasi.Rekonsiliasi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +34,9 @@ enum class JenisLaporan(val judul: String, val keterangan: String, val mime: Str
     ABSENSI_CSV("Absensi (CSV)", "Bisa dibuka di Excel", "text/csv"),
     INVENTARIS_CSV("Inventaris (CSV)", "Daftar barang dan kondisinya", "text/csv"),
     TUGAS_CSV("Tugas (CSV)", "Semua tugas, penerima, dan status", "text/csv"),
+    LPJ_PROKER_PDF("Pertanggungjawaban Proker (PDF)", "Rencana, anggaran vs realisasi, nota, dan bukti per proker", "application/pdf"),
+    REGISTER_SURAT_PDF("Register Surat (PDF)", "Surat masuk dan keluar, urut tanggal", "application/pdf"),
+    REKONSILIASI_PDF("Rekonsiliasi Kas (PDF)", "Pengeluaran kas dicocokkan dengan nota dan kwitansi", "application/pdf"),
     BACKUP_ZIP("Cadangan Lengkap + Foto (ZIP)", "Data desa, jurnal & nota di HP, dan foto. Bisa dipulihkan", "application/zip"),
     BACKUP_JSON("Backup Semua Data (JSON)", "Cadangan data di HP + data bersama", "application/json"),
 }
@@ -206,6 +211,66 @@ class LaporanViewModel(
                     appContext, "tugas.csv", listOf("Tugas", "Untuk", "Tenggat", "Status", "Keterangan"),
                     data.map { listOf(it.judul, it.untukNama, formatTanggal(it.deadlineMillis).substringBefore(","), if (it.selesai) "Selesai" else "Belum", it.deskripsi) }
                 )
+            }
+            JenisLaporan.LPJ_PROKER_PDF -> {
+                val proker = ambil(desa.alirProker()).sortedBy { it.mulaiMillis.takeIf { m -> m > 0L } ?: Long.MAX_VALUE }
+                val nota = ambil(desa.alirNota())
+                val bukti = desa.ambilMentah("bukti").orEmpty()
+                    .filter { it.second["dihapus"] != true }
+                    .groupingBy { it.second["prokerId"] as? String ?: "" }.eachCount()
+                val baris = mutableListOf<String>()
+                proker.forEachIndexed { i, p ->
+                    val notaProker = nota.filter { it.prokerTerkait.trim().equals(p.namaProker.trim(), ignoreCase = true) }
+                    baris += "${i + 1}. ${p.namaProker}  [${p.status.name.replace('_', ' ')}]"
+                    if (p.picNama.isNotBlank() || p.divisiPenanggungJawab.isNotBlank()) {
+                        baris += "   PIC: ${p.picNama.ifBlank { "-" }}  ·  Divisi: ${p.divisiPenanggungJawab.ifBlank { "-" }}"
+                    }
+                    baris += "   Jadwal: ${ringkasTanggal(p.mulaiMillis)} s.d. ${ringkasTanggal(p.selesaiMillis)}"
+                    if (p.target.isNotBlank()) baris += "   Target: ${p.target}"
+                    baris += "   Anggaran: ${formatRupiah(p.anggaran)}  ·  Realisasi: ${formatRupiah(p.realisasi)}  ·  " +
+                        "Selisih: ${formatRupiah(p.anggaran - p.realisasi)}"
+                    baris += "   Nota/kwitansi terkait: ${notaProker.size} (${formatRupiah(notaProker.sumOf { it.nominal })})  ·  " +
+                        "Bukti foto: ${bukti[p.id] ?: 0}"
+                    if (p.catatanEvaluasi.isNotBlank()) baris += "   Evaluasi: ${p.catatanEvaluasi}"
+                    baris += ""
+                }
+                baris += "Total anggaran : ${formatRupiah(proker.sumOf { it.anggaran })}"
+                baris += "Total realisasi: ${formatRupiah(proker.sumOf { it.realisasi })}"
+                PembuatLaporan.pdf(appContext, "lpj-proker.pdf", "Laporan Pertanggungjawaban Program Kerja", cap, baris)
+            }
+            JenisLaporan.REGISTER_SURAT_PDF -> {
+                val data = ambil(desa.alirSurat()).sortedBy { it.tanggalMillis }
+                val baris = mutableListOf<String>()
+                listOf(com.kkn.almufid.sekretaris.data.entity.JenisSurat.MASUK, com.kkn.almufid.sekretaris.data.entity.JenisSurat.KELUAR).forEach { jenis ->
+                    val bagian = data.filter { it.jenis == jenis }
+                    baris += "SURAT ${jenis.name} (${bagian.size})"
+                    bagian.forEachIndexed { i, x ->
+                        baris += "${i + 1}. ${formatTanggal(x.tanggalMillis)} | ${x.nomorSurat.ifBlank { "tanpa nomor" }} | " +
+                            "${x.perihal} | ${x.tujuanAtauPengirim} | dicatat ${x.jejak.dibuatOlehNama.ifBlank { "-" }}"
+                    }
+                    baris += ""
+                }
+                PembuatLaporan.pdf(appContext, "register-surat.pdf", "Register Surat Masuk dan Keluar", cap, baris)
+            }
+            JenisLaporan.REKONSILIASI_PDF -> {
+                val r = Rekonsiliasi.hitung(ambil(koordinasi.alirKas()), ambil(desa.alirNota()), ambil(desa.alirProker()))
+                val baris = mutableListOf(
+                    "Kas masuk            : ${formatRupiah(r.kasMasuk)}",
+                    "Kas keluar           : ${formatRupiah(r.kasKeluar)}",
+                    "Saldo kas            : ${formatRupiah(r.saldo)}",
+                    "Total nota/kwitansi  : ${formatRupiah(r.totalNota)}",
+                    "Selisih (kas keluar - nota): ${formatRupiah(r.selisih)}",
+                    "Pengeluaran cocok nota: ${r.cocok.size}  ·  Nota tanpa foto: ${r.notaTanpaFoto}",
+                    "",
+                    "KAS KELUAR BELUM ADA NOTA (${r.kasTanpaNota.size})"
+                )
+                r.kasTanpaNota.forEach { baris += "${formatTanggal(it.tanggalMillis)} | ${formatRupiah(it.jumlah)} | ${it.kategori} ${it.keterangan}".trim() }
+                baris += ""
+                baris += "NOTA BELUM TERCATAT DI KAS (${r.notaTanpaKas.size})"
+                r.notaTanpaKas.forEach { baris += "${formatTanggal(it.tanggalMillis)} | ${formatRupiah(it.nominal)} | ${it.jenis} ${it.keterangan}" }
+                baris += ""
+                baris += "Catatan: kas mencakup semua desa, nota hanya milik desa ini."
+                PembuatLaporan.pdf(appContext, "rekonsiliasi-kas.pdf", "Rekonsiliasi Kas", cap, baris)
             }
             JenisLaporan.BACKUP_ZIP -> {
                 val ringkasan = bangun(JenisLaporan.BACKUP_JSON)

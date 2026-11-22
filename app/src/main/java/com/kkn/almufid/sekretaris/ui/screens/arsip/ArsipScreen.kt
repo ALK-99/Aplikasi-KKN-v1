@@ -22,7 +22,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.kkn.almufid.sekretaris.data.entity.NotaEntry
+import com.kkn.almufid.sekretaris.data.cloud.NotaDesa
+import com.kkn.almufid.sekretaris.ui.FotoUtil
+import com.kkn.almufid.sekretaris.ui.auth.DialogInfo
 import com.kkn.almufid.sekretaris.ui.formatRupiah
 import com.kkn.almufid.sekretaris.ui.formatTanggal
 import java.io.File
@@ -51,6 +53,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 fun ArsipScreen(viewModel: NotaViewModel) {
     val daftar by viewModel.daftarNota.collectAsState()
     val total by viewModel.totalPengeluaran.collectAsState()
+    val pesan by viewModel.pesan.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
@@ -77,11 +80,13 @@ fun ArsipScreen(viewModel: NotaViewModel) {
         }
     }
 
+    pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
+
     if (dialogTerbuka) {
         DialogTambahNota(
             onTutup = { dialogTerbuka = false },
-            onSimpan = { keterangan, nominal, proker, foto ->
-                viewModel.tambahNota(keterangan, nominal, proker, foto)
+            onSimpan = { keterangan, nominal, proker, jenis, foto ->
+                viewModel.tambahNota(keterangan, nominal, proker, jenis, foto)
                 dialogTerbuka = false
             }
         )
@@ -108,15 +113,16 @@ private fun KartuTotal(total: Long, jumlah: Int) {
 }
 
 @Composable
-private fun TileNota(nota: NotaEntry, rasio: Float, modifier: Modifier, onHapus: () -> Unit) {
+private fun TileNota(nota: NotaDesa, rasio: Float, modifier: Modifier, onHapus: () -> Unit) {
     val bentuk = RoundedCornerShape(20.dp)
     Box(
         modifier.fillMaxWidth().aspectRatio(rasio).shadow(10.dp, bentuk).clip(bentuk)
             .background(Brush.linearGradient(listOf(Surface2, Violet)))
     ) {
-        if (nota.fotoPath != null && File(nota.fotoPath).exists()) {
-            AsyncImage(
-                model = File(nota.fotoPath), contentDescription = "Foto nota",
+        val gambar = remember(nota.id, nota.fotoBase64) { FotoUtil.dekode(nota.fotoBase64) }
+        if (gambar != null) {
+            GambarPratinjau(
+                bitmap = gambar.asImageBitmap(), contentDescription = "Foto ${nota.jenis.lowercase()}",
                 contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -127,7 +133,7 @@ private fun TileNota(nota: NotaEntry, rasio: Float, modifier: Modifier, onHapus:
                 .background(Ground.copy(alpha = 0.82f)).padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Text(formatRupiah(nota.nominal), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
-            Text(nota.keterangan, color = TeksSoft, fontSize = 11.sp, maxLines = 1)
+            Text("${nota.jenis.lowercase().replaceFirstChar { it.uppercase() }} · ${nota.keterangan}", color = TeksSoft, fontSize = 11.sp, maxLines = 1)
         }
         IconButton(onClick = onHapus, modifier = Modifier.align(Alignment.TopEnd)) {
             Icon(Icons.Default.Delete, "Hapus", tint = Color.White)
@@ -139,12 +145,13 @@ private fun TileNota(nota: NotaEntry, rasio: Float, modifier: Modifier, onHapus:
 @Composable
 private fun DialogTambahNota(
     onTutup: () -> Unit,
-    onSimpan: (String, Long, String, Bitmap?) -> Unit
+    onSimpan: (String, Long, String, String, Bitmap?) -> Unit
 ) {
     var keterangan by remember { mutableStateOf("") }
     var nominalTeks by remember { mutableStateOf("") }
     var proker by remember { mutableStateOf("") }
     var foto by remember { mutableStateOf<Bitmap?>(null) }
+    var jenis by remember { mutableStateOf("NOTA") }
     var izinDitolakPesan by remember { mutableStateOf<String?>(null) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -178,6 +185,10 @@ private fun DialogTambahNota(
         title = { Text("Tambah Nota/Kwitansi") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = jenis == "NOTA", onClick = { jenis = "NOTA" }, label = { Text("Nota") })
+                    FilterChip(selected = jenis == "KWITANSI", onClick = { jenis = "KWITANSI" }, label = { Text("Kwitansi") })
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = bukaKamera, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.CameraAlt, contentDescription = null)
@@ -220,7 +231,7 @@ private fun DialogTambahNota(
         },
         confirmButton = {
             TextButton(onClick = {
-                onSimpan(keterangan, nominalTeks.toLongOrNull() ?: 0L, proker, foto)
+                onSimpan(keterangan, nominalTeks.toLongOrNull() ?: 0L, proker, jenis, foto)
             }) { Text("Simpan") }
         },
         dismissButton = { TextButton(onClick = onTutup) { Text("Batal") } }

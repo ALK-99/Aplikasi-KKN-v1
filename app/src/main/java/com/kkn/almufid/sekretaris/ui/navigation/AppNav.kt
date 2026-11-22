@@ -38,6 +38,10 @@ import com.kkn.almufid.sekretaris.ui.screens.koordinasi.TugasScreen
 import com.kkn.almufid.sekretaris.ui.screens.pengaturan.PengaturanScreen
 import com.kkn.almufid.sekretaris.ui.screens.peta.PetaScreen
 import com.kkn.almufid.sekretaris.data.cloud.DesaRepository
+import com.kkn.almufid.sekretaris.ui.screens.rekonsiliasi.RekonsiliasiScreen
+import com.kkn.almufid.sekretaris.ui.screens.rekonsiliasi.RekonsiliasiViewModel
+import com.kkn.almufid.sekretaris.ui.screens.riwayat.RiwayatScreen
+import com.kkn.almufid.sekretaris.ui.screens.riwayat.RiwayatViewModel
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilScreen
 import com.kkn.almufid.sekretaris.ui.screens.profil.ProfilViewModel
 import com.kkn.almufid.sekretaris.ui.screens.proker.ProkerScreen
@@ -111,7 +115,7 @@ fun AppNav(onLogout: () -> Unit = {}) {
                     ProkerScreen(vm)
                 }
                 composable(Tujuan.ARSIP.rute) {
-                    val vm: NotaViewModel = viewModel(factory = GenericViewModelFactory { NotaViewModel(db.notaDao(), app) })
+                    val vm: NotaViewModel = viewModel(factory = GenericViewModelFactory { NotaViewModel(desaRepo) })
                     ArsipScreen(vm)
                 }
                 composable(Tujuan.INVENTARIS.rute) {
@@ -133,6 +137,14 @@ fun AppNav(onLogout: () -> Unit = {}) {
                 composable(Tujuan.KAS.rute) {
                     val vm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })
                     KasScreen(vm)
+                }
+                composable(Tujuan.REKONSILIASI.rute) {
+                    val vm: RekonsiliasiViewModel = viewModel(factory = GenericViewModelFactory { RekonsiliasiViewModel(desaRepo, KoordinasiRepository()) })
+                    RekonsiliasiScreen(vm)
+                }
+                composable(Tujuan.RIWAYAT.rute) {
+                    val vm: RiwayatViewModel = viewModel(factory = GenericViewModelFactory { RiwayatViewModel(desaRepo) })
+                    RiwayatScreen(vm)
                 }
                 composable(Tujuan.IBADAH.rute) { IbadahScreen() }
                 composable(Tujuan.PETA.rute) { PetaScreen() }

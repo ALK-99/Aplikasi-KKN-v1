@@ -102,6 +102,18 @@ Supaya APK hasil GitHub Actions (lihat bagian 3 di bawah) juga punya Firebase ak
   dari app karena aturan keamanan hanya mengizinkan penulis/admin).
 - Semua gratis: tanpa Firebase Storage, foto hanya di dalam ZIP.
 
+## Manajemen proker, nota, rekonsiliasi, riwayat (Tahap C)
+- **Proker**: ketuk kartu untuk mengisi target, jadwal (dd/mm/yyyy), PIC, anggaran, realisasi, evaluasi,
+  dan **bukti kegiatan** (foto dari kamera/galeri). Foto dikompres (maks ~180 KB) dan disimpan di Firestore
+  desa, bukan Firebase Storage, jadi tetap gratis dan terlihat di semua HP satu desa.
+- **Arsip Nota** sekarang per desa (cloud) dan mendukung jenis **Nota** atau **Kwitansi**. Nota lama di HP
+  diunggah lewat kartu "Data lama ditemukan" di Beranda (aman diulang).
+- **Rekonsiliasi Kas**: mencocokkan pengeluaran Kas Kelompok dengan nota (nominal sama, selisih tanggal
+  maksimal 14 hari), menampilkan kas tanpa nota, nota tanpa kas, dan anggaran vs realisasi vs nota per proker.
+- **Laporan baru**: Pertanggungjawaban Proker, Register Surat, Rekonsiliasi Kas (PDF).
+- **Riwayat Perubahan** (menu Lainnya): siapa mengubah apa dan kapan, bisa disaring per jenis data.
+- Aturan Firestore **tidak berubah** di tahap ini (koleksi `nota` dan `bukti` masuk aturan desa yang sama).
+
 ## Catatan penting
 - **Repo harus Publik** agar pengecekan update jalan tanpa token. Konsekuensi: file keystore
   (`app/sekretaris-kkn.jks`, password di `app/build.gradle.kts`) ikut terlihat publik. Untuk aplikasi

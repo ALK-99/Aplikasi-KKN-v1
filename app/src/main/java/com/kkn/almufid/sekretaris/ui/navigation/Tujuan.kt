@@ -18,6 +18,8 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     KAS("kas", "Kas Kelompok", Icons.Default.AccountBalanceWallet),
     IBADAH("ibadah", "Waktu Sholat", Icons.Default.AccessTime),
     PETA("peta", "Peta", Icons.Default.Map),
+    REKONSILIASI("rekonsiliasi", "Rekonsiliasi Kas", Icons.Default.AccountBalance),
+    RIWAYAT("riwayat", "Riwayat Perubahan", Icons.Default.History),
     LAPORAN("laporan", "Laporan & Backup", Icons.Default.Description),
     PROFIL("profil", "Profil Saya", Icons.Default.Person),
     PENGATURAN("pengaturan", "Pengaturan", Icons.Default.Settings);
@@ -41,7 +43,7 @@ enum class KategoriMenu(
         "Menu Utama", "Administrasi dan kegiatan harian KKN", Icons.Default.Dashboard,
         listOf(
             Tujuan.JURNAL, Tujuan.ABSENSI, Tujuan.SURAT, Tujuan.PROKER, Tujuan.ARSIP,
-            Tujuan.INVENTARIS, Tujuan.PENGUMUMAN, Tujuan.TUGAS, Tujuan.KAS
+            Tujuan.INVENTARIS, Tujuan.PENGUMUMAN, Tujuan.TUGAS, Tujuan.KAS, Tujuan.REKONSILIASI
         )
     ),
     UMUM(
@@ -50,6 +52,6 @@ enum class KategoriMenu(
     ),
     LAINNYA(
         "Lainnya", "Laporan, backup, dan pengaturan", Icons.Default.MoreHoriz,
-        listOf(Tujuan.LAPORAN, Tujuan.PENGATURAN)
+        listOf(Tujuan.RIWAYAT, Tujuan.LAPORAN, Tujuan.PENGATURAN)
     )
 }

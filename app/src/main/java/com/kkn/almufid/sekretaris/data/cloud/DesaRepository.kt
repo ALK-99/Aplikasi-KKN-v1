@@ -14,6 +14,7 @@ import com.kkn.almufid.sekretaris.data.entity.AbsensiEntry
 import com.kkn.almufid.sekretaris.data.entity.Anggota
 import com.kkn.almufid.sekretaris.data.entity.InventarisEntry
 import com.kkn.almufid.sekretaris.data.entity.JenisSurat
+import com.kkn.almufid.sekretaris.data.entity.NotaEntry
 import com.kkn.almufid.sekretaris.data.entity.ProkerEntry
 import com.kkn.almufid.sekretaris.data.entity.StatusProker
 import com.kkn.almufid.sekretaris.data.entity.SuratEntry
@@ -129,7 +130,28 @@ class DesaRepository(
                 StatusProker.BELUM_MULAI
             },
             catatanEvaluasi = d.getString("catatanEvaluasi") ?: "",
+            target = d.getString("target") ?: "",
+            mulaiMillis = d.getLong("mulaiMillis") ?: 0L,
+            selesaiMillis = d.getLong("selesaiMillis") ?: 0L,
+            anggaran = d.getLong("anggaran") ?: 0L,
+            picNama = d.getString("picNama") ?: "",
+            realisasi = d.getLong("realisasi") ?: 0L,
             jejak = d.jejak(),
+        )
+    }
+
+    fun alirBukti(prokerId: String): Flow<List<BuktiDesa>> = alirKoleksi("bukti", { it.whereEqualTo("prokerId", prokerId) }) { d ->
+        if (d.dihapus()) null else BuktiDesa(
+            id = d.id, prokerId = d.getString("prokerId") ?: "", catatan = d.getString("catatan") ?: "",
+            fotoBase64 = d.getString("foto") ?: "", jejak = d.jejak(),
+        )
+    }
+
+    fun alirNota(): Flow<List<NotaDesa>> = alirKoleksi("nota") { d ->
+        if (d.dihapus()) null else NotaDesa(
+            id = d.id, tanggalMillis = d.getLong("tanggalMillis") ?: 0L, keterangan = d.getString("keterangan") ?: "",
+            nominal = d.getLong("nominal") ?: 0L, prokerTerkait = d.getString("prokerTerkait") ?: "",
+            jenis = d.getString("jenis") ?: "NOTA", fotoBase64 = d.getString("foto") ?: "", jejak = d.jejak(),
         )
     }
 
@@ -160,7 +182,9 @@ class DesaRepository(
         )
     }
 
-    fun alirRiwayat(): Flow<List<RiwayatDesa>> = alirKoleksi("riwayat") { d ->
+    fun alirRiwayat(): Flow<List<RiwayatDesa>> = alirKoleksi(
+        "riwayat", { it.orderBy("waktu", Query.Direction.DESCENDING).limit(300) }
+    ) { d ->
         RiwayatDesa(
             id = d.id,
             tabel = d.getString("tabel") ?: "",
@@ -260,6 +284,44 @@ class DesaRepository(
         tulis(k, "proker", "ubah status", "${p.namaProker} → ${status.name}", koleksi(k, "proker").document(p.id), data, false)
     }
 
+    suspend fun ubahRencanaProker(
+        p: ProkerDesa, target: String, mulai: Long, selesai: Long, anggaran: Long,
+        pic: String, realisasi: Long, evaluasi: String,
+    ): HasilAuth<Unit> = aman { k ->
+        val data = mapOf<String, Any>(
+            "target" to target.trim(), "mulaiMillis" to mulai, "selesaiMillis" to selesai,
+            "anggaran" to anggaran, "picNama" to pic.trim(), "realisasi" to realisasi,
+            "catatanEvaluasi" to evaluasi.trim(),
+        ) + jejakUbah(k, System.currentTimeMillis())
+        tulis(k, "proker", "ubah rencana", p.namaProker, koleksi(k, "proker").document(p.id), data, false)
+    }
+
+    suspend fun tambahBukti(p: ProkerDesa, catatan: String, fotoBase64: String): HasilAuth<Unit> = aman { k ->
+        val data = mapOf<String, Any>(
+            "prokerId" to p.id, "catatan" to catatan.trim(), "foto" to fotoBase64, "dihapus" to false,
+        ) + jejakBaru(k, System.currentTimeMillis())
+        tulis(k, "bukti", "tambah bukti", p.namaProker, koleksi(k, "bukti").document(), data, true)
+    }
+
+    suspend fun hapusBukti(b: BuktiDesa, namaProker: String): HasilAuth<Unit> = aman { k ->
+        val data = mapOf<String, Any>("dihapus" to true) + jejakUbah(k, System.currentTimeMillis())
+        tulis(k, "bukti", "hapus bukti", namaProker, koleksi(k, "bukti").document(b.id), data, false)
+    }
+
+    suspend fun tambahNota(keterangan: String, nominal: Long, proker: String, jenis: String, fotoBase64: String): HasilAuth<Unit> = aman { k ->
+        val t = System.currentTimeMillis()
+        val data = mapOf<String, Any>(
+            "tanggalMillis" to t, "keterangan" to keterangan.trim(), "nominal" to nominal,
+            "prokerTerkait" to proker.trim(), "jenis" to jenis, "foto" to fotoBase64, "dihapus" to false,
+        ) + jejakBaru(k, t)
+        tulis(k, "nota", "tambah", "$jenis · ${keterangan.trim()} · Rp$nominal", koleksi(k, "nota").document(), data, true)
+    }
+
+    suspend fun hapusNota(n: NotaDesa): HasilAuth<Unit> = aman { k ->
+        val data = mapOf<String, Any>("dihapus" to true) + jejakUbah(k, System.currentTimeMillis())
+        tulis(k, "nota", "hapus", n.keterangan, koleksi(k, "nota").document(n.id), data, false)
+    }
+
     suspend fun hapusProker(p: ProkerDesa): HasilAuth<Unit> = aman { k ->
         val data = mapOf<String, Any>("dihapus" to true) + jejakUbah(k, System.currentTimeMillis())
         tulis(k, "proker", "hapus", p.namaProker, koleksi(k, "proker").document(p.id), data, false)
@@ -304,6 +366,7 @@ class DesaRepository(
     suspend fun imporDataLama(
         anggota: List<Anggota>, absensi: List<AbsensiEntry>, proker: List<ProkerEntry>,
         surat: List<SuratEntry>, inventaris: List<InventarisEntry>,
+        nota: List<Pair<NotaEntry, String>> = emptyList(),
     ): HasilAuth<Int> {
         val k = konteks() ?: return HasilAuth.Gagal("Desa akun ini belum diisi atau profil belum terbaca.")
         return try {
@@ -346,7 +409,14 @@ class DesaRepository(
                         "keterangan" to it.keterangan, "dihapus" to false,
                     ) + jb)
             }
-            kerja.chunked(400).forEach { bagian ->
+            nota.forEach { (n, foto) ->
+                kerja += koleksi(k, "nota").document("lama_${k.uid}_nota_${n.id}") to
+                    (mapOf<String, Any>(
+                        "tanggalMillis" to n.tanggalMillis, "keterangan" to n.keterangan, "nominal" to n.nominal,
+                        "prokerTerkait" to n.prokerTerkait, "jenis" to "NOTA", "foto" to foto, "dihapus" to false,
+                    ) + jb)
+            }
+            kerja.chunked(100).forEach { bagian ->
                 val batch = db.batch()
                 bagian.forEach { (ref, data) -> batch.set(ref, data) }
                 batch.commit().await()
@@ -366,7 +436,7 @@ class DesaRepository(
     // ------------------------------------------------------------ cadangan
 
     /** Koleksi data desa yang ikut dicadangkan dan dipulihkan (riwayat hanya dicadangkan sebagai arsip). */
-    val koleksiCadangan = listOf("anggota", "absensi", "proker", "surat", "inventaris")
+    val koleksiCadangan = listOf("anggota", "absensi", "proker", "surat", "inventaris", "nota", "bukti")
 
     /** Identitas desa untuk berkas cadangan, atau null kalau belum login / desa belum diisi. */
     suspend fun identitasDesa(): Pair<String, String>? = konteks()?.let { it.desaId to it.desaNama }
@@ -412,7 +482,7 @@ class DesaRepository(
                     kerja += koleksi(k, nama).document(id) to bersih
                 }
             }
-            kerja.chunked(400).forEach { bagian ->
+            kerja.chunked(100).forEach { bagian ->
                 val batch = db.batch()
                 bagian.forEach { (ref, isi) -> batch.set(ref, isi) }
                 batch.commit().await()

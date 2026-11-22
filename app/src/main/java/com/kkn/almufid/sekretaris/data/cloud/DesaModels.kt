@@ -41,6 +41,34 @@ data class ProkerDesa(
     val divisiPenanggungJawab: String = "",
     val status: StatusProker = StatusProker.BELUM_MULAI,
     val catatanEvaluasi: String = "",
+    /** Perencanaan & pelaksanaan (0 = belum diisi). */
+    val target: String = "",
+    val mulaiMillis: Long = 0L,
+    val selesaiMillis: Long = 0L,
+    val anggaran: Long = 0L,
+    val picNama: String = "",
+    val realisasi: Long = 0L,
+    val jejak: Jejak = Jejak(),
+)
+
+/** Bukti kegiatan proker: foto kecil terkompres (base64 JPEG) disimpan langsung di Firestore, tanpa Storage. */
+data class BuktiDesa(
+    val id: String = "",
+    val prokerId: String = "",
+    val catatan: String = "",
+    val fotoBase64: String = "",
+    val jejak: Jejak = Jejak(),
+)
+
+/** Nota atau kwitansi belanja. [jenis] = "NOTA" atau "KWITANSI". */
+data class NotaDesa(
+    val id: String = "",
+    val tanggalMillis: Long = 0L,
+    val keterangan: String = "",
+    val nominal: Long = 0L,
+    val prokerTerkait: String = "",
+    val jenis: String = "NOTA",
+    val fotoBase64: String = "",
     val jejak: Jejak = Jejak(),
 )
 
@@ -80,6 +108,7 @@ data class JumlahDataLama(
     val proker: Int = 0,
     val surat: Int = 0,
     val inventaris: Int = 0,
+    val nota: Int = 0,
 ) {
-    val total: Int get() = anggota + absensi + proker + surat + inventaris
+    val total: Int get() = anggota + absensi + proker + surat + inventaris + nota
 }

@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.kkn.almufid.sekretaris.ui.components.*
+import com.kkn.almufid.sekretaris.ui.formatRupiah
 import com.kkn.almufid.sekretaris.ui.theme.*
 
 private fun warnaStatus(status: StatusProker): Color = when (status) {
@@ -48,6 +49,7 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
     val daftar by viewModel.daftarProker.collectAsState()
     val pesan by viewModel.pesan.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
+    var idDikelola by remember { mutableStateOf<String?>(null) }
     val selesai = daftar.count { it.status == StatusProker.SELESAI }
     val aktif = daftar.count { it.status != StatusProker.BATAL }
     val frac by animateFloatAsState(if (aktif == 0) 0f else selesai.toFloat() / aktif, tween(800), label = "proker")
@@ -70,6 +72,7 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
                         KartuProker(
                             proker = p,
                             modifier = Modifier.munculBertahap(i),
+                            onBuka = { idDikelola = p.id },
                             onUbahStatus = { status -> viewModel.ubahStatus(p, status) },
                             onHapus = { viewModel.hapusProker(p) }
                         )
@@ -83,6 +86,10 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
     }
 
     pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
+
+    daftar.firstOrNull { it.id == idDikelola }?.let { p ->
+        DialogKelolaProker(p, viewModel, onTutup = { idDikelola = null })
+    }
 
     if (dialogTerbuka) {
         DialogTambahProker(
@@ -99,14 +106,31 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
 private fun KartuProker(
     proker: ProkerDesa,
     modifier: Modifier,
+    onBuka: () -> Unit,
     onUbahStatus: (StatusProker) -> Unit,
     onHapus: () -> Unit
 ) {
     var menuTerbuka by remember { mutableStateOf(false) }
-    KartuGelap(modifier.fillMaxWidth()) {
+    KartuGelap(modifier.fillMaxWidth().tekanPegas(onBuka)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(proker.namaProker, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                if (proker.picNama.isNotBlank()) {
+                    Text("PIC: ${proker.picNama}", color = TeksSoft, fontSize = 12.sp)
+                }
+                if (proker.mulaiMillis > 0L || proker.selesaiMillis > 0L) {
+                    Text(
+                        "Jadwal: ${ringkasTanggal(proker.mulaiMillis)} – ${ringkasTanggal(proker.selesaiMillis)}",
+                        color = TeksRedup, fontSize = 12.sp
+                    )
+                }
+                if (proker.anggaran > 0L || proker.realisasi > 0L) {
+                    Text(
+                        "Anggaran ${formatRupiah(proker.anggaran)} · Realisasi ${formatRupiah(proker.realisasi)}",
+                        color = if (proker.realisasi > proker.anggaran && proker.anggaran > 0L) Merah else TeksRedup,
+                        fontSize = 12.sp
+                    )
+                }
                 if (proker.divisiPenanggungJawab.isNotBlank()) {
                     Text("PJ: ${proker.divisiPenanggungJawab}", color = TeksRedup, fontSize = 12.sp)
                 }

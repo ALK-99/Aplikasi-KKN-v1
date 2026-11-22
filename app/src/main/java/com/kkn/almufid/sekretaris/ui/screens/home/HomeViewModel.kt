@@ -1,6 +1,7 @@
 package com.kkn.almufid.sekretaris.ui.screens.home
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kkn.almufid.sekretaris.data.AppDatabase
@@ -11,6 +12,7 @@ import com.kkn.almufid.sekretaris.data.cloud.JumlahDataLama
 import com.kkn.almufid.sekretaris.data.cloud.KoordinasiRepository
 import com.kkn.almufid.sekretaris.data.cloud.Pengumuman
 import com.kkn.almufid.sekretaris.data.entity.StatusProker
+import com.kkn.almufid.sekretaris.ui.FotoUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -62,20 +64,27 @@ class HomeViewModel(
     private val _pesan = MutableStateFlow<String?>(null)
     val pesan: StateFlow<String?> = _pesan.asStateFlow()
 
-    private fun kunci() = "impor_selesai_${auth.uidSaatIni ?: ""}"
+    private fun kunciV1() = "impor_selesai_${auth.uidSaatIni ?: ""}"
+    private fun kunciV2() = "impor_v2_${auth.uidSaatIni ?: ""}"
+
+    /** True kalau data lama selain nota sudah pernah diunggah (Tahap A), jadi sekarang hanya nota yang tersisa. */
+    private var hanyaNota = false
 
     init { periksaDataLama() }
 
     private fun periksaDataLama() {
         viewModelScope.launch {
-            if (auth.uidSaatIni == null || prefs.getBoolean(kunci(), false)) return@launch
+            if (auth.uidSaatIni == null || prefs.getBoolean(kunciV2(), false)) return@launch
+            hanyaNota = prefs.getBoolean(kunciV1(), false)
             val jumlah = withContext(Dispatchers.IO) {
-                JumlahDataLama(
+                val nota = db.notaDao().semuaNota().first().size
+                if (hanyaNota) JumlahDataLama(nota = nota) else JumlahDataLama(
                     anggota = db.anggotaDao().semuaAnggota().first().size,
                     absensi = db.absensiDao().semuaAbsensi().first().size,
                     proker = db.prokerDao().semuaProker().first().size,
                     surat = db.suratDao().semuaSurat().first().size,
                     inventaris = db.inventarisDao().semuaInventaris().first().size,
+                    nota = nota,
                 )
             }
             _dataLama.value = if (jumlah.total > 0) jumlah else null
@@ -88,17 +97,22 @@ class HomeViewModel(
         viewModelScope.launch {
             try {
                 val hasil = withContext(Dispatchers.IO) {
+                    val nota = db.notaDao().semuaNota().first().map { n ->
+                        val foto = n.fotoPath?.let { BitmapFactory.decodeFile(it) }
+                        n to (foto?.let { FotoUtil.kompresKeBase64(it) } ?: "")
+                    }
                     desa.imporDataLama(
-                        anggota = db.anggotaDao().semuaAnggota().first(),
-                        absensi = db.absensiDao().semuaAbsensi().first(),
-                        proker = db.prokerDao().semuaProker().first(),
-                        surat = db.suratDao().semuaSurat().first(),
-                        inventaris = db.inventarisDao().semuaInventaris().first(),
+                        anggota = if (hanyaNota) emptyList() else db.anggotaDao().semuaAnggota().first(),
+                        absensi = if (hanyaNota) emptyList() else db.absensiDao().semuaAbsensi().first(),
+                        proker = if (hanyaNota) emptyList() else db.prokerDao().semuaProker().first(),
+                        surat = if (hanyaNota) emptyList() else db.suratDao().semuaSurat().first(),
+                        inventaris = if (hanyaNota) emptyList() else db.inventarisDao().semuaInventaris().first(),
+                        nota = nota,
                     )
                 }
                 when (hasil) {
                     is HasilAuth.Sukses -> {
-                        prefs.edit().putBoolean(kunci(), true).apply()
+                        prefs.edit().putBoolean(kunciV1(), true).putBoolean(kunciV2(), true).apply()
                         _dataLama.value = null
                         _pesan.value = "${hasil.data} data dari HP ini sudah masuk ke desa kamu. Data asli di HP tidak dihapus."
                     }
@@ -111,7 +125,7 @@ class HomeViewModel(
     }
 
     fun lewatiDataLama() {
-        prefs.edit().putBoolean(kunci(), true).apply()
+        prefs.edit().putBoolean(kunciV1(), true).putBoolean(kunciV2(), true).apply()
         _dataLama.value = null
     }
 

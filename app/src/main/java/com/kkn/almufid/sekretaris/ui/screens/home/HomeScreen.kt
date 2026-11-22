@@ -89,7 +89,7 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
                 Text("Data lama ditemukan di HP ini", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Gold)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "${j.anggota} anggota, ${j.absensi} absensi, ${j.proker} proker, ${j.surat} surat, ${j.inventaris} barang. " +
+                    "${j.anggota} anggota, ${j.absensi} absensi, ${j.proker} proker, ${j.surat} surat, ${j.inventaris} barang, ${j.nota} nota. " +
                         "Unggah supaya teman satu desa ikut melihatnya. Kalau teman sudah mengunggah data yang sama, " +
                         "pilih Lewati agar tidak ganda. Data di HP tidak dihapus.",
                     fontSize = 12.sp, color = TeksRedup, lineHeight = 17.sp
@@ -291,6 +291,8 @@ private fun MenuKartu(tujuan: Tujuan, modifier: Modifier, onClick: () -> Unit) {
         Tujuan.POLLING -> Color(0xFF8A3FD6) to Color(0xFFD08BFF)
         Tujuan.TUGAS -> Color(0xFF1F8F4E) to Color(0xFF6BE09A)
         Tujuan.KAS -> Color(0xFFB8860B) to Color(0xFFFFD166)
+        Tujuan.REKONSILIASI -> Color(0xFF8A5A00) to Color(0xFFFFB84D)
+        Tujuan.RIWAYAT -> Color(0xFF4A5AA8) to Color(0xFF9FB0FF)
         Tujuan.IBADAH -> Color(0xFF0B7A5C) to Color(0xFF2BD4A0)
         Tujuan.PETA -> Color(0xFF0E8CA0) to Color(0xFF5CE1E6)
         Tujuan.LAPORAN -> Color(0xFF3B5BDB) to Color(0xFF8FA8FF)
