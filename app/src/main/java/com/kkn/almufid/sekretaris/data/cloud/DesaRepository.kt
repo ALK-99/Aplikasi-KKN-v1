@@ -422,7 +422,7 @@ class DesaRepository(
                 batch.commit().await()
             }
             koleksi(k, "riwayat").document()
-                .set(catatan(k, "impor", "impor", "${kerja.size} data lama dari HP", sekarang)).await()
+                .set(catatan(k, "impor", "impor", "", "${kerja.size} data lama dari HP", sekarang)).await()
             HasilAuth.Sukses(kerja.size)
         } catch (e: Exception) {
             val ditolak = (e as? FirebaseFirestoreException)?.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
@@ -488,7 +488,7 @@ class DesaRepository(
                 batch.commit().await()
             }
             koleksi(k, "riwayat").document()
-                .set(catatan(k, "cadangan", "pulihkan", "${kerja.size} data dipulihkan dari cadangan", sekarang)).await()
+                .set(catatan(k, "cadangan", "pulihkan", "", "${kerja.size} data dipulihkan dari cadangan", sekarang)).await()
             HasilAuth.Sukses(kerja.size)
         } catch (e: Exception) {
             val ditolak = (e as? FirebaseFirestoreException)?.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
