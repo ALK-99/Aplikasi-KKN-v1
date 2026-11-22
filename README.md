@@ -142,3 +142,17 @@ Ekspor Data (CSV/PDF/JSON). Semua gratis (Firestore Spark, tanpa server).
 Setelah memperbarui app, tempel ulang `firestore.rules` terbaru: ada aturan
 baru untuk moderasi jurnal dan pembacaan saran oleh admin.
 
+
+## Tahap D: tampilan dan navigasi
+- Mode terang/gelap/ikuti sistem (Pengaturan > Tampilan), tata letak adaptif HP dan tablet (lebar maksimal 720dp, kolom menu menyesuaikan).
+- Menu Utama dibagi divisi: Sekretaris, Bendahara, Media (berisi Jurnal), Pendidikan (segera). Pengumuman ada di Umum.
+- Pencarian global (ikon kaca pembesar di Beranda), panduan awal (onboarding), Cek Pembaruan di Pengaturan.
+
+## Tahap E: pengingat, widget, templat surat
+- Pengingat: worker 15 menit memeriksa tugas, jadwal proker, absensi hari ini (setelah 16.00), dan pengumuman belum dibaca. Notifikasi diulang dengan getar dan lampu sampai diketuk. Dapat dimatikan di Pengaturan > Pengingat.
+- Widget layar utama: sholat berikutnya (Yogyakarta), progres proker, jumlah pengingat.
+- Templat Surat PDF (divisi Sekretaris): Undangan, Permohonan, Pemberitahuan, Terima Kasih; opsional dicatat sebagai surat keluar.
+
+## Tahap F: versi PC (web)
+Folder `web/` adalah dasbor web (baca-saja) dengan login NIM yang sama, tabel yang bisa dicari dan diurutkan, ekspor CSV, dan cetak. Diterbitkan lewat GitHub Pages oleh `.github/workflows/web-pages.yml`.
+Pengaturan satu kali: isi `web/firebase-config.js` dari Firebase Console (Web app), tambahkan domain `alk-99.github.io` di Authentication > Settings > Authorized domains, lalu aktifkan Pages (Settings > Pages > Source: GitHub Actions).

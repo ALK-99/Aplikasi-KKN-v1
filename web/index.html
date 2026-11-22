@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KKN Al-Mushlih 2027 · Versi PC</title>
+<style>
+:root{--bg:#f4f5fb;--s1:#fff;--s2:#eceefa;--tx:#171a2e;--soft:#4a5070;--mut:#7a809e;--vio:#5b4bdb;--gold:#b97a00;--mint:#0e8f6e;--red:#d33a3a;--line:#d9dcef}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1120;--s1:#181b30;--s2:#222642;--tx:#f4f5fb;--soft:#c3c8e3;--mut:#9aa0bf;--vio:#8f84ff;--gold:#ffb84d;--mint:#2bd4a0;--red:#ff7a7a;--line:#2d3254}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--s1);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:16px;margin:0;flex:1}header small{color:var(--mut)}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:8px 14px;background:var(--vio);color:#fff;font-weight:600}
+button.sek{background:var(--s2);color:var(--tx)}
+input,select{font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--s1);color:var(--tx)}
+#login{max-width:380px;margin:12vh auto;background:var(--s1);padding:26px;border-radius:18px;border:1px solid var(--line)}
+#login input{width:100%;margin:6px 0}#pesan{color:var(--red);min-height:20px;font-size:13px}
+nav{display:flex;gap:6px;flex-wrap:wrap;padding:14px 20px 0}
+nav button{background:var(--s1);color:var(--soft);border:1px solid var(--line)}
+nav button.on{background:var(--vio);color:#fff;border-color:var(--vio)}
+main{padding:14px 20px 40px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center}.bar input{flex:1;min-width:200px}
+.kartu{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.k{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:14px}.k b{display:block;font-size:24px}.k span{color:var(--mut);font-size:12px}
+table{width:100%;border-collapse:collapse;background:var(--s1);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--s2);color:var(--soft);font-size:12px;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;user-select:none;white-space:nowrap}
+tr:last-child td{border-bottom:0}.wrap{overflow:auto;border-radius:14px}
+.tag{padding:2px 9px;border-radius:99px;background:var(--s2);font-size:12px}
+.bg{height:8px;background:var(--s2);border-radius:9px;overflow:hidden}.bg i{display:block;height:100%;background:var(--mint)}
+.kosong{padding:30px;text-align:center;color:var(--mut)}
+@media print{header,nav,.bar,button{display:none!important}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <h2 style="margin:0 0 4px">KKN Al-Mushlih 2027</h2>
+  <p style="color:var(--mut);margin:0 0 12px">Versi PC · masuk dengan akun yang sama seperti di HP</p>
+  <input id="nim" placeholder="NIM" autocomplete="username">
+  <input id="sandi" type="password" placeholder="Kata sandi" autocomplete="current-password">
+  <div id="pesan"></div>
+  <button id="masuk" style="width:100%;margin-top:6px">Masuk</button>
+</div>
+<div id="app" hidden>
+  <header><h1>KKN Al-Mushlih 2027 · <span id="desa"></span></h1><small id="siapa"></small><button class="sek" id="keluar">Keluar</button></header>
+  <nav id="tab"></nav>
+  <main id="isi"></main>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+firebase.initializeApp(window.KKN_FIREBASE);
+const auth = firebase.auth(), db = firebase.firestore();
+const $ = (id) => document.getElementById(id);
+const rp = (n) => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
+const tgl = (ms) => ms ? new Date(ms).toLocaleDateString("id-ID", {day:"2-digit",month:"short",year:"numeric"}) : "-";
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let desaId = "", data = {}, tabAktif = "ringkasan", urut = {k: null, naik: true}, kata = "";
+const unsub = [];
+
+const KOLEKSI = ["anggota", "absensi", "proker", "surat", "inventaris", "nota", "riwayat"];
+const TAB = {
+  ringkasan: {judul: "Ringkasan"},
+  anggota: {judul: "Anggota", kolom: [["nama","Nama"],["divisi","Divisi"],["aktif","Status",(v)=>v?"Aktif":"Nonaktif"]]},
+  absensi: {judul: "Absensi", kolom: [["tanggalMillis","Tanggal",tgl],["anggotaNama","Nama"],["hadir","Hadir",(v)=>v?"Hadir":"Tidak"],["keterangan","Keterangan"]]},
+  proker: {judul: "Proker", kolom: [["namaProker","Program"],["divisiPenanggungJawab","Divisi"],["status","Status"],["mulaiMillis","Mulai",tgl],["selesaiMillis","Selesai",tgl],["anggaran","Anggaran",rp],["realisasi","Realisasi",rp],["picNama","PIC"]]},
+  surat: {judul: "Surat", kolom: [["tanggalMillis","Tanggal",tgl],["jenis","Jenis"],["nomorSurat","Nomor"],["perihal","Perihal"],["tujuanAtauPengirim","Tujuan/Pengirim"]]},
+  inventaris: {judul: "Inventaris", kolom: [["namaBarang","Barang"],["jumlah","Jumlah"],["kondisi","Kondisi"],["keterangan","Keterangan"]]},
+  nota: {judul: "Nota & Kwitansi", kolom: [["tanggalMillis","Tanggal",tgl],["keterangan","Keterangan"],["nominal","Nominal",rp],["prokerTerkait","Proker"],["jenis","Jenis"]]},
+  riwayat: {judul: "Riwayat Perubahan", kolom: [["waktu","Waktu",(v)=>v?new Date(v).toLocaleString("id-ID"):"-"],["olehNama","Oleh"],["aksi","Aksi"],["tabel","Data"],["ringkas","Rincian"]]},
+};
+
+async function masuk() {
+  $("pesan").textContent = "";
+  const nim = $("nim").value.trim(), sandi = $("sandi").value;
+  if (!nim || !sandi) { $("pesan").textContent = "Isi NIM dan kata sandi."; return; }
+  try {
+    const idx = await db.collection("nim_index").doc(nim).get();
+    if (!idx.exists) { $("pesan").textContent = "NIM tidak ditemukan."; return; }
+    await auth.signInWithEmailAndPassword(idx.data().email, sandi);
+  } catch (e) { $("pesan").textContent = "Gagal masuk: periksa NIM dan kata sandi."; }
+}
+$("masuk").onclick = masuk;
+$("sandi").onkeydown = (e) => { if (e.key === "Enter") masuk(); };
+$("keluar").onclick = () => auth.signOut();
+
+auth.onAuthStateChanged(async (u) => {
+  unsub.splice(0).forEach((f) => f());
+  if (!u) { $("app").hidden = true; $("login").hidden = false; return; }
+  const p = await db.collection("users").doc(u.uid).get();
+  const prof = p.exists ? p.data() : null;
+  if (!prof || prof.akunDiblokir || !prof.desaId) {
+    $("pesan").textContent = "Akun belum punya desa. Buka aplikasi HP sekali dulu."; await auth.signOut(); return;
+  }
+  desaId = prof.desaId; $("desa").textContent = prof.desa || desaId; $("siapa").textContent = prof.namaLengkap || "";
+  $("login").hidden = true; $("app").hidden = false;
+  KOLEKSI.forEach((k) => {
+    unsub.push(db.collection("desa").doc(desaId).collection(k).onSnapshot((s) => {
+      data[k] = s.docs.map((d) => ({id: d.id, ...d.data()})).filter((x) => !x.dihapus);
+      gambar();
+    }, () => { data[k] = []; gambar(); }));
+  });
+  bangunTab();
+});
+
+function bangunTab() {
+  $("tab").innerHTML = Object.entries(TAB).map(([k, v]) => `<button data-k="${k}" class="${k===tabAktif?"on":""}">${v.judul}</button>`).join("");
+  $("tab").querySelectorAll("button").forEach((b) => b.onclick = () => { tabAktif = b.dataset.k; kata = ""; urut = {k:null,naik:true}; bangunTab(); gambar(); });
+}
+
+function csv(kolom, baris) {
+  const q = (s) => '"' + String(s ?? "").replace(/"/g, '""') + '"';
+  const teks = [kolom.map((c) => q(c[1])).join(",")].concat(baris.map((r) => kolom.map((c) => q(c[2] ? c[2](r[c[0]]) : r[c[0]])).join(","))).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + teks], {type: "text/csv;charset=utf-8"}));
+  a.download = `kkn-${tabAktif}.csv`; a.click();
+}
+
+function gambar() {
+  const el = $("isi"); if (!desaId) return;
+  if (tabAktif === "ringkasan") return ringkasan(el);
+  const t = TAB[tabAktif]; let baris = (data[tabAktif] || []).slice();
+  if (kata) { const q = kata.toLowerCase(); baris = baris.filter((r) => t.kolom.some((c) => String(c[2] ? c[2](r[c[0]]) : r[c[0]] ?? "").toLowerCase().includes(q))); }
+  if (urut.k) baris.sort((a, b) => { const x = a[urut.k] ?? "", y = b[urut.k] ?? ""; return (x > y ? 1 : x < y ? -1 : 0) * (urut.naik ? 1 : -1); });
+  else baris.sort((a, b) => (b.tanggalMillis || b.waktu || 0) - (a.tanggalMillis || a.waktu || 0));
+  const tot = tabAktif === "nota" ? `<span class="tag">Total ${rp(baris.reduce((s, r) => s + (r.nominal || 0), 0))}</span>` : "";
+  el.innerHTML = `<div class="bar"><input id="cari" placeholder="Cari di ${t.judul}…" value="${esc(kata)}"><span class="tag">${baris.length} data</span>${tot}<button class="sek" id="xcsv">Ekspor CSV</button><button class="sek" onclick="print()">Cetak</button></div>` +
+    (baris.length ? `<div class="wrap"><table><thead><tr>${t.kolom.map((c) => `<th data-k="${c[0]}">${c[1]}${urut.k===c[0]?(urut.naik?" ▲":" ▼"):""}</th>`).join("")}</tr></thead><tbody>${baris.map((r) => `<tr>${t.kolom.map((c) => `<td>${esc(c[2] ? c[2](r[c[0]]) : r[c[0]])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : `<div class="kosong">Belum ada data.</div>`);
+  const c = $("cari"); c.oninput = () => { kata = c.value; const p = c.selectionStart; gambar(); const n = $("cari"); n.focus(); n.setSelectionRange(p, p); };
+  $("xcsv").onclick = () => csv(t.kolom, baris);
+  el.querySelectorAll("th").forEach((h) => h.onclick = () => { urut = {k: h.dataset.k, naik: urut.k === h.dataset.k ? !urut.naik : true}; gambar(); });
+}
+
+function ringkasan(el) {
+  const pr = (data.proker || []).filter((p) => p.status !== "BATAL"), sel = pr.filter((p) => p.status === "SELESAI").length;
+  const persen = pr.length ? Math.round(sel * 100 / pr.length) : 0;
+  const nota = (data.nota || []).reduce((s, r) => s + (r.nominal || 0), 0);
+  const ang = pr.reduce((s, p) => s + (p.anggaran || 0), 0), rea = pr.reduce((s, p) => s + (p.realisasi || 0), 0);
+  const hariIni = new Date(); hariIni.setHours(0,0,0,0);
+  const absen = (data.absensi || []).filter((a) => new Date(a.tanggalMillis).setHours(0,0,0,0) === +hariIni);
+  const aktif = (data.anggota || []).filter((a) => a.aktif !== false).length;
+  el.innerHTML = `<div class="kartu">
+    <div class="k"><b>${aktif}</b><span>Anggota aktif</span></div>
+    <div class="k"><b>${absen.filter((a)=>a.hadir).length}/${aktif}</b><span>Hadir hari ini</span></div>
+    <div class="k"><b>${persen}%</b><span>Proker selesai (${sel}/${pr.length})</span><div class="bg" style="margin-top:8px"><i style="width:${persen}%"></i></div></div>
+    <div class="k"><b>${(data.surat||[]).length}</b><span>Surat tercatat</span></div>
+    <div class="k"><b>${rp(nota)}</b><span>Total nota</span></div>
+    <div class="k"><b>${rp(rea)}</b><span>Realisasi dari anggaran ${rp(ang)}</span></div></div>
+    <div class="wrap"><table><thead><tr><th>Proker</th><th>Status</th><th>Jadwal</th><th>Anggaran</th><th>Realisasi</th></tr></thead><tbody>${pr.map((p)=>`<tr><td>${esc(p.namaProker)}</td><td><span class="tag">${esc(p.status)}</span></td><td>${tgl(p.mulaiMillis)} – ${tgl(p.selesaiMillis)}</td><td>${rp(p.anggaran)}</td><td>${rp(p.realisasi)}</td></tr>`).join("") || `<tr><td colspan="5" class="kosong">Belum ada proker.</td></tr>`}</tbody></table></div>`;
+}
+</script>
+</body>
+</html>
