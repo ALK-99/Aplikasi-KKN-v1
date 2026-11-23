@@ -161,3 +161,6 @@ Pengaturan satu kali: isi `web/firebase-config.js` dari Firebase Console (Web ap
 - Mode demo: semua akun yang login boleh membuat tugas, kas, pengumuman, dan polling. Aturan ada di `firestore.rules` (publish ulang), flag `MODE_DEMO` di KoordinasiViewModel. Saat produksi, kembalikan ke admin.
 - Android: ubah data anggota, surat, inventaris, nota. Pembaruan hanya membaca rilis APK (tag `v` + angka), rilis PC (`pc-v...`) otomatis pre-release.
 - PC: profil, ubah data, laporan PDF, cadangan/pulihkan ZIP (sama dengan HP), peta, pengaturan (tema, pengingat, saran, nomor darurat), Pusat Kendali (admin), notifikasi berulang, cek pembaruan, panduan awal.
+
+## Tahap H: divisi Pendidikan
+Menu Jadwal Mengajar (hari, jam, lembaga/kelas, materi, pengajar, catatan) di Android dan PC, tersimpan di `desa/{desaId}/ajar`, ikut cadangan, pencarian, dan PDF di PC.

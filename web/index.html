@@ -133,7 +133,7 @@ const auth = firebase.auth(), db = firebase.firestore();
 /* ---------- state ---------- */
 let me = null, desaId = "", admin = false, data = {}, halaman = "beranda", kata = "", saring = {};
 const unsub = [];
-const DESA = ["anggota","absensi","proker","surat","inventaris","nota","bukti","riwayat"];
+const DESA = ["anggota","absensi","proker","surat","inventaris","nota","bukti","riwayat","ajar"];
 const GLOBAL = ["tugas","pengumuman","polling","kas","jurnal_bersama"];
 const dk = (n) => db.collection("desa").doc(desaId).collection(n);
 const aktif = (n) => (data[n] || []).filter((x) => !x.dihapus);
@@ -228,7 +228,7 @@ const MENU = [
   ["Sekretaris", [["absensi","✅","Absensi"],["anggota","👥","Anggota"],["surat","✉️","Surat Masuk/Keluar"],["templat","📝","Templat Surat PDF"],["proker","📋","Program Kerja"],["inventaris","📦","Inventaris Posko"],["tugas","🗓️","Tugas"]]],
   ["Bendahara", [["nota","🧾","Arsip Nota"],["rekon","⚖️","Rekonsiliasi"],["kas","💰","Kas Kelompok"]]],
   ["Media", [["jurnal","📖","Jurnal & Notulen"]]],
-  ["Pendidikan", [["_pend","🎓","Pendidikan","segera"]]],
+  ["Pendidikan", [["ajar","🎓","Jadwal Mengajar"]]],
   ["Umum", [["pengumuman","📣","Pengumuman"],["polling","📊","Polling"],["sholat","🕌","Waktu Sholat"]]],
   ["Lainnya", [["riwayat","🕘","Riwayat Perubahan"]]],
 ];
@@ -560,10 +560,25 @@ HAL.cari = (el) => {
   aktif("nota").filter((n) => cocok(n.keterangan, n.prokerTerkait)).forEach((n) => H.push(["Nota", n.keterangan, rp(n.nominal), "nota"]));
   aktif("tugas").filter((t) => cocok(t.judul, t.deskripsi, t.untukNama)).forEach((t) => H.push(["Tugas", t.judul, t.untukNama, "tugas"]));
   aktif("pengumuman").filter((p) => cocok(p.judul, p.isi)).forEach((p) => H.push(["Pengumuman", p.judul, "", "pengumuman"]));
+  aktif("ajar").filter((a) => cocok(a.materi, a.lembaga, a.pengajarNama)).forEach((a) => H.push(["Jadwal mengajar", a.materi || a.lembaga, a.lembaga, "ajar"]));
   aktif("jurnal_bersama").filter((j) => cocok(j.judul, j.isi)).forEach((j) => H.push(["Jurnal", j.judul, j.penulisNama, "jurnal"]));
   MENU.forEach(([, m]) => m.forEach((x) => { if (!x[3] && cocok(x[2])) H.push(["Menu", x[2], "", x[0]]); }));
   el.innerHTML = `<p style="color:var(--mut)">${H.length} hasil untuk “${esc(kata)}”</p>` + (H.length ? `<div class="cards">${H.slice(0, 80).map((h) => `<div class="card" style="cursor:pointer" data-go="${h[3]}"><span class="tag">${h[0]}</span><h3 style="margin-top:8px">${esc(h[1])}</h3><p>${esc(h[2])}</p></div>`).join("")}</div>` : `<div class="kosong">Tidak ada hasil.</div>`);
   el.querySelectorAll("[data-go]").forEach((c) => c.onclick = () => { halaman = c.dataset.go; kata = ""; $("cari").value = ""; bangunMenu(); gambar(); });
+};
+
+HAL.ajar = (el) => {
+  const HARI = ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"];
+  const baris = aktif("ajar").sort((a, b) => (a.hari - b.hari) || String(a.jam || "").localeCompare(String(b.jam || "")));
+  const kol = [["Hari", (r) => `<b>${HARI[(r.hari || 1) - 1] || r.hari}</b>`], ["Jam", (r) => esc(r.jam)], ["Lembaga / kelas", (r) => esc(r.lembaga)], ["Materi", (r) => `<b>${esc(r.materi)}</b>`], ["Pengajar", (r) => esc(r.pengajarNama)], ["Catatan", (r) => esc(r.catatan)]];
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah jadwal</button><span class="sp"></span>${tombolCsv()}<button class="sek" data-pdf>PDF</button></div>` + tabel(kol, baris, (r) => `<button class="sek kecil" data-u="${r.id}">Ubah</button> <button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  const isi = (x = {}) => `<label>Hari</label><select name="h">${HARI.map((h, i) => `<option value="${i + 1}" ${(x.hari || 1) === i + 1 ? "selected" : ""}>${h}</option>`).join("")}</select><label>Jam</label><input name="j" value="${esc(x.jam || "")}" placeholder="16.00-17.30"><label>Lembaga / kelas</label><input name="l" value="${esc(x.lembaga || "")}"><label>Materi</label><input name="m" value="${esc(x.materi || "")}"><label>Pengajar</label><input name="p" value="${esc(x.pengajarNama || "")}"><label>Catatan</label><input name="c" value="${esc(x.catatan || "")}">`;
+  const ambil = (m) => ({hari: +v(m, "h"), jam: v(m, "j").trim(), lembaga: v(m, "l").trim(), materi: v(m, "m").trim(), pengajarNama: v(m, "p").trim(), catatan: v(m, "c").trim()});
+  el.querySelector("[data-tambah]").onclick = () => formModal("Tambah jadwal mengajar", isi(), (m) => { const d = ambil(m); if (!d.materi && !d.lembaga) { toast("Isi lembaga atau materi"); return false; } coba(() => tulis("ajar", "tambah", `${d.materi || d.lembaga} (hari ${d.hari})`, dk("ajar").doc(), {...d, dihapus: false}, true), "Jadwal ditambahkan"); });
+  el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.u); formModal("Ubah jadwal", isi(x), (m) => { const d = ambil(m); if (!d.materi && !d.lembaga) { toast("Isi lembaga atau materi"); return false; } coba(() => tulis("ajar", "ubah", d.materi || d.lembaga, dk("ajar").doc(x.id), d, false), "Jadwal diperbarui"); }); });
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.h); konfirm(`Hapus jadwal "${x.materi || x.lembaga}"?`, () => coba(() => tulis("ajar", "hapus", x.materi || x.lembaga, dk("ajar").doc(x.id), {dihapus: true}, false), "Dihapus")); });
+  ikatCsv(el, "jadwal-mengajar", [["Hari", (r) => HARI[(r.hari || 1) - 1]], ["Jam", (r) => r.jam], ["Lembaga", (r) => r.lembaga], ["Materi", (r) => r.materi], ["Pengajar", (r) => r.pengajarNama], ["Catatan", (r) => r.catatan]], baris);
+  el.querySelector("[data-pdf]").onclick = () => simpanDok(dokPdfHtml("Jadwal Mengajar", "Divisi Pendidikan", ["Hari", "Jam", "Lembaga / kelas", "Materi", "Pengajar", "Catatan"], baris.map((r) => [HARI[(r.hari || 1) - 1], r.jam, r.lembaga, r.materi, r.pengajarNama, r.catatan])), "Jadwal_Mengajar.pdf");
 };
 
 /* ====================== TAMBAHAN: profil, laporan, cadangan, peta, pengaturan, kendali, pengingat, pembaruan ====================== */
@@ -649,7 +664,7 @@ async function muatJSZip() {
   await new Promise((ok, gagal) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"; s.onload = ok; s.onerror = () => gagal(new Error("Tidak bisa memuat pustaka ZIP (periksa internet)")); document.head.appendChild(s); });
   return window.JSZip;
 }
-const KOLEKSI_CAD = ["anggota","absensi","proker","surat","inventaris","nota","bukti"];
+const KOLEKSI_CAD = ["anggota","absensi","proker","surat","inventaris","nota","bukti","ajar"];
 async function buatCadangan() {
   toast("Menyiapkan cadangan…"); const JSZip = await muatJSZip(), t = Date.now(), desaJson = {};
   for (const n of KOLEKSI_CAD.concat("riwayat")) { const s = await dk(n).get(); desaJson[n] = s.docs.map((d) => ({id: d.id, data: d.data()})); }
