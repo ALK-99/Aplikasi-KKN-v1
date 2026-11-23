@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +34,7 @@ fun InventarisScreen(viewModel: InventarisViewModel) {
     val daftar by viewModel.daftarBarang.collectAsState()
     val pesan by viewModel.pesan.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
+    var diubah by remember { mutableStateOf<InventarisDesa?>(null) }
 
     Box(Modifier.fillMaxSize()) {
         if (daftar.isEmpty()) {
@@ -43,7 +45,7 @@ fun InventarisScreen(viewModel: InventarisViewModel) {
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 itemsIndexed(daftar, key = { _, b -> b.id }) { i, b ->
-                    KartuBarang(b, Modifier.munculBertahap(i)) { viewModel.hapusBarang(b) }
+                    KartuBarang(b, Modifier.munculBertahap(i), onUbah = { diubah = b }) { viewModel.hapusBarang(b) }
                 }
             }
         }
@@ -53,6 +55,15 @@ fun InventarisScreen(viewModel: InventarisViewModel) {
     }
 
     pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
+
+    diubah?.let { b ->
+        DialogUbah(
+            judul = "Ubah Barang",
+            bidang = listOf(Bidang("Nama barang", b.namaBarang), Bidang("Jumlah", b.jumlah.toString(), angka = true), Bidang("Kondisi", b.kondisi), Bidang("Keterangan", b.keterangan)),
+            onTutup = { diubah = null },
+            onSimpan = { v -> viewModel.ubahBarang(b, v[0], v[1].toIntOrNull() ?: 0, v[2], v[3]); diubah = null }
+        )
+    }
 
     if (dialogTerbuka) {
         DialogTambahBarang(
@@ -66,7 +77,7 @@ fun InventarisScreen(viewModel: InventarisViewModel) {
 }
 
 @Composable
-private fun KartuBarang(barang: InventarisDesa, modifier: Modifier, onHapus: () -> Unit) {
+private fun KartuBarang(barang: InventarisDesa, modifier: Modifier, onUbah: () -> Unit, onHapus: () -> Unit) {
     KartuGelap(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -86,6 +97,7 @@ private fun KartuBarang(barang: InventarisDesa, modifier: Modifier, onHapus: () 
                     Text("Dicatat ${barang.jejak.dibuatOlehNama}", color = TeksRedup, fontSize = 10.sp)
                 }
             }
+            IconButton(onClick = onUbah) { Icon(Icons.Default.Edit, "Ubah", tint = TeksRedup) }
             IconButton(onClick = onHapus) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
         }
     }

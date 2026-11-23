@@ -40,6 +40,14 @@ class NotaViewModel(private val desa: DesaRepository) : ViewModel() {
         }
     }
 
+    fun ubahNota(entry: NotaDesa, keterangan: String, nominal: Long, proker: String) {
+        if (keterangan.isBlank() || nominal <= 0) return
+        viewModelScope.launch {
+            val hasil = desa.ubahNota(entry, keterangan, nominal, proker)
+            if (hasil is HasilAuth.Gagal) _pesan.value = hasil.pesan
+        }
+    }
+
     fun hapusNota(entry: NotaDesa) {
         viewModelScope.launch {
             val hasil = desa.hapusNota(entry)

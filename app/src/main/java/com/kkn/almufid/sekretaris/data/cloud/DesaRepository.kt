@@ -253,6 +253,33 @@ class DesaRepository(
         tulis(k, "anggota", if (aktif) "aktifkan" else "nonaktifkan", anggota.nama, ref, data, false)
     }
 
+    suspend fun ubahAnggota(a: AnggotaDesa, nama: String, divisi: String): HasilAuth<Unit> = aman { k ->
+        val data = mapOf<String, Any>("nama" to nama.trim(), "divisi" to divisi.trim()) + jejakUbah(k, System.currentTimeMillis())
+        tulis(k, "anggota", "ubah", "${a.nama} → ${nama.trim()}", koleksi(k, "anggota").document(a.id), data, false)
+    }
+
+    suspend fun ubahSurat(s: SuratDesa, nomor: String, perihal: String, tujuan: String): HasilAuth<Unit> = aman { k ->
+        val data = mapOf<String, Any>(
+            "nomorSurat" to nomor.trim(), "perihal" to perihal.trim(), "tujuanAtauPengirim" to tujuan.trim(),
+        ) + jejakUbah(k, System.currentTimeMillis())
+        tulis(k, "surat", "ubah", perihal.trim(), koleksi(k, "surat").document(s.id), data, false)
+    }
+
+    suspend fun ubahBarang(b: InventarisDesa, nama: String, jumlah: Int, kondisi: String, keterangan: String): HasilAuth<Unit> = aman { k ->
+        val data = mapOf<String, Any>(
+            "namaBarang" to nama.trim(), "jumlah" to jumlah, "kondisi" to kondisi.trim().ifBlank { "Baik" },
+            "keterangan" to keterangan.trim(),
+        ) + jejakUbah(k, System.currentTimeMillis())
+        tulis(k, "inventaris", "ubah", "${nama.trim()} ($jumlah)", koleksi(k, "inventaris").document(b.id), data, false)
+    }
+
+    suspend fun ubahNota(n: NotaDesa, keterangan: String, nominal: Long, proker: String): HasilAuth<Unit> = aman { k ->
+        val data = mapOf<String, Any>(
+            "keterangan" to keterangan.trim(), "nominal" to nominal, "prokerTerkait" to proker.trim(),
+        ) + jejakUbah(k, System.currentTimeMillis())
+        tulis(k, "nota", "ubah", "${n.jenis} · ${keterangan.trim()} · Rp$nominal", koleksi(k, "nota").document(n.id), data, false)
+    }
+
     // -- absensi
     /** [sudahAda] true bila data absensi anggota itu pada tanggal tersebut sudah tercatat (menentukan buat baru atau ubah). */
     suspend fun simpanAbsensi(

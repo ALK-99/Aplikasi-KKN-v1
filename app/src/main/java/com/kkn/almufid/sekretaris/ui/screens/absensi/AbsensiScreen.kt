@@ -46,6 +46,7 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
     val semua by viewModel.semuaAnggota.collectAsState()
     val pesan by viewModel.pesan.collectAsState()
     var dialogTambahAnggota by remember { mutableStateOf(false) }
+    var anggotaDiubah by remember { mutableStateOf<AnggotaDesa?>(null) }
     var konfirmasiNonaktif by remember { mutableStateOf<AnggotaDesa?>(null) }
     var lihatNonaktif by remember { mutableStateOf(false) }
     val nonaktifLain = remember(semua, anggota) { semua.filter { s -> !s.aktif && anggota.none { it.id == s.id } } }
@@ -109,6 +110,7 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
                             dicatatOleh = statusPerAnggota[orang.id]?.jejak?.diubahOlehNama?.ifBlank { null },
                             modifier = Modifier.munculBertahap(i),
                             onUbah = { status -> viewModel.tandaiKehadiran(orang, status) },
+                            onUbahData = { anggotaDiubah = orang },
                             onAturAktif = {
                                 if (orang.aktif) konfirmasiNonaktif = orang else viewModel.aturAktif(orang, true)
                             }
@@ -158,6 +160,15 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
     }
     pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
 
+    anggotaDiubah?.let { a ->
+        com.kkn.almufid.sekretaris.ui.components.DialogUbah(
+            judul = "Ubah Anggota",
+            bidang = listOf(com.kkn.almufid.sekretaris.ui.components.Bidang("Nama", a.nama), com.kkn.almufid.sekretaris.ui.components.Bidang("Divisi", a.divisi)),
+            onTutup = { anggotaDiubah = null },
+            onSimpan = { v -> viewModel.ubahAnggota(a, v[0], v[1]); anggotaDiubah = null }
+        )
+    }
+
     if (dialogTambahAnggota) {
         DialogTambahAnggota(
             onTutup = { dialogTambahAnggota = false },
@@ -193,6 +204,7 @@ private fun BarisAbsensi(
     dicatatOleh: String?,
     modifier: Modifier,
     onUbah: (Boolean) -> Unit,
+    onUbahData: () -> Unit = {},
     onAturAktif: () -> Unit
 ) {
     Row(
@@ -209,6 +221,10 @@ private fun BarisAbsensi(
             Text(
                 if (aktif) "Nonaktifkan" else "Aktifkan kembali", color = VioletTerang, fontSize = 10.sp,
                 fontWeight = FontWeight.Bold, modifier = Modifier.tekanPegas(onAturAktif).padding(top = 2.dp)
+            )
+            Text(
+                "Ubah nama / divisi", color = VioletTerang, fontSize = 10.sp,
+                fontWeight = FontWeight.Bold, modifier = Modifier.tekanPegas(onUbahData).padding(top = 2.dp)
             )
         }
         if (aktif || hadir != null) {

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +36,7 @@ fun SuratScreen(viewModel: SuratViewModel) {
     val daftar by viewModel.daftarSurat.collectAsState()
     val pesan by viewModel.pesan.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
+    var diubah by remember { mutableStateOf<SuratDesa?>(null) }
     var filter by remember { mutableStateOf<JenisSurat?>(null) }
     val tampil = remember(daftar, filter) { if (filter == null) daftar else daftar.filter { it.jenis == filter } }
 
@@ -53,7 +55,7 @@ fun SuratScreen(viewModel: SuratViewModel) {
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     itemsIndexed(tampil, key = { _, s -> s.id }) { i, s ->
-                        KartuSurat(s, Modifier.munculBertahap(i)) { viewModel.hapusSurat(s) }
+                        KartuSurat(s, Modifier.munculBertahap(i), onUbah = { diubah = s }) { viewModel.hapusSurat(s) }
                     }
                 }
             }
@@ -64,6 +66,15 @@ fun SuratScreen(viewModel: SuratViewModel) {
     }
 
     pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
+
+    diubah?.let { s ->
+        DialogUbah(
+            judul = "Ubah Surat",
+            bidang = listOf(Bidang("Nomor surat", s.nomorSurat), Bidang("Perihal", s.perihal), Bidang(if (s.jenis == JenisSurat.MASUK) "Dari" else "Kepada", s.tujuanAtauPengirim)),
+            onTutup = { diubah = null },
+            onSimpan = { v -> viewModel.ubahSurat(s, v[0], v[1], v[2]); diubah = null }
+        )
+    }
 
     if (dialogTerbuka) {
         DialogTambahSurat(
@@ -78,12 +89,13 @@ fun SuratScreen(viewModel: SuratViewModel) {
 }
 
 @Composable
-private fun KartuSurat(surat: SuratDesa, modifier: Modifier, onHapus: () -> Unit) {
+private fun KartuSurat(surat: SuratDesa, modifier: Modifier, onUbah: () -> Unit, onHapus: () -> Unit) {
     val masuk = surat.jenis == JenisSurat.MASUK
     KartuGelap(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TagKecil(if (masuk) "Surat masuk" else "Surat keluar", if (masuk) Mint else Gold)
             Spacer(Modifier.weight(1f))
+            IconButton(onClick = onUbah) { Icon(Icons.Default.Edit, "Ubah", tint = TeksRedup) }
             IconButton(onClick = onHapus) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
         }
         if (surat.nomorSurat.isNotBlank()) {

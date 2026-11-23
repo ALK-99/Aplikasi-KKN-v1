@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import com.kkn.almufid.sekretaris.ui.permissions.rememberPemicuGaleri
 import com.kkn.almufid.sekretaris.ui.permissions.rememberPemicuKamera
@@ -55,6 +56,7 @@ fun ArsipScreen(viewModel: NotaViewModel) {
     val total by viewModel.totalPengeluaran.collectAsState()
     val pesan by viewModel.pesan.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
+    var diubah by remember { mutableStateOf<NotaDesa?>(null) }
 
     Box(Modifier.fillMaxSize()) {
         LazyVerticalStaggeredGrid(
@@ -70,7 +72,7 @@ fun ArsipScreen(viewModel: NotaViewModel) {
                 }
             }
             itemsIndexed(daftar, key = { _, n -> n.id }) { i, nota ->
-                TileNota(nota, if (i % 3 == 0) 0.8f else 1.1f, Modifier.munculBertahap(i)) {
+                TileNota(nota, if (i % 3 == 0) 0.8f else 1.1f, Modifier.munculBertahap(i), onUbah = { diubah = nota }) {
                     viewModel.hapusNota(nota)
                 }
             }
@@ -81,6 +83,15 @@ fun ArsipScreen(viewModel: NotaViewModel) {
     }
 
     pesan?.let { DialogInfo(judul = "Info", pesan = it, onTutup = viewModel::tutupPesan) }
+
+    diubah?.let { n ->
+        DialogUbah(
+            judul = "Ubah Nota",
+            bidang = listOf(Bidang("Keterangan", n.keterangan), Bidang("Nominal (Rp)", n.nominal.toString(), angka = true), Bidang("Proker terkait", n.prokerTerkait)),
+            onTutup = { diubah = null },
+            onSimpan = { v -> viewModel.ubahNota(n, v[0], v[1].toLongOrNull() ?: 0L, v[2]); diubah = null }
+        )
+    }
 
     if (dialogTerbuka) {
         DialogTambahNota(
@@ -113,7 +124,7 @@ private fun KartuTotal(total: Long, jumlah: Int) {
 }
 
 @Composable
-private fun TileNota(nota: NotaDesa, rasio: Float, modifier: Modifier, onHapus: () -> Unit) {
+private fun TileNota(nota: NotaDesa, rasio: Float, modifier: Modifier, onUbah: () -> Unit, onHapus: () -> Unit) {
     val bentuk = RoundedCornerShape(20.dp)
     Box(
         modifier.fillMaxWidth().aspectRatio(rasio).shadow(10.dp, bentuk).clip(bentuk)
@@ -134,6 +145,9 @@ private fun TileNota(nota: NotaDesa, rasio: Float, modifier: Modifier, onHapus: 
         ) {
             Text(formatRupiah(nota.nominal), color = TeksUtama, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
             Text("${nota.jenis.lowercase().replaceFirstChar { it.uppercase() }} · ${nota.keterangan}", color = TeksSoft, fontSize = 11.sp, maxLines = 1)
+        }
+        IconButton(onClick = onUbah, modifier = Modifier.align(Alignment.TopStart)) {
+            Icon(Icons.Default.Edit, "Ubah", tint = Color.White)
         }
         IconButton(onClick = onHapus, modifier = Modifier.align(Alignment.TopEnd)) {
             Icon(Icons.Default.Delete, "Hapus", tint = Color.White)

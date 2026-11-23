@@ -47,7 +47,8 @@ class KoordinasiViewModel(
     init {
         val uid = auth.uidSaatIni
         if (uid != null) viewModelScope.launch {
-            _admin.value = auth.apakahAdmin(uid)
+            // MODE DEMO: semua anggota boleh membuat pengumuman, polling, tugas, dan kas (sesuai aturan Firestore demo).
+            _admin.value = MODE_DEMO || auth.apakahAdmin(uid)
             auth.ambilProfil(uid)?.let { namaSaya = it.namaLengkap }
             if (_admin.value) {
                 val h = auth.ambilSemuaProfil()
@@ -98,3 +99,6 @@ class KoordinasiViewModel(
     }
     fun hapusKas(id: String) { kerjakan { repo.hapusKas(id) } }
 }
+
+/** Ubah ke false (dan kembalikan aturan Firestore) saat aplikasi dipakai sungguhan. */
+const val MODE_DEMO = true

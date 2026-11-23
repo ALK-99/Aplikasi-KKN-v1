@@ -27,6 +27,11 @@ class SuratViewModel(private val desa: DesaRepository) : ViewModel() {
         if (hasil is HasilAuth.Gagal) _pesan.value = hasil.pesan
     }
 
+    fun ubahSurat(surat: SuratDesa, nomor: String, perihal: String, tujuan: String) {
+        if (perihal.isBlank()) return
+        viewModelScope.launch { lapor(desa.ubahSurat(surat, nomor, perihal, tujuan)) }
+    }
+
     fun tambahSurat(jenis: JenisSurat, nomor: String, perihal: String, tujuan: String) {
         if (perihal.isBlank()) return
         viewModelScope.launch { lapor(desa.tambahSurat(jenis, nomor, perihal, tujuan)) }

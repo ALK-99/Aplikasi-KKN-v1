@@ -9,6 +9,7 @@ import androidx.core.content.FileProvider
 import com.kkn.almufid.sekretaris.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -44,7 +45,7 @@ object UpdateChecker {
     suspend fun cekDetail(): HasilCek = withContext(Dispatchers.IO) {
         if (BuildConfig.GITHUB_OWNER == PLACEHOLDER_OWNER) return@withContext HasilCek.Gagal
         try {
-            val url = URL("https://api.github.com/repos/${BuildConfig.GITHUB_OWNER}/${BuildConfig.GITHUB_REPO}/releases/latest")
+            val url = URL("https://api.github.com/repos/${BuildConfig.GITHUB_OWNER}/${BuildConfig.GITHUB_REPO}/releases?per_page=20")
             val koneksi = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 8000
                 readTimeout = 8000
@@ -53,7 +54,20 @@ object UpdateChecker {
             }
             try {
                 if (koneksi.responseCode != 200) return@withContext HasilCek.Gagal
-                val json = JSONObject(koneksi.inputStream.bufferedReader().use { it.readText() })
+                // Rilis aplikasi PC memakai tag "pc-v..." di repo yang sama; hanya rilis APK (tag v + angka) yang dipakai di sini.
+                val daftar = JSONArray(koneksi.inputStream.bufferedReader().use { it.readText() })
+                var json: JSONObject? = null
+                for (i in 0 until daftar.length()) {
+                    val r = daftar.getJSONObject(i)
+                    val t = r.optString("tag_name")
+                    if (r.optBoolean("draft") || r.optBoolean("prerelease")) continue
+                    if (!Regex("^[vV]\\d.*").matches(t)) continue
+                    val aset = r.optJSONArray("assets") ?: continue
+                    var adaApk = false
+                    for (k in 0 until aset.length()) if (aset.getJSONObject(k).optString("name").endsWith(".apk", ignoreCase = true)) adaApk = true
+                    if (adaApk) { json = r; break }
+                }
+                if (json == null) return@withContext HasilCek.Terbaru
                 val tag = json.optString("tag_name").removePrefix("v").removePrefix("V")
                 if (tag.isBlank()) return@withContext HasilCek.Gagal
                 if (!lebihBaru(tag, BuildConfig.VERSION_NAME)) return@withContext HasilCek.Terbaru

@@ -31,6 +31,11 @@ class InventarisViewModel(private val desa: DesaRepository) : ViewModel() {
         viewModelScope.launch { lapor(desa.tambahBarang(nama, jumlah, kondisi, keterangan)) }
     }
 
+    fun ubahBarang(entry: InventarisDesa, nama: String, jumlah: Int, kondisi: String, keterangan: String) {
+        if (nama.isBlank() || jumlah <= 0) return
+        viewModelScope.launch { lapor(desa.ubahBarang(entry, nama, jumlah, kondisi, keterangan)) }
+    }
+
     fun hapusBarang(entry: InventarisDesa) {
         viewModelScope.launch { lapor(desa.hapusBarang(entry)) }
     }

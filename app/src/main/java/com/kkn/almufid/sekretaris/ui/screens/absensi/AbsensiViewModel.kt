@@ -61,6 +61,11 @@ class AbsensiViewModel(private val desa: DesaRepository) : ViewModel() {
         viewModelScope.launch { lapor(desa.tambahAnggota(nama, divisi)) }
     }
 
+    fun ubahAnggota(anggota: AnggotaDesa, nama: String, divisi: String) {
+        if (nama.isBlank()) return
+        viewModelScope.launch { lapor(desa.ubahAnggota(anggota, nama, divisi)) }
+    }
+
     fun aturAktif(anggota: AnggotaDesa, aktif: Boolean) {
         viewModelScope.launch { lapor(desa.aturAnggotaAktif(anggota, aktif)) }
     }
