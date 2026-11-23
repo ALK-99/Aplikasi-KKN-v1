@@ -17,6 +17,7 @@
     "productName": "KKN Al-Mushlih 2027",
     "files": [
       "main.js",
+      "preload.js",
       "app/**/*"
     ],
     "win": {

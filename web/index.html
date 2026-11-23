@@ -1,77 +1,127 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" data-tema="auto">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KKN Al-Mushlih 2027 · Versi PC</title>
+<title>KKN Al-Mushlih 2027</title>
 <style>
-:root{--bg:#f4f5fb;--s1:#fff;--s2:#eceefa;--tx:#171a2e;--soft:#4a5070;--mut:#7a809e;--vio:#5b4bdb;--gold:#b97a00;--mint:#0e8f6e;--red:#d33a3a;--line:#d9dcef}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1120;--s1:#181b30;--s2:#222642;--tx:#f4f5fb;--soft:#c3c8e3;--mut:#9aa0bf;--vio:#8f84ff;--gold:#ffb84d;--mint:#2bd4a0;--red:#ff7a7a;--line:#2d3254}}
-*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx)}
-header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--s1);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-header h1{font-size:16px;margin:0;flex:1}header small{color:var(--mut)}
-button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:8px 14px;background:var(--vio);color:#fff;font-weight:600}
-button.sek{background:var(--s2);color:var(--tx)}
-input,select{font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--s1);color:var(--tx)}
-#login{max-width:380px;margin:12vh auto;background:var(--s1);padding:26px;border-radius:18px;border:1px solid var(--line)}
-#login input{width:100%;margin:6px 0}#pesan{color:var(--red);min-height:20px;font-size:13px}
-nav{display:flex;gap:6px;flex-wrap:wrap;padding:14px 20px 0}
-nav button{background:var(--s1);color:var(--soft);border:1px solid var(--line)}
-nav button.on{background:var(--vio);color:#fff;border-color:var(--vio)}
-main{padding:14px 20px 40px}
-.bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center}.bar input{flex:1;min-width:200px}
-.kartu{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
-.k{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:14px}.k b{display:block;font-size:24px}.k span{color:var(--mut);font-size:12px}
-table{width:100%;border-collapse:collapse;background:var(--s1);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-th{background:var(--s2);color:var(--soft);font-size:12px;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;user-select:none;white-space:nowrap}
-tr:last-child td{border-bottom:0}.wrap{overflow:auto;border-radius:14px}
-.tag{padding:2px 9px;border-radius:99px;background:var(--s2);font-size:12px}
-.bg{height:8px;background:var(--s2);border-radius:9px;overflow:hidden}.bg i{display:block;height:100%;background:var(--mint)}
-.kosong{padding:30px;text-align:center;color:var(--mut)}
-@media print{header,nav,.bar,button{display:none!important}body{background:#fff;color:#000}}
+:root{--bg:#f3f4fb;--s1:#fff;--s2:#eceefa;--tx:#171a2e;--soft:#4a5070;--mut:#7a809e;--vio:#5b4bdb;--vio2:#8f84ff;--gold:#b97a00;--mint:#0e8f6e;--red:#d33a3a;--pink:#d92b6b;--line:#dcdff0;--sh:0 6px 24px rgba(40,40,90,.08)}
+html[data-tema=gelap]{--bg:#0d0f1e;--s1:#161a2f;--s2:#20254a;--tx:#f4f5fb;--soft:#c3c8e3;--mut:#9aa0bf;--vio:#7c6cff;--vio2:#a79eff;--gold:#ffb84d;--mint:#2bd4a0;--red:#ff7a7a;--pink:#ff5c93;--line:#2b3156;--sh:0 8px 30px rgba(0,0,0,.35)}
+@media (prefers-color-scheme:dark){html[data-tema=auto]{--bg:#0d0f1e;--s1:#161a2f;--s2:#20254a;--tx:#f4f5fb;--soft:#c3c8e3;--mut:#9aa0bf;--vio:#7c6cff;--vio2:#a79eff;--gold:#ffb84d;--mint:#2bd4a0;--red:#ff7a7a;--pink:#ff5c93;--line:#2b3156;--sh:0 8px 30px rgba(0,0,0,.35)}}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;font:14px/1.5 "Segoe UI",system-ui,Roboto,sans-serif;background:var(--bg);color:var(--tx)}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:9px 16px;background:linear-gradient(135deg,var(--vio),var(--vio2));color:#fff;font-weight:600;transition:transform .08s,opacity .15s}
+button:hover{opacity:.92}button:active{transform:scale(.97)}
+button.sek{background:var(--s2);color:var(--tx)}button.bahaya{background:transparent;color:var(--red);padding:6px 10px}button.kecil{padding:5px 11px;font-size:12px;border-radius:9px}
+input,select,textarea{font:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--s1);color:var(--tx);width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--vio);outline-offset:-1px}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px;font-weight:600}
+#login,#setup{max-width:400px;margin:10vh auto;background:var(--s1);padding:28px;border-radius:22px;border:1px solid var(--line);box-shadow:var(--sh)}
+#setup{max-width:560px}
+.logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--vio),var(--pink));display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px}
+.shell{display:grid;grid-template-columns:268px 1fr;height:100vh}
+aside{background:var(--s1);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:auto}
+.brand{display:flex;gap:12px;align-items:center;padding:18px}.brand b{display:block;font-size:15px}.brand small{color:var(--mut)}
+.grp{padding:8px 12px 2px;color:var(--mut);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.mn{display:flex;gap:10px;align-items:center;width:calc(100% - 16px);margin:2px 8px;padding:9px 12px;background:transparent;color:var(--soft);border-radius:12px;text-align:left;font-weight:600}
+.mn:hover{background:var(--s2);opacity:1}.mn.on{background:linear-gradient(135deg,var(--vio),var(--vio2));color:#fff}.mn.off{opacity:.45;cursor:default}
+.mn i{font-style:normal;width:22px;text-align:center}.seg{font-size:10px;background:var(--s2);color:var(--mut);padding:1px 7px;border-radius:99px;margin-left:auto}
+.kanan{display:flex;flex-direction:column;min-width:0;height:100vh}
+.top{display:flex;gap:12px;align-items:center;padding:14px 26px;border-bottom:1px solid var(--line);background:var(--s1)}
+.top h1{margin:0;font-size:19px;flex:1}.top input{max-width:300px}
+main{padding:22px 26px 60px;overflow:auto;flex:1}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
+.k{background:var(--s1);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--sh)}
+.k b{display:block;font-size:26px;line-height:1.2}.k span{color:var(--mut);font-size:12px}
+.hero{background:linear-gradient(135deg,var(--vio),var(--pink));color:#fff;border-radius:24px;padding:22px;margin-bottom:18px;box-shadow:var(--sh)}
+.hero h2{margin:0 0 4px}.hero p{margin:0;opacity:.9}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.bar input,.bar select{width:auto;flex:1;min-width:180px;max-width:340px}.bar .sp{flex:1}
+.tag{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--s2);font-size:12px;color:var(--soft);font-weight:600}
+.tag.ok{background:rgba(43,212,160,.18);color:var(--mint)}.tag.warn{background:rgba(255,184,77,.2);color:var(--gold)}.tag.bad{background:rgba(255,92,92,.18);color:var(--red)}
+.wrap{overflow:auto;border-radius:18px;border:1px solid var(--line);background:var(--s1);box-shadow:var(--sh)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{background:var(--s2);color:var(--soft);font-size:11px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}tr:last-child td{border:0}
+tbody tr:hover{background:var(--s2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--sh)}
+.card h3{margin:0 0 6px;font-size:15px}.card p{margin:4px 0;color:var(--soft)}
+.bg{height:8px;background:var(--s2);border-radius:9px;overflow:hidden}.bg i{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--vio2))}
+.kosong{padding:40px;text-align:center;color:var(--mut)}
+.modal{position:fixed;inset:0;background:rgba(5,6,20,.6);display:grid;place-items:center;z-index:20;padding:20px}
+.dlg{background:var(--s1);border-radius:22px;padding:24px;width:min(640px,100%);max-height:90vh;overflow:auto;box-shadow:var(--sh);border:1px solid var(--line)}
+.dlg h2{margin:0 0 6px}.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.aksi{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.foto{width:100%;max-height:220px;object-fit:cover;border-radius:14px;margin-top:8px;cursor:zoom-in}
+.thumb{width:54px;height:54px;object-fit:cover;border-radius:10px;cursor:zoom-in}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 20px;border-radius:99px;font-weight:600;z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{padding:6px 14px;border-radius:99px;background:var(--s2);color:var(--soft);font-weight:600;cursor:pointer;border:0}.chip.on{background:var(--vio);color:#fff}
+.sholat{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}.sholat div{background:rgba(255,255,255,.16);border-radius:14px;padding:8px;text-align:center}.sholat b{display:block;font-size:16px}
+.surat{background:#fff;color:#000;padding:40px 48px;font:13px/1.55 "Times New Roman",serif;border-radius:8px;max-width:720px;margin:auto}
+@media (max-width:900px){.shell{grid-template-columns:1fr}aside{display:none}.row2{grid-template-columns:1fr}}
+@media print{.shell,#toast,.modal{display:none!important}}
 </style>
 </head>
 <body>
+<div id="setup" hidden>
+  <div class="logo">K</div><h2>Pengaturan awal (sekali saja)</h2>
+  <p style="color:var(--soft)">Tempel konfigurasi Web app dari Firebase Console (Project settings &gt; Your apps &gt; Web &gt; firebaseConfig).</p>
+  <textarea id="cfg" rows="8" style="font:12px monospace" placeholder='apiKey: "...", authDomain: "...", projectId: "...", appId: "..."'></textarea>
+  <div id="cfgpesan" style="color:var(--red);min-height:22px"></div>
+  <button id="cfgsimpan">Simpan dan mulai</button>
+</div>
 <div id="login" hidden>
-  <h2 style="margin:0 0 4px">KKN Al-Mushlih 2027</h2>
-  <p style="color:var(--mut);margin:0 0 12px">Versi PC · masuk dengan akun yang sama seperti di HP</p>
-  <input id="nim" placeholder="NIM" autocomplete="username">
-  <input id="sandi" type="password" placeholder="Kata sandi" autocomplete="current-password">
-  <div id="pesan"></div>
-  <button id="masuk" style="width:100%;margin-top:6px">Masuk</button>
+  <div class="logo">K</div>
+  <h2 style="margin:14px 0 2px">KKN Al-Mushlih 2027</h2>
+  <p style="color:var(--mut);margin:0 0 8px">Masuk dengan akun yang sama seperti di HP</p>
+  <label>NIM</label><input id="nim" autocomplete="username">
+  <label>Kata sandi</label><input id="sandi" type="password" autocomplete="current-password">
+  <div id="pesan" style="color:var(--red);min-height:22px;margin-top:6px"></div>
+  <button id="masuk" style="width:100%">Masuk</button>
 </div>
-<div id="app" hidden>
-  <header><h1>KKN Al-Mushlih 2027 · <span id="desa"></span></h1><small id="siapa"></small><button class="sek" id="gantiCfg" title="Ganti konfigurasi Firebase">Konfigurasi</button><button class="sek" id="keluar">Keluar</button></header>
-  <nav id="tab"></nav>
-  <main id="isi"></main>
+<div id="app" class="shell" hidden>
+  <aside><div class="brand"><div class="logo">K</div><div><b>KKN Al-Mushlih</b><small id="desa"></small></div></div><div id="menu"></div>
+    <div style="margin-top:auto;padding:12px"><div id="siapa" style="color:var(--mut);font-size:12px;margin:0 6px 8px"></div>
+    <button class="sek" id="tema" style="width:100%;margin-bottom:6px">Tema: otomatis</button>
+    <button class="sek" id="gantiCfg" style="width:100%;margin-bottom:6px">Konfigurasi Firebase</button>
+    <button class="sek" id="keluar" style="width:100%">Keluar</button></div></aside>
+  <div class="kanan"><div class="top"><h1 id="judul"></h1><input id="cari" placeholder="Cari di semua data… (Ctrl+K)"></div><main id="isi"></main></div>
 </div>
+<div id="toast"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<div id="setup" hidden style="max-width:560px;margin:8vh auto;background:var(--s1);padding:26px;border-radius:18px;border:1px solid var(--line)">
-  <h2 style="margin:0 0 6px">Pengaturan awal (sekali saja)</h2>
-  <p style="color:var(--soft)">Tempel konfigurasi Web app dari Firebase Console (Project settings > Your apps > Web > firebaseConfig). Boleh dengan atau tanpa tanda kurung kurawal.</p>
-  <textarea id="cfg" rows="8" style="width:100%;font:12px monospace;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--s2);color:var(--tx)" placeholder='apiKey: "...", authDomain: "...", projectId: "...", appId: "..."'></textarea>
-  <div id="cfgpesan" style="color:var(--red);min-height:20px"></div>
-  <button id="cfgsimpan">Simpan dan mulai</button>
-</div>
 <script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rp = (n) => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
+const tgl = (ms) => ms ? new Date(ms).toLocaleDateString("id-ID", {day:"2-digit",month:"short",year:"numeric"}) : "-";
+const tglJam = (ms) => ms ? new Date(ms).toLocaleString("id-ID", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}) : "-";
+const awalHari = (ms) => { const d = new Date(ms); d.setHours(0,0,0,0); return +d; };
+const kePengguna = (inp) => inp ? +new Date(inp + "T00:00:00") : 0;
+const keInput = (ms) => ms ? new Date(ms - new Date(ms).getTimezoneOffset()*60000).toISOString().slice(0,10) : "";
+function toast(t) { const e = $("toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove("on"), 2600); }
+
+/* ---------- tema ---------- */
+const TEMA = ["auto","terang","gelap"];
+let temaIdx = Math.max(0, TEMA.indexOf(localStorage.getItem("kkn_tema") || "auto"));
+function pasangTema() { document.documentElement.dataset.tema = TEMA[temaIdx] === "terang" ? "terang" : TEMA[temaIdx] === "gelap" ? "gelap" : "auto"; const t = $("tema"); if (t) t.textContent = "Tema: " + ["otomatis","terang","gelap"][temaIdx]; }
+pasangTema();
+
+/* ---------- konfigurasi ---------- */
 function bacaCfg() {
   try { const t = localStorage.getItem("kkn_firebase"); if (t) return JSON.parse(t); } catch (e) {}
   const c = window.KKN_FIREBASE; return c && c.apiKey && !c.apiKey.startsWith("ISI_") ? c : null;
 }
 const CFG = bacaCfg();
 if (!CFG) {
-  document.getElementById("setup").hidden = false;
-  document.getElementById("cfgsimpan").onclick = () => {
-    const t = document.getElementById("cfg").value, o = {};
+  $("setup").hidden = false;
+  $("cfgsimpan").onclick = () => {
+    const t = $("cfg").value, o = {};
     for (const k of ["apiKey","authDomain","projectId","appId","storageBucket","messagingSenderId"]) {
-      const m = t.match(new RegExp(k + '\\s*["\']?\\s*[:=]\\s*["\']([^"\']+)["\']'));
-      if (m) o[k] = m[1];
+      const m = t.match(new RegExp(k + '\\s*["\']?\\s*[:=]\\s*["\']([^"\']+)["\']')); if (m) o[k] = m[1];
     }
-    if (!o.apiKey || !o.projectId) { document.getElementById("cfgpesan").textContent = "apiKey dan projectId tidak ditemukan. Salin ulang konfigurasinya."; return; }
+    if (!o.apiKey || !o.projectId) { $("cfgpesan").textContent = "apiKey dan projectId tidak ditemukan. Salin ulang konfigurasinya."; return; }
     if (!o.authDomain) o.authDomain = o.projectId + ".firebaseapp.com";
     localStorage.setItem("kkn_firebase", JSON.stringify(o)); location.reload();
   };
@@ -79,104 +129,437 @@ if (!CFG) {
 }
 firebase.initializeApp(CFG);
 const auth = firebase.auth(), db = firebase.firestore();
-const $ = (id) => document.getElementById(id);
-const rp = (n) => "Rp " + (Number(n) || 0).toLocaleString("id-ID");
-const tgl = (ms) => ms ? new Date(ms).toLocaleDateString("id-ID", {day:"2-digit",month:"short",year:"numeric"}) : "-";
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let desaId = "", data = {}, tabAktif = "ringkasan", urut = {k: null, naik: true}, kata = "";
+
+/* ---------- state ---------- */
+let me = null, desaId = "", admin = false, data = {}, halaman = "beranda", kata = "", saring = {};
 const unsub = [];
+const DESA = ["anggota","absensi","proker","surat","inventaris","nota","bukti","riwayat"];
+const GLOBAL = ["tugas","pengumuman","polling","kas","jurnal_bersama"];
+const dk = (n) => db.collection("desa").doc(desaId).collection(n);
+const aktif = (n) => (data[n] || []).filter((x) => !x.dihapus);
 
-const KOLEKSI = ["anggota", "absensi", "proker", "surat", "inventaris", "nota", "riwayat"];
-const TAB = {
-  ringkasan: {judul: "Ringkasan"},
-  anggota: {judul: "Anggota", kolom: [["nama","Nama"],["divisi","Divisi"],["aktif","Status",(v)=>v?"Aktif":"Nonaktif"]]},
-  absensi: {judul: "Absensi", kolom: [["tanggalMillis","Tanggal",tgl],["anggotaNama","Nama"],["hadir","Hadir",(v)=>v?"Hadir":"Tidak"],["keterangan","Keterangan"]]},
-  proker: {judul: "Proker", kolom: [["namaProker","Program"],["divisiPenanggungJawab","Divisi"],["status","Status"],["mulaiMillis","Mulai",tgl],["selesaiMillis","Selesai",tgl],["anggaran","Anggaran",rp],["realisasi","Realisasi",rp],["picNama","PIC"]]},
-  surat: {judul: "Surat", kolom: [["tanggalMillis","Tanggal",tgl],["jenis","Jenis"],["nomorSurat","Nomor"],["perihal","Perihal"],["tujuanAtauPengirim","Tujuan/Pengirim"]]},
-  inventaris: {judul: "Inventaris", kolom: [["namaBarang","Barang"],["jumlah","Jumlah"],["kondisi","Kondisi"],["keterangan","Keterangan"]]},
-  nota: {judul: "Nota & Kwitansi", kolom: [["tanggalMillis","Tanggal",tgl],["keterangan","Keterangan"],["nominal","Nominal",rp],["prokerTerkait","Proker"],["jenis","Jenis"]]},
-  riwayat: {judul: "Riwayat Perubahan", kolom: [["waktu","Waktu",(v)=>v?new Date(v).toLocaleString("id-ID"):"-"],["olehNama","Oleh"],["aksi","Aksi"],["tabel","Data"],["ringkas","Rincian"]]},
-};
+/* ---------- tulis (data + riwayat atomik, sama dengan aplikasi HP) ---------- */
+const jejakBaru = (t) => ({dibuatOleh: me.uid, dibuatOlehNama: me.nama, dibuatPada: t, diubahOleh: me.uid, diubahOlehNama: me.nama, diubahPada: t});
+const jejakUbah = (t) => ({diubahOleh: me.uid, diubahOlehNama: me.nama, diubahPada: t});
+async function tulis(tabel, aksi, ringkas, ref, isi, baru) {
+  const t = Date.now(), b = db.batch();
+  if (baru) b.set(ref, {...isi, ...jejakBaru(t)}); else b.update(ref, {...isi, ...jejakUbah(t)});
+  b.set(dk("riwayat").doc(), {tabel, aksi, targetId: ref.id, ringkas: String(ringkas).slice(0,160), oleh: me.uid, olehNama: me.nama, waktu: t});
+  await b.commit();
+}
+async function coba(fn, ok) { try { await fn(); if (ok) toast(ok); } catch (e) { toast(e.code === "permission-denied" ? "Ditolak server (aturan Firestore / akun diblokir)." : "Gagal: " + e.message); } }
 
+/* ---------- foto: kompres ke JPEG base64 (sama dengan HP, maks ~180 KB) ---------- */
+function kompres(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      let maks = 1280, q = 0.8;
+      for (let i = 0; i < 8; i++) {
+        const s = Math.min(1, maks / Math.max(img.width, img.height)), c = document.createElement("canvas");
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        const b64 = c.toDataURL("image/jpeg", q).split(",")[1];
+        if (b64.length * 0.75 <= 180000) { URL.revokeObjectURL(url); return res(b64); }
+        q -= 0.1; if (q < 0.4) { q = 0.7; maks = Math.round(maks * 0.75); }
+      }
+      rej(new Error("Foto terlalu besar"));
+    };
+    img.onerror = () => rej(new Error("File bukan gambar")); img.src = url;
+  });
+}
+const src = (b) => "data:image/jpeg;base64," + b;
+
+/* ---------- modal ---------- */
+function modal(html, ikat) {
+  const m = document.createElement("div"); m.className = "modal"; m.innerHTML = `<div class="dlg">${html}</div>`;
+  m.onmousedown = (e) => { if (e.target === m) tutup(); }; document.body.appendChild(m);
+  const tutup = () => { m.remove(); gambar(); }; m.tutup = tutup; if (ikat) ikat(m, tutup); return m;
+}
+function formModal(judul, isi, onSimpan, tombol = "Simpan") {
+  modal(`<h2>${judul}</h2>${isi}<div class="aksi"><button class="sek" data-x>Batal</button><button data-ok>${tombol}</button></div>`, (m, tutup) => {
+    m.querySelector("[data-x]").onclick = tutup;
+    m.querySelector("[data-ok]").onclick = async () => { const ok = await onSimpan(m); if (ok !== false) tutup(); };
+    const f = m.querySelector("input,textarea,select"); if (f) f.focus();
+  });
+}
+const v = (m, n) => m.querySelector(`[name=${n}]`).value;
+function lihatFoto(b) { modal(`<img src="${src(b)}" style="width:100%;border-radius:12px"><div class="aksi"><button class="sek" data-x>Tutup</button></div>`, (m, t) => m.querySelector("[data-x]").onclick = t); }
+const konfirm = (teks, fn) => formModal("Konfirmasi", `<p>${esc(teks)}</p>`, async () => { await fn(); }, "Ya, lanjutkan");
+
+/* ---------- login ---------- */
 async function masuk() {
   $("pesan").textContent = "";
   const nim = $("nim").value.trim(), sandi = $("sandi").value;
   if (!nim || !sandi) { $("pesan").textContent = "Isi NIM dan kata sandi."; return; }
   try {
     const idx = await db.collection("nim_index").doc(nim).get();
-    if (!idx.exists) { $("pesan").textContent = "NIM tidak ditemukan."; return; }
+    if (!idx.exists || !idx.data().email) { $("pesan").textContent = "NIM tidak ditemukan."; return; }
     await auth.signInWithEmailAndPassword(idx.data().email, sandi);
   } catch (e) { $("pesan").textContent = "Gagal masuk: periksa NIM dan kata sandi."; }
 }
-$("masuk").onclick = masuk;
-$("sandi").onkeydown = (e) => { if (e.key === "Enter") masuk(); };
+$("masuk").onclick = masuk; $("sandi").onkeydown = (e) => { if (e.key === "Enter") masuk(); };
 $("keluar").onclick = () => auth.signOut();
-$("gantiCfg").onclick = () => { if (confirm("Ganti konfigurasi Firebase?")) { localStorage.removeItem("kkn_firebase"); auth.signOut().finally(() => location.reload()); } };
+$("tema").onclick = () => { temaIdx = (temaIdx + 1) % 3; localStorage.setItem("kkn_tema", TEMA[temaIdx]); pasangTema(); };
+$("gantiCfg").onclick = () => konfirm("Ganti konfigurasi Firebase? Kamu akan keluar.", () => { localStorage.removeItem("kkn_firebase"); auth.signOut().finally(() => location.reload()); });
 
 auth.onAuthStateChanged(async (u) => {
-  unsub.splice(0).forEach((f) => f());
+  unsub.splice(0).forEach((f) => f()); data = {};
   if (!u) { $("app").hidden = true; $("login").hidden = false; return; }
   const p = await db.collection("users").doc(u.uid).get();
   const prof = p.exists ? p.data() : null;
   if (!prof || prof.akunDiblokir || !prof.desaId) {
-    $("pesan").textContent = "Akun belum punya desa. Buka aplikasi HP sekali dulu."; await auth.signOut(); return;
+    $("pesan").textContent = prof && prof.akunDiblokir ? "Akun diblokir." : "Akun belum punya desa. Buka aplikasi HP sekali dulu."; await auth.signOut(); return;
   }
-  desaId = prof.desaId; $("desa").textContent = prof.desa || desaId; $("siapa").textContent = prof.namaLengkap || "";
+  desaId = prof.desaId; me = {uid: u.uid, nama: prof.namaLengkap || "Pengguna", desa: prof.desa || desaId, peran: prof.peran};
+  try { admin = (await db.collection("admins").doc(u.uid).get()).exists; } catch (e) { admin = false; }
+  $("desa").textContent = me.desa; $("siapa").textContent = me.nama + (admin ? " · admin" : "");
   $("login").hidden = true; $("app").hidden = false;
-  KOLEKSI.forEach((k) => {
-    unsub.push(db.collection("desa").doc(desaId).collection(k).onSnapshot((s) => {
-      data[k] = s.docs.map((d) => ({id: d.id, ...d.data()})).filter((x) => !x.dihapus);
-      gambar();
-    }, () => { data[k] = []; gambar(); }));
-  });
-  bangunTab();
+  const dengar = (ref, n) => unsub.push(ref.onSnapshot((s) => { data[n] = s.docs.map((d) => ({id: d.id, ...d.data()})); gambar(); }, () => { data[n] = []; gambar(); }));
+  DESA.forEach((n) => dengar(dk(n), n)); GLOBAL.forEach((n) => dengar(db.collection(n), n));
+  unsub.push(db.collection("users").where("desaId", "==", desaId).onSnapshot((s) => { data.users = s.docs.map((d) => ({id: d.id, ...d.data()})); }, () => {}));
+  bangunMenu(); gambar();
 });
 
-function bangunTab() {
-  $("tab").innerHTML = Object.entries(TAB).map(([k, v]) => `<button data-k="${k}" class="${k===tabAktif?"on":""}">${v.judul}</button>`).join("");
-  $("tab").querySelectorAll("button").forEach((b) => b.onclick = () => { tabAktif = b.dataset.k; kata = ""; urut = {k:null,naik:true}; bangunTab(); gambar(); });
+/* ---------- menu ---------- */
+const MENU = [
+  ["", [["beranda","🏠","Beranda"]]],
+  ["Sekretaris", [["absensi","✅","Absensi"],["anggota","👥","Anggota"],["surat","✉️","Surat Masuk/Keluar"],["templat","📝","Templat Surat PDF"],["proker","📋","Program Kerja"],["inventaris","📦","Inventaris Posko"],["tugas","🗓️","Tugas"]]],
+  ["Bendahara", [["nota","🧾","Arsip Nota"],["rekon","⚖️","Rekonsiliasi"],["kas","💰","Kas Kelompok"]]],
+  ["Media", [["jurnal","📖","Jurnal & Notulen"]]],
+  ["Pendidikan", [["_pend","🎓","Pendidikan","segera"]]],
+  ["Umum", [["pengumuman","📣","Pengumuman"],["polling","📊","Polling"],["sholat","🕌","Waktu Sholat"]]],
+  ["Lainnya", [["riwayat","🕘","Riwayat Perubahan"]]],
+];
+const JUDUL = {}; MENU.forEach(([, m]) => m.forEach((x) => JUDUL[x[0]] = x[2])); JUDUL.cari = "Hasil Pencarian";
+function bangunMenu() {
+  $("menu").innerHTML = MENU.map(([g, items]) => (g ? `<div class="grp">${g}</div>` : "") + items.map(([k, ik, n, s]) =>
+    `<button class="mn ${halaman===k?"on":""} ${s?"off":""}" data-k="${k}"><i>${ik}</i>${n}${s?`<span class="seg">segera</span>`:""}</button>`).join("")).join("");
+  $("menu").querySelectorAll(".mn:not(.off)").forEach((b) => b.onclick = () => { halaman = b.dataset.k; kata = ""; $("cari").value = ""; saring = {}; bangunMenu(); gambar(); });
 }
+$("cari").oninput = (e) => { kata = e.target.value.trim(); if (kata.length >= 2) { halaman = "cari"; } else if (halaman === "cari") halaman = "beranda"; bangunMenu(); gambar(); };
+document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); $("cari").focus(); } });
 
-function csv(kolom, baris) {
-  const q = (s) => '"' + String(s ?? "").replace(/"/g, '""') + '"';
-  const teks = [kolom.map((c) => q(c[1])).join(",")].concat(baris.map((r) => kolom.map((c) => q(c[2] ? c[2](r[c[0]]) : r[c[0]])).join(","))).join("\r\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob(["﻿" + teks], {type: "text/csv;charset=utf-8"}));
-  a.download = `kkn-${tabAktif}.csv`; a.click();
-}
-
+/* ---------- gambar halaman ---------- */
 function gambar() {
-  const el = $("isi"); if (!desaId) return;
-  if (tabAktif === "ringkasan") return ringkasan(el);
-  const t = TAB[tabAktif]; let baris = (data[tabAktif] || []).slice();
-  if (kata) { const q = kata.toLowerCase(); baris = baris.filter((r) => t.kolom.some((c) => String(c[2] ? c[2](r[c[0]]) : r[c[0]] ?? "").toLowerCase().includes(q))); }
-  if (urut.k) baris.sort((a, b) => { const x = a[urut.k] ?? "", y = b[urut.k] ?? ""; return (x > y ? 1 : x < y ? -1 : 0) * (urut.naik ? 1 : -1); });
-  else baris.sort((a, b) => (b.tanggalMillis || b.waktu || 0) - (a.tanggalMillis || a.waktu || 0));
-  const tot = tabAktif === "nota" ? `<span class="tag">Total ${rp(baris.reduce((s, r) => s + (r.nominal || 0), 0))}</span>` : "";
-  el.innerHTML = `<div class="bar"><input id="cari" placeholder="Cari di ${t.judul}…" value="${esc(kata)}"><span class="tag">${baris.length} data</span>${tot}<button class="sek" id="xcsv">Ekspor CSV</button><button class="sek" onclick="print()">Cetak</button></div>` +
-    (baris.length ? `<div class="wrap"><table><thead><tr>${t.kolom.map((c) => `<th data-k="${c[0]}">${c[1]}${urut.k===c[0]?(urut.naik?" ▲":" ▼"):""}</th>`).join("")}</tr></thead><tbody>${baris.map((r) => `<tr>${t.kolom.map((c) => `<td>${esc(c[2] ? c[2](r[c[0]]) : r[c[0]])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : `<div class="kosong">Belum ada data.</div>`);
-  const c = $("cari"); c.oninput = () => { kata = c.value; const p = c.selectionStart; gambar(); const n = $("cari"); n.focus(); n.setSelectionRange(p, p); };
-  $("xcsv").onclick = () => csv(t.kolom, baris);
-  el.querySelectorAll("th").forEach((h) => h.onclick = () => { urut = {k: h.dataset.k, naik: urut.k === h.dataset.k ? !urut.naik : true}; gambar(); });
+  if (!desaId || $("app").hidden) return;
+  if (document.querySelector(".modal") && !gambar.paksa) return;
+  const ae = document.activeElement; if (ae && $("isi").contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && ae.type !== "checkbox" && !gambar.paksa) return;
+  $("judul").textContent = JUDUL[halaman] || "";
+  const f = HAL[halaman] || HAL.beranda;
+  const y = $("isi").scrollTop; $("isi").innerHTML = ""; f($("isi")); $("isi").scrollTop = y;
+}
+function tabel(kolom, baris, aksi) {
+  if (!baris.length) return `<div class="kosong">Belum ada data.</div>`;
+  return `<div class="wrap"><table><thead><tr>${kolom.map((c) => `<th>${c[0]}</th>`).join("")}${aksi?"<th></th>":""}</tr></thead><tbody>${baris.map((r, i) => `<tr>${kolom.map((c) => `<td>${c[1](r)}</td>`).join("")}${aksi?`<td style="text-align:right;white-space:nowrap">${aksi(r, i)}</td>`:""}</tr>`).join("")}</tbody></table></div>`;
+}
+function csv(nama, kolom, baris) {
+  const q = (s) => '"' + String(s ?? "").replace(/"/g, '""').replace(/<[^>]+>/g, "") + '"';
+  const t = [kolom.map((c) => q(c[0])).join(",")].concat(baris.map((r) => kolom.map((c) => q(c[1](r))).join(","))).join("\r\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + t], {type: "text/csv;charset=utf-8"})); a.download = `kkn-${nama}.csv`; a.click();
+}
+const gabung = (...a) => a.join("");
+function tombolCsv(nama, kolom, baris) { return `<button class="sek" data-csv>Ekspor CSV</button>`; }
+function ikatCsv(el, nama, kolom, baris) { const b = el.querySelector("[data-csv]"); if (b) b.onclick = () => csv(nama, kolom, baris); }
+const urutBaru = (a) => a.slice().sort((x, y) => (y.tanggalMillis || y.waktu || y.diubahPada || 0) - (x.tanggalMillis || x.waktu || x.diubahPada || 0));
+const statusTag = (s) => `<span class="tag ${s==="SELESAI"?"ok":s==="BERJALAN"?"warn":s==="BATAL"?"bad":""}">${esc(({BELUM_MULAI:"Belum mulai",BERJALAN:"Berjalan",SELESAI:"Selesai",BATAL:"Batal"})[s]||s)}</span>`;
+
+/* ---------- waktu sholat (rumus yang sama dengan HP) ---------- */
+const KOTA = {Surabaya:[-7.2575,112.7521],Jombang:[-7.5467,112.2331],Mojokerto:[-7.4704,112.4401],Malang:[-7.9666,112.6326],Yogyakarta:[-7.7956,110.3695],Jakarta:[-6.2088,106.8456],Bandung:[-6.9175,107.6191],Medan:[3.5952,98.6722],Makassar:[-5.1477,119.4327],Denpasar:[-8.65,115.2167]};
+function sholat(lin, buj, zona, T, B, H) {
+  const R = Math.PI / 180, D = 180 / Math.PI, fix = (a, b) => a - b * Math.floor(a / b);
+  let y = T, m = B; if (m <= 2) { y--; m += 12; } const a = Math.floor(y / 100), bb = 2 - a + Math.floor(a / 4);
+  const jd = Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + H + bb - 1524.5, d = jd + 0.5 - 2451545;
+  const g = fix(357.529 + 0.98560028 * d, 360), q = fix(280.459 + 0.98564736 * d, 360);
+  const l = fix(q + 1.915 * Math.sin(g * R) + 0.02 * Math.sin(2 * g * R), 360), e = 23.439 - 3.6e-7 * d;
+  const ra = fix(Math.atan2(Math.cos(e * R) * Math.sin(l * R), Math.cos(l * R)) * D / 15, 24), eqt = q / 15 - ra, dek = Math.asin(Math.sin(e * R) * Math.sin(l * R)) * D;
+  const dz = 12 + zona - buj / 15 - eqt;
+  const sel = (s) => { const x = (-Math.sin(s * R) - Math.sin(dek * R) * Math.sin(lin * R)) / (Math.cos(dek * R) * Math.cos(lin * R)); return Math.acos(Math.max(-1, Math.min(1, x))) * D / 15; };
+  const ash = () => sel(-Math.atan(1 / (1 + Math.tan(Math.abs(lin - dek) * R))) * D), ih = 2 / 60;
+  return [["Subuh", dz - sel(20) + ih], ["Terbit", dz - sel(0.833) - ih], ["Dzuhur", dz + ih], ["Ashar", dz + ash() + ih], ["Maghrib", dz + sel(0.833) + ih], ["Isya", dz + sel(18) + ih]];
+}
+const jamFmt = (j) => { const t = Math.round((((j % 24) + 24) % 24) * 60) % 1440; return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); };
+function jadwalHariIni(kota) { const n = new Date(), [la, bu] = KOTA[kota] || KOTA.Yogyakarta; return sholat(la, bu, 7, n.getFullYear(), n.getMonth() + 1, n.getDate()); }
+
+/* ---------- halaman ---------- */
+const HAL = {};
+
+HAL.beranda = (el) => {
+  const pr = aktif("proker").filter((p) => p.status !== "BATAL"), sel = pr.filter((p) => p.status === "SELESAI").length, persen = pr.length ? Math.round(sel * 100 / pr.length) : 0;
+  const ang = aktif("anggota").filter((a) => a.aktif !== false), hari = awalHari(Date.now());
+  const hadir = aktif("absensi").filter((a) => a.tanggalMillis === hari && a.hadir).length;
+  const kasM = aktif("kas").filter((k) => k.masuk !== false).reduce((s, k) => s + (k.jumlah || 0), 0), kasK = aktif("kas").filter((k) => k.masuk === false).reduce((s, k) => s + (k.jumlah || 0), 0);
+  const j = jadwalHariIni("Yogyakarta"), now = new Date().getHours() + new Date().getMinutes() / 60;
+  const urut = j.filter((x) => x[0] !== "Terbit"), next = urut.find((x) => x[1] > now) || urut[0];
+  const perhatian = [];
+  const nowMs = Date.now();
+  aktif("tugas").filter((t) => t.untukUid === me.uid && !t.selesai && (!t.deadlineMillis || t.deadlineMillis < nowMs + 864e5)).forEach((t) => perhatian.push(["Tugas", t.judul, t.deadlineMillis && t.deadlineMillis < nowMs ? "Lewat tenggat" : "Tenggat < 24 jam", "tugas"]));
+  aktif("pengumuman").filter((p) => !(p.dibacaOleh || []).includes(me.uid) && p.tanggalMillis > nowMs - 3 * 864e5).forEach((p) => perhatian.push(["Pengumuman", p.judul, "Belum dibaca", "pengumuman"]));
+  if (new Date().getHours() >= 16 && ang.length && !aktif("absensi").some((a) => a.tanggalMillis === hari)) perhatian.push(["Absensi", "Absensi hari ini belum dicatat", "", "absensi"]);
+  aktif("proker").filter((p) => p.status !== "SELESAI" && p.status !== "BATAL" && p.selesaiMillis && p.selesaiMillis < hari).forEach((p) => perhatian.push(["Proker", p.namaProker, "Lewat jadwal", "proker"]));
+  el.innerHTML = `<div class="hero"><h2>Assalamu'alaikum, ${esc(me.nama.split(" ")[0])}</h2><p>${esc(me.desa)} · ${new Date().toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p>
+    <div class="sholat">${urut.map((x) => `<div style="${x===next?"background:rgba(255,255,255,.38)":""}">${x[0]}<b>${jamFmt(x[1])}</b></div>`).join("")}</div></div>
+    <div class="grid"><div class="k"><b>${ang.length}</b><span>Anggota aktif</span></div><div class="k"><b>${hadir}/${ang.length}</b><span>Hadir hari ini</span></div>
+    <div class="k"><b>${persen}%</b><span>Proker selesai (${sel}/${pr.length})</span><div class="bg" style="margin-top:8px"><i style="width:${persen}%"></i></div></div>
+    <div class="k"><b>${aktif("surat").length}</b><span>Surat tercatat</span></div><div class="k"><b>${rp(aktif("nota").reduce((s, n) => s + (n.nominal || 0), 0))}</b><span>Total nota</span></div>
+    <div class="k"><b>${rp(kasM - kasK)}</b><span>Saldo kas kelompok</span></div></div>
+    <h3>Perlu perhatian</h3>${perhatian.length ? `<div class="cards">${perhatian.map((p) => `<div class="card" style="cursor:pointer" data-go="${p[3]}"><span class="tag warn">${p[0]}</span><h3 style="margin-top:8px">${esc(p[1])}</h3><p>${esc(p[2])}</p></div>`).join("")}</div>` : `<div class="kosong">Tidak ada yang mendesak. 🎉</div>`}`;
+  el.querySelectorAll("[data-go]").forEach((c) => c.onclick = () => { halaman = c.dataset.go; bangunMenu(); gambar(); });
+};
+
+HAL.anggota = (el) => {
+  const kol = [["Nama", (r) => `<b>${esc(r.nama)}</b>`], ["Divisi", (r) => esc(r.divisi)], ["Status", (r) => r.aktif === false ? `<span class="tag bad">Nonaktif</span>` : `<span class="tag ok">Aktif</span>`]];
+  const baris = aktif("anggota").sort((a, b) => a.nama.localeCompare(b.nama));
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah anggota</button><span class="sp"></span>${tombolCsv()}</div>` +
+    tabel(kol, baris, (r) => `<button class="sek kecil" data-t="${r.id}">${r.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>`);
+  ikatCsv(el, "anggota", kol.map((c) => [c[0], (r) => r[c[0] === "Nama" ? "nama" : c[0] === "Divisi" ? "divisi" : "aktif"]]), baris);
+  el.querySelector("[data-tambah]").onclick = () => formModal("Tambah anggota", `<label>Nama</label><input name="n"><label>Divisi</label><input name="d" placeholder="mis. Sekretaris">`, (m) => {
+    const n = v(m, "n").trim(); if (!n) { toast("Nama wajib diisi"); return false; }
+    coba(() => tulis("anggota", "tambah", n, dk("anggota").doc(), {nama: n, divisi: v(m, "d").trim(), aktif: true}, true), "Anggota ditambahkan");
+  });
+  el.querySelectorAll("[data-t]").forEach((b) => b.onclick = () => { const a = baris.find((x) => x.id === b.dataset.t), akt = a.aktif === false; coba(() => tulis("anggota", akt ? "aktifkan" : "nonaktifkan", a.nama, dk("anggota").doc(a.id), {aktif: akt}, false), "Diperbarui"); });
+};
+
+HAL.absensi = (el) => {
+  const tglPilih = saring.tgl || keInput(Date.now()), ms = kePengguna(tglPilih);
+  const ang = aktif("anggota").filter((a) => a.aktif !== false).sort((a, b) => a.nama.localeCompare(b.nama));
+  const ada = {}; aktif("absensi").filter((a) => a.tanggalMillis === ms).forEach((a) => ada[a.anggotaId] = a);
+  const hadir = Object.values(ada).filter((a) => a.hadir).length;
+  el.innerHTML = `<div class="bar"><input type="date" id="tg" value="${tglPilih}" style="max-width:190px"><span class="tag ok">${hadir} hadir</span><span class="tag">${ang.length - Object.keys(ada).length} belum dicatat</span><span class="sp"></span><button class="sek" data-semua>Hadirkan semua yang belum dicatat</button><button class="sek" data-rekap>Rekap</button></div>` +
+    (ang.length ? `<div class="wrap"><table><thead><tr><th>Nama</th><th>Status</th><th>Keterangan</th><th></th></tr></thead><tbody>${ang.map((a) => { const x = ada[a.id]; return `<tr><td><b>${esc(a.nama)}</b><br><small style="color:var(--mut)">${esc(a.divisi)}</small></td>
+      <td><div class="chips"><button class="chip ${x && x.hadir ? "on" : ""}" data-h="${a.id}" data-v="1">Hadir</button><button class="chip ${x && !x.hadir ? "on" : ""}" data-h="${a.id}" data-v="0">Tidak</button></div></td>
+      <td><input data-ket="${a.id}" value="${esc(x ? x.keterangan : "")}" placeholder="izin / sakit / ..." style="min-width:160px"></td><td></td></tr>`; }).join("")}</tbody></table></div>` : `<div class="kosong">Tambahkan anggota dulu di menu Anggota.</div>`);
+  $("tg").onchange = (e) => { saring.tgl = e.target.value; gambar(); };
+  const simpan = (a, h) => { const ket = el.querySelector(`[data-ket="${a.id}"]`).value, x = ada[a.id];
+    return tulis("absensi", x ? "ubah" : "tambah", `${a.nama}: ${h ? "hadir" : "tidak hadir"}`, dk("absensi").doc(`${a.id}_${ms}`), {anggotaId: a.id, anggotaNama: a.nama, tanggalMillis: ms, hadir: h, keterangan: ket}, !x); };
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => coba(() => simpan(ang.find((a) => a.id === b.dataset.h), b.dataset.v === "1"), "Tersimpan"));
+  el.querySelectorAll("[data-ket]").forEach((i) => i.onchange = () => { const a = ang.find((x) => x.id === i.dataset.ket); if (ada[a.id]) coba(() => simpan(a, ada[a.id].hadir), "Keterangan tersimpan"); else toast("Pilih Hadir/Tidak dulu"); });
+  el.querySelector("[data-semua]").onclick = () => coba(async () => { for (const a of ang.filter((x) => !ada[x.id])) await simpan(a, true); }, "Semua ditandai hadir");
+  el.querySelector("[data-rekap]").onclick = () => {
+    const rek = ang.map((a) => { const l = aktif("absensi").filter((x) => x.anggotaId === a.id); return {n: a.nama, h: l.filter((x) => x.hadir).length, t: l.filter((x) => !x.hadir).length}; });
+    modal(`<h2>Rekap kehadiran</h2>${tabel([["Nama", (r) => esc(r.n)], ["Hadir", (r) => r.h], ["Tidak hadir", (r) => r.t], ["%", (r) => (r.h + r.t ? Math.round(r.h * 100 / (r.h + r.t)) : 0) + "%"]], rek)}<div class="aksi"><button class="sek" data-x>Tutup</button><button data-c>Ekspor CSV</button></div>`, (m, t) => { m.querySelector("[data-x]").onclick = t; m.querySelector("[data-c]").onclick = () => csv("rekap-absensi", [["Nama", (r) => r.n], ["Hadir", (r) => r.h], ["Tidak hadir", (r) => r.t]], rek); });
+  };
+};
+
+HAL.surat = (el) => {
+  const f = saring.js || "";
+  const baris = urutBaru(aktif("surat")).filter((s) => !f || s.jenis === f);
+  const kol = [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => `<span class="tag ${r.jenis==="MASUK"?"warn":"ok"}">${r.jenis==="MASUK"?"Masuk":"Keluar"}</span>`], ["Nomor", (r) => esc(r.nomorSurat)], ["Perihal", (r) => `<b>${esc(r.perihal)}</b>`], ["Tujuan / Pengirim", (r) => esc(r.tujuanAtauPengirim)]];
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Catat surat</button><div class="chips">${[["","Semua"],["MASUK","Masuk"],["KELUAR","Keluar"]].map((c) => `<button class="chip ${f===c[0]?"on":""}" data-f="${c[0]}">${c[1]}</button>`).join("")}</div><span class="sp"></span>${tombolCsv()}</div>` +
+    tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  ikatCsv(el, "surat", [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => r.jenis], ["Nomor", (r) => r.nomorSurat], ["Perihal", (r) => r.perihal], ["Tujuan/Pengirim", (r) => r.tujuanAtauPengirim]], baris);
+  el.querySelectorAll("[data-f]").forEach((b) => b.onclick = () => { saring.js = b.dataset.f; gambar(); });
+  el.querySelector("[data-tambah]").onclick = () => formModal("Catat surat", `<label>Jenis</label><select name="j"><option value="KELUAR">Surat keluar</option><option value="MASUK">Surat masuk</option></select><label>Nomor</label><input name="no"><label>Perihal</label><input name="p"><label>Tujuan / Pengirim</label><input name="t">`, (m) => {
+    const p = v(m, "p").trim(); if (!p) { toast("Perihal wajib diisi"); return false; }
+    coba(() => tulis("surat", "tambah", `${v(m, "j")} · ${p}`, dk("surat").doc(), {tanggalMillis: Date.now(), jenis: v(m, "j"), nomorSurat: v(m, "no").trim(), perihal: p, tujuanAtauPengirim: v(m, "t").trim(), dihapus: false}, true), "Surat dicatat");
+  });
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => { const s = baris.find((x) => x.id === b.dataset.h); konfirm(`Hapus surat "${s.perihal}"?`, () => coba(() => tulis("surat", "hapus", s.perihal, dk("surat").doc(s.id), {dihapus: true}, false), "Dihapus")); });
+};
+
+/* templat surat: pratinjau + simpan PDF */
+HAL.templat = (el) => {
+  const T = saring.tp || "UNDANGAN", F = saring.tf || {};
+  const NAMA = {UNDANGAN: "Undangan", PERMOHONAN: "Permohonan", PEMBERITAHUAN: "Pemberitahuan", TERIMA_KASIH: "Terima Kasih"};
+  const fld = (k, l, t = "input", ph = "") => `<label>${l}</label>${t === "textarea" ? `<textarea data-f="${k}" rows="3" placeholder="${ph}">${esc(F[k] || "")}</textarea>` : `<input data-f="${k}" value="${esc(F[k] ?? "")}" placeholder="${ph}">`}`;
+  el.innerHTML = `<div class="chips" style="margin-bottom:14px">${Object.entries(NAMA).map(([k, n]) => `<button class="chip ${T===k?"on":""}" data-t="${k}">${n}</button>`).join("")}</div>
+  <div style="display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.2fr);gap:18px;align-items:start"><div class="card">
+    ${fld("tempat", "Tempat, tanggal")}${fld("nomor", "Nomor")}${fld("lampiran", "Lampiran")}${fld("perihal", "Perihal", "input", NAMA[T])}${fld("tujuan", "Kepada Yth.", "textarea")}${fld("inti", "Isi inti / keterangan", "textarea")}
+    ${T !== "TERIMA_KASIH" ? fld("hari", "Hari / tanggal") : ""}${T === "UNDANGAN" ? fld("waktu", "Waktu") : ""}${T !== "TERIMA_KASIH" ? fld("lokasi", "Tempat") : ""}
+    <div class="row2">${fld("ketua", "Nama Ketua")}${fld("sekretaris", "Nama Sekretaris")}</div>
+    <label><input type="checkbox" data-f="catat" ${F.catat !== false ? "checked" : ""} style="width:auto"> Catat juga sebagai surat keluar</label>
+    <div class="aksi"><button data-pdf>Simpan sebagai PDF</button></div></div><div id="pv"></div></div>`;
+  F.tempat = F.tempat ?? ("Yogyakarta, " + new Date().toLocaleDateString("id-ID", {day: "numeric", month: "long", year: "numeric"})); F.lampiran = F.lampiran ?? "-";
+  const pv = () => $("pv").innerHTML = suratHtml(T, F, NAMA[T]);
+  el.querySelectorAll("[data-t]").forEach((b) => b.onclick = () => { saring.tp = b.dataset.t; gambar(); });
+  el.querySelectorAll("[data-f]").forEach((i) => { if (!i.value && F[i.dataset.f]) i.value = F[i.dataset.f]; i.oninput = () => { F[i.dataset.f] = i.type === "checkbox" ? i.checked : i.value; saring.tf = F; pv(); }; });
+  pv();
+  el.querySelector("[data-pdf]").onclick = async () => {
+    if (!(F.tujuan || "").trim()) { toast("Isi bagian Kepada Yth."); return; }
+    const html = suratHtml(T, F, NAMA[T], true), nama = `Surat_${NAMA[T].replace(/ /g, "")}_${keInput(Date.now())}.pdf`;
+    if (window.kkn && window.kkn.simpanPdf) { const r = await window.kkn.simpanPdf(html, nama); if (!r) return; toast("PDF disimpan"); }
+    else { const w = window.open("", "_blank"); w.document.write(html); w.document.close(); w.print(); }
+    if (F.catat !== false) coba(() => tulis("surat", "tambah", `KELUAR · ${F.perihal || NAMA[T]}`, dk("surat").doc(), {tanggalMillis: Date.now(), jenis: "KELUAR", nomorSurat: (F.nomor || "").trim(), perihal: (F.perihal || NAMA[T]).trim(), tujuanAtauPengirim: (F.tujuan || "").split("\n")[0].trim(), dihapus: false}, true));
+  };
+};
+function suratHtml(T, F, nama, penuh) {
+  const e = (s) => esc(s).replace(/\n/g, "<br>"), P = [];
+  P.push("Assalamu'alaikum Warahmatullahi Wabarakatuh.");
+  const tgh = `Hari/tanggal : ${e(F.hari || "-")}<br>${T === "UNDANGAN" ? `Waktu : ${e(F.waktu || "-")}<br>` : ""}Tempat : ${e(F.lokasi || "-")}`;
+  if (T === "UNDANGAN") P.push("Dengan hormat, kami mengundang Bapak/Ibu/Saudara/i untuk hadir pada kegiatan berikut.", e(F.inti || ""), tgh, "Demikian undangan ini kami sampaikan. Atas kehadiran dan perhatiannya kami ucapkan terima kasih.");
+  if (T === "PERMOHONAN") P.push("Dengan hormat, melalui surat ini kami bermaksud mengajukan permohonan sebagai berikut.", e(F.inti || ""), tgh, "Demikian permohonan ini kami sampaikan. Besar harapan kami agar permohonan ini dapat dikabulkan. Atas perhatian dan kerja samanya kami ucapkan terima kasih.");
+  if (T === "PEMBERITAHUAN") P.push("Dengan hormat, melalui surat ini kami memberitahukan hal berikut.", e(F.inti || ""), tgh, "Demikian pemberitahuan ini kami sampaikan. Atas perhatiannya kami ucapkan terima kasih.");
+  if (T === "TERIMA_KASIH") P.push("Dengan hormat, kami mengucapkan terima kasih yang sebesar-besarnya atas bantuan dan dukungan yang telah diberikan.", e(F.inti || ""), "Semoga kebaikan Bapak/Ibu/Saudara/i dibalas dengan pahala yang berlipat ganda. Demikian ucapan terima kasih ini kami sampaikan.");
+  P.push("Wassalamu'alaikum Warahmatullahi Wabarakatuh.");
+  const css = `.s{font:13px/1.55 "Times New Roman",serif;color:#000;background:#fff;padding:${penuh ? "0" : "40px 48px"}}.kop{text-align:center;border-bottom:3px double #000;padding-bottom:6px;margin-bottom:14px}.kop b{font-size:16px;display:block}p{margin:0 0 10px;text-align:justify}.ttd{display:flex;justify-content:space-between;margin-top:26px;padding:0 10px}.ttd div{width:46%}.sp{height:62px}`;
+  const isi = `<div class="s"><div class="kop"><b>KELOMPOK KKN AL-MUSHLIH 2027</b>${me.desa ? "Desa " + esc(me.desa) : "Sekretariat Posko KKN"}</div>
+    <p style="text-align:right">${e(F.tempat || "")}</p><p>Nomor : ${e(F.nomor || "-")}<br>Lampiran : ${e(F.lampiran || "-")}<br>Perihal : ${e(F.perihal || nama)}</p><p>Kepada Yth.<br>${e(F.tujuan || "-")}<br>di tempat</p>
+    ${P.filter(Boolean).map((x) => `<p>${x}</p>`).join("")}<div class="ttd"><div>Ketua,<div class="sp"></div>${e(F.ketua || "(................)")}</div><div style="text-align:right">Sekretaris,<div class="sp"></div>${e(F.sekretaris || "(................)")}</div></div></div>`;
+  return penuh ? `<!doctype html><meta charset="utf-8"><style>${css}@page{size:A4;margin:22mm 20mm}</style>${isi}` : `<style>${css}</style><div style="box-shadow:var(--sh);border-radius:12px;overflow:hidden">${isi}</div>`;
 }
 
-function ringkasan(el) {
-  const pr = (data.proker || []).filter((p) => p.status !== "BATAL"), sel = pr.filter((p) => p.status === "SELESAI").length;
-  const persen = pr.length ? Math.round(sel * 100 / pr.length) : 0;
-  const nota = (data.nota || []).reduce((s, r) => s + (r.nominal || 0), 0);
-  const ang = pr.reduce((s, p) => s + (p.anggaran || 0), 0), rea = pr.reduce((s, p) => s + (p.realisasi || 0), 0);
-  const hariIni = new Date(); hariIni.setHours(0,0,0,0);
-  const absen = (data.absensi || []).filter((a) => new Date(a.tanggalMillis).setHours(0,0,0,0) === +hariIni);
-  const aktif = (data.anggota || []).filter((a) => a.aktif !== false).length;
-  el.innerHTML = `<div class="kartu">
-    <div class="k"><b>${aktif}</b><span>Anggota aktif</span></div>
-    <div class="k"><b>${absen.filter((a)=>a.hadir).length}/${aktif}</b><span>Hadir hari ini</span></div>
-    <div class="k"><b>${persen}%</b><span>Proker selesai (${sel}/${pr.length})</span><div class="bg" style="margin-top:8px"><i style="width:${persen}%"></i></div></div>
-    <div class="k"><b>${(data.surat||[]).length}</b><span>Surat tercatat</span></div>
-    <div class="k"><b>${rp(nota)}</b><span>Total nota</span></div>
-    <div class="k"><b>${rp(rea)}</b><span>Realisasi dari anggaran ${rp(ang)}</span></div></div>
-    <div class="wrap"><table><thead><tr><th>Proker</th><th>Status</th><th>Jadwal</th><th>Anggaran</th><th>Realisasi</th></tr></thead><tbody>${pr.map((p)=>`<tr><td>${esc(p.namaProker)}</td><td><span class="tag">${esc(p.status)}</span></td><td>${tgl(p.mulaiMillis)} – ${tgl(p.selesaiMillis)}</td><td>${rp(p.anggaran)}</td><td>${rp(p.realisasi)}</td></tr>`).join("") || `<tr><td colspan="5" class="kosong">Belum ada proker.</td></tr>`}</tbody></table></div>`;
+HAL.proker = (el) => {
+  const baris = aktif("proker").sort((a, b) => (a.mulaiMillis || 9e15) - (b.mulaiMillis || 9e15));
+  const sel = baris.filter((p) => p.status === "SELESAI").length;
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah proker</button><span class="tag">${sel}/${baris.length} selesai</span><span class="sp"></span>${tombolCsv()}</div>` +
+    (baris.length ? `<div class="cards">${baris.map((p) => `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><h3>${esc(p.namaProker)}</h3>${statusTag(p.status)}</div><p>${esc(p.divisiPenanggungJawab || "-")} · PIC ${esc(p.picNama || "-")}</p><p>${tgl(p.mulaiMillis)} – ${tgl(p.selesaiMillis)}</p><p>Anggaran ${rp(p.anggaran)} · Realisasi ${rp(p.realisasi)}</p><div class="aksi" style="justify-content:flex-start;margin-top:10px"><button class="kecil" data-b="${p.id}">Buka detail</button></div></div>`).join("")}</div>` : `<div class="kosong">Belum ada proker.</div>`);
+  ikatCsv(el, "proker", [["Program", (r) => r.namaProker], ["Divisi", (r) => r.divisiPenanggungJawab], ["Status", (r) => r.status], ["Mulai", (r) => tgl(r.mulaiMillis)], ["Selesai", (r) => tgl(r.selesaiMillis)], ["Anggaran", (r) => r.anggaran || 0], ["Realisasi", (r) => r.realisasi || 0], ["PIC", (r) => r.picNama]], baris);
+  el.querySelector("[data-tambah]").onclick = () => formModal("Tambah proker", `<label>Nama program</label><input name="n"><label>Divisi penanggung jawab</label><input name="d">`, (m) => {
+    const n = v(m, "n").trim(); if (!n) { toast("Nama wajib diisi"); return false; }
+    coba(() => tulis("proker", "tambah", n, dk("proker").doc(), {namaProker: n, divisiPenanggungJawab: v(m, "d").trim(), status: "BELUM_MULAI", catatanEvaluasi: "", dihapus: false}, true), "Proker ditambahkan");
+  });
+  el.querySelectorAll("[data-b]").forEach((b) => b.onclick = () => detailProker(b.dataset.b));
+};
+function detailProker(id) {
+  const p = aktif("proker").find((x) => x.id === id); if (!p) return;
+  const bukti = aktif("bukti").filter((b) => b.prokerId === id), notaP = aktif("nota").filter((n) => n.prokerTerkait === p.namaProker);
+  gambar.paksa = false;
+  modal(`<h2>${esc(p.namaProker)}</h2><label>Status</label><select name="st">${["BELUM_MULAI","BERJALAN","SELESAI","BATAL"].map((s) => `<option ${p.status===s?"selected":""} value="${s}">${({BELUM_MULAI:"Belum mulai",BERJALAN:"Berjalan",SELESAI:"Selesai",BATAL:"Batal"})[s]}</option>`).join("")}</select>
+    <label>Target</label><input name="tg" value="${esc(p.target||"")}"><div class="row2"><div><label>Mulai</label><input type="date" name="m" value="${keInput(p.mulaiMillis)}"></div><div><label>Selesai</label><input type="date" name="s" value="${keInput(p.selesaiMillis)}"></div></div>
+    <div class="row2"><div><label>Anggaran (Rp)</label><input type="number" name="a" value="${p.anggaran||0}"></div><div><label>Realisasi (Rp)</label><input type="number" name="r" value="${p.realisasi||0}"></div></div>
+    <label>PIC</label><input name="pic" value="${esc(p.picNama||"")}"><label>Catatan evaluasi</label><textarea name="ev" rows="3">${esc(p.catatanEvaluasi||"")}</textarea>
+    <p style="color:var(--mut);margin:8px 0 0">Nota terkait: ${notaP.length} (${rp(notaP.reduce((s, n) => s + (n.nominal||0), 0))})</p>
+    <h3 style="margin-bottom:0">Bukti kegiatan (${bukti.length})</h3><div id="bk" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${bukti.map((b) => `<div style="width:120px"><img class="thumb" style="width:120px;height:90px" src="${src(b.foto)}" data-f="${b.id}"><small>${esc(b.catatan||"")}</small><br><button class="bahaya kecil" data-hb="${b.id}">hapus</button></div>`).join("")}</div>
+    <label>Tambah foto bukti</label><input type="file" accept="image/*" name="fb"><input name="cb" placeholder="Catatan foto (opsional)" style="margin-top:6px">
+    <div class="aksi"><button class="bahaya" data-hp>Hapus proker</button><span style="flex:1"></span><button class="sek" data-x>Tutup</button><button data-ok>Simpan</button></div>`, (m, tutup) => {
+    m.querySelector("[data-x]").onclick = tutup;
+    m.querySelectorAll("[data-f]").forEach((i) => i.onclick = () => lihatFoto(bukti.find((b) => b.id === i.dataset.f).foto));
+    m.querySelectorAll("[data-hb]").forEach((b) => b.onclick = () => coba(() => tulis("bukti", "hapus bukti", p.namaProker, dk("bukti").doc(b.dataset.hb), {dihapus: true}, false), "Bukti dihapus").then(tutup));
+    m.querySelector("[data-hp]").onclick = () => konfirm(`Hapus proker "${p.namaProker}"?`, () => coba(() => tulis("proker", "hapus", p.namaProker, dk("proker").doc(p.id), {dihapus: true}, false), "Proker dihapus").then(tutup));
+    m.querySelector("[data-ok]").onclick = () => coba(async () => {
+      const st = v(m, "st"); if (st !== p.status) await tulis("proker", "ubah status", `${p.namaProker} → ${st}`, dk("proker").doc(p.id), {status: st}, false);
+      await tulis("proker", "ubah rencana", p.namaProker, dk("proker").doc(p.id), {target: v(m, "tg").trim(), mulaiMillis: kePengguna(v(m, "m")), selesaiMillis: kePengguna(v(m, "s")), anggaran: Math.round(+v(m, "a") || 0), picNama: v(m, "pic").trim(), realisasi: Math.round(+v(m, "r") || 0), catatanEvaluasi: v(m, "ev").trim()}, false);
+      const f = m.querySelector("[name=fb]").files[0];
+      if (f) await tulis("bukti", "tambah bukti", p.namaProker, dk("bukti").doc(), {prokerId: p.id, catatan: v(m, "cb").trim(), foto: await kompres(f), dihapus: false}, true);
+      tutup();
+    }, "Proker disimpan");
+  });
 }
+
+HAL.inventaris = (el) => {
+  const baris = aktif("inventaris").sort((a, b) => a.namaBarang.localeCompare(b.namaBarang));
+  const kol = [["Barang", (r) => `<b>${esc(r.namaBarang)}</b>`], ["Jumlah", (r) => r.jumlah], ["Kondisi", (r) => esc(r.kondisi)], ["Keterangan", (r) => esc(r.keterangan)]];
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah barang</button><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  ikatCsv(el, "inventaris", [["Barang", (r) => r.namaBarang], ["Jumlah", (r) => r.jumlah], ["Kondisi", (r) => r.kondisi], ["Keterangan", (r) => r.keterangan]], baris);
+  el.querySelector("[data-tambah]").onclick = () => formModal("Tambah barang", `<label>Nama barang</label><input name="n"><div class="row2"><div><label>Jumlah</label><input type="number" name="j" value="1"></div><div><label>Kondisi</label><input name="k" value="Baik"></div></div><label>Keterangan</label><input name="ket">`, (m) => {
+    const n = v(m, "n").trim(); if (!n) { toast("Nama wajib diisi"); return false; }
+    const j = Math.max(0, parseInt(v(m, "j")) || 0);
+    coba(() => tulis("inventaris", "tambah", `${n} (${j})`, dk("inventaris").doc(), {namaBarang: n, jumlah: j, kondisi: v(m, "k").trim() || "Baik", keterangan: v(m, "ket").trim(), dihapus: false}, true), "Barang ditambahkan");
+  });
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.h); konfirm(`Hapus "${x.namaBarang}"?`, () => coba(() => tulis("inventaris", "hapus", x.namaBarang, dk("inventaris").doc(x.id), {dihapus: true}, false), "Dihapus")); });
+};
+
+HAL.nota = (el) => {
+  const f = saring.nj || "", baris = urutBaru(aktif("nota")).filter((n) => !f || n.jenis === f);
+  const kol = [["Foto", (r) => r.foto ? `<img class="thumb" src="${src(r.foto)}" data-f="${r.id}">` : "-"], ["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => `<span class="tag">${esc(r.jenis)}</span>`], ["Keterangan", (r) => `<b>${esc(r.keterangan)}</b>`], ["Proker", (r) => esc(r.prokerTerkait)], ["Nominal", (r) => rp(r.nominal)]];
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah nota</button><div class="chips">${[["","Semua"],["NOTA","Nota"],["KWITANSI","Kwitansi"]].map((c) => `<button class="chip ${f===c[0]?"on":""}" data-j="${c[0]}">${c[1]}</button>`).join("")}</div><span class="tag ok">Total ${rp(baris.reduce((s, n) => s + (n.nominal || 0), 0))}</span><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  ikatCsv(el, "nota", [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => r.jenis], ["Keterangan", (r) => r.keterangan], ["Proker", (r) => r.prokerTerkait], ["Nominal", (r) => r.nominal]], baris);
+  el.querySelectorAll("[data-j]").forEach((b) => b.onclick = () => { saring.nj = b.dataset.j; gambar(); });
+  el.querySelectorAll("[data-f]").forEach((i) => i.onclick = () => lihatFoto(baris.find((n) => n.id === i.dataset.f).foto));
+  el.querySelector("[data-tambah]").onclick = () => formModal("Tambah nota / kwitansi", `<label>Jenis</label><select name="j"><option>NOTA</option><option>KWITANSI</option></select><label>Keterangan</label><input name="k"><label>Nominal (Rp)</label><input type="number" name="n"><label>Proker terkait</label><select name="p"><option value="">(tidak ada)</option>${aktif("proker").map((p) => `<option>${esc(p.namaProker)}</option>`).join("")}</select><label>Foto (opsional)</label><input type="file" accept="image/*" name="f">`, async (m) => {
+    const k = v(m, "k").trim(), n = Math.round(+v(m, "n") || 0); if (!k || n <= 0) { toast("Isi keterangan dan nominal"); return false; }
+    await coba(async () => { const fl = m.querySelector("[name=f]").files[0], foto = fl ? await kompres(fl) : ""; await tulis("nota", "tambah", `${v(m, "j")} · ${k} · Rp${n}`, dk("nota").doc(), {tanggalMillis: Date.now(), keterangan: k, nominal: n, prokerTerkait: v(m, "p"), jenis: v(m, "j"), foto, dihapus: false}, true); }, "Nota ditambahkan");
+  });
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.h); konfirm(`Hapus nota "${x.keterangan}"?`, () => coba(() => tulis("nota", "hapus", x.keterangan, dk("nota").doc(x.id), {dihapus: true}, false), "Dihapus")); });
+};
+
+HAL.rekon = (el) => {
+  const pr = aktif("proker").filter((p) => p.status !== "BATAL"), nota = aktif("nota");
+  const baris = pr.map((p) => { const t = nota.filter((n) => n.prokerTerkait === p.namaProker).reduce((s, n) => s + (n.nominal || 0), 0); return {p: p.namaProker, a: p.anggaran || 0, r: p.realisasi || 0, n: t, s: (p.realisasi || 0) - t}; });
+  const tanpa = nota.filter((n) => !n.prokerTerkait || !pr.some((p) => p.namaProker === n.prokerTerkait)).reduce((s, n) => s + (n.nominal || 0), 0);
+  const kol = [["Proker", (r) => `<b>${esc(r.p)}</b>`], ["Anggaran", (r) => rp(r.a)], ["Realisasi (dilaporkan)", (r) => rp(r.r)], ["Total nota", (r) => rp(r.n)], ["Selisih", (r) => `<span class="tag ${r.s === 0 ? "ok" : "bad"}">${r.s === 0 ? "Cocok" : rp(r.s)}</span>`]];
+  el.innerHTML = `<p style="color:var(--soft)">Membandingkan realisasi yang dilaporkan di tiap proker dengan jumlah nota yang tertaut ke proker itu. Selisih berarti ada nota yang belum diarsipkan atau realisasi yang belum diperbarui.</p><div class="bar"><span class="tag warn">Nota tanpa proker: ${rp(tanpa)}</span><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris);
+  ikatCsv(el, "rekonsiliasi", [["Proker", (r) => r.p], ["Anggaran", (r) => r.a], ["Realisasi", (r) => r.r], ["Total nota", (r) => r.n], ["Selisih", (r) => r.s]], baris);
+};
+
+HAL.kas = (el) => {
+  const baris = urutBaru(aktif("kas")), m = baris.filter((k) => k.masuk !== false).reduce((s, k) => s + (k.jumlah || 0), 0), kl = baris.filter((k) => k.masuk === false).reduce((s, k) => s + (k.jumlah || 0), 0);
+  const kol = [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => `<span class="tag ${r.masuk===false?"bad":"ok"}">${r.masuk===false?"Keluar":"Masuk"}</span>`], ["Kategori", (r) => esc(r.kategori)], ["Keterangan", (r) => esc(r.keterangan)], ["Jumlah", (r) => `<b>${rp(r.jumlah)}</b>`], ["Oleh", (r) => esc(r.penulisNama)]];
+  el.innerHTML = `<div class="grid"><div class="k"><b style="color:var(--mint)">${rp(m)}</b><span>Pemasukan</span></div><div class="k"><b style="color:var(--red)">${rp(kl)}</b><span>Pengeluaran</span></div><div class="k"><b>${rp(m - kl)}</b><span>Saldo</span></div></div><div class="bar"><button data-tambah>+ Catat kas</button><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  ikatCsv(el, "kas", [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => r.masuk === false ? "Keluar" : "Masuk"], ["Kategori", (r) => r.kategori], ["Keterangan", (r) => r.keterangan], ["Jumlah", (r) => r.jumlah]], baris);
+  el.querySelector("[data-tambah]").onclick = () => formModal("Catat kas", `<label>Jenis</label><select name="j"><option value="1">Pemasukan</option><option value="0">Pengeluaran</option></select><label>Jumlah (Rp)</label><input type="number" name="n"><label>Kategori</label><input name="k"><label>Keterangan</label><input name="ket">`, (m) => {
+    const n = Math.round(+v(m, "n") || 0); if (n <= 0) { toast("Jumlah wajib diisi"); return false; }
+    coba(() => db.collection("kas").add({masuk: v(m, "j") === "1", jumlah: n, kategori: v(m, "k").trim(), keterangan: v(m, "ket").trim(), penulisNama: me.nama, tanggalMillis: Date.now(), dihapus: false}), "Kas dicatat");
+  });
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => konfirm("Hapus catatan kas ini?", () => coba(() => db.collection("kas").doc(b.dataset.h).update({dihapus: true}), "Dihapus")));
+};
+
+HAL.tugas = (el) => {
+  const baris = aktif("tugas").sort((a, b) => (a.selesai - b.selesai) || ((a.deadlineMillis || 9e15) - (b.deadlineMillis || 9e15)));
+  const kol = [["", (r) => `<input type="checkbox" data-c="${r.id}" ${r.selesai ? "checked" : ""} style="width:18px;height:18px">`], ["Tugas", (r) => `<b style="${r.selesai ? "text-decoration:line-through;opacity:.6" : ""}">${esc(r.judul)}</b><br><small style="color:var(--mut)">${esc(r.deskripsi)}</small>`], ["Untuk", (r) => esc(r.untukNama || "-")], ["Tenggat", (r) => r.deadlineMillis ? `<span class="tag ${!r.selesai && r.deadlineMillis < Date.now() ? "bad" : ""}">${tgl(r.deadlineMillis)}</span>` : "-"]];
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah tugas</button><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  ikatCsv(el, "tugas", [["Tugas", (r) => r.judul], ["Untuk", (r) => r.untukNama], ["Tenggat", (r) => tgl(r.deadlineMillis)], ["Selesai", (r) => r.selesai ? "ya" : "tidak"]], baris);
+  el.querySelectorAll("[data-c]").forEach((c) => c.onchange = () => coba(() => db.collection("tugas").doc(c.dataset.c).update({selesai: c.checked})));
+  el.querySelector("[data-tambah]").onclick = () => formModal("Tambah tugas", `<label>Judul</label><input name="j"><label>Deskripsi</label><textarea name="d" rows="2"></textarea><label>Untuk</label><select name="u">${(data.users || []).map((u) => `<option value="${u.id}">${esc(u.namaLengkap)}</option>`).join("")}</select><label>Tenggat</label><input type="date" name="t">`, (m) => {
+    const j = v(m, "j").trim(); if (!j) { toast("Judul wajib diisi"); return false; }
+    const u = (data.users || []).find((x) => x.id === v(m, "u"));
+    coba(() => db.collection("tugas").add({judul: j, deskripsi: v(m, "d").trim(), untukUid: u ? u.id : "", untukNama: u ? u.namaLengkap : "", deadlineMillis: kePengguna(v(m, "t")), selesai: false, tanggalMillis: Date.now(), dihapus: false}), "Tugas ditambahkan");
+  });
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => konfirm("Hapus tugas ini?", () => coba(() => db.collection("tugas").doc(b.dataset.h).update({dihapus: true}), "Dihapus")));
+};
+
+HAL.jurnal = (el) => {
+  const baris = urutBaru(aktif("jurnal_bersama"));
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tulis jurnal bersama</button><span class="tag">Jurnal pribadi hanya ada di HP masing-masing</span></div>` + (baris.length ? `<div class="cards">${baris.map((j) => `<div class="card"><span class="tag">${j.jenis === "NOTULEN" ? "Notulen" : "Harian"}</span> <small style="color:var(--mut)">${tglJam(j.tanggalMillis)}</small><h3 style="margin-top:8px">${esc(j.judul)}</h3><p style="white-space:pre-wrap">${esc((j.isi || "").slice(0, 260))}${(j.isi || "").length > 260 ? "…" : ""}</p><p style="font-size:12px;color:var(--mut)">${esc(j.penulisNama)} · ${esc(j.desa || "")}</p><div class="aksi" style="justify-content:flex-start"><button class="sek kecil" data-b="${j.id}">Baca</button>${j.penulisUid === me.uid ? `<button class="bahaya kecil" data-h="${j.id}">Hapus</button>` : ""}</div></div>`).join("")}</div>` : `<div class="kosong">Belum ada jurnal bersama.</div>`);
+  el.querySelectorAll("[data-b]").forEach((b) => b.onclick = () => { const j = baris.find((x) => x.id === b.dataset.b); modal(`<h2>${esc(j.judul)}</h2><p style="color:var(--mut)">${esc(j.penulisNama)} · ${tglJam(j.tanggalMillis)}</p><p style="white-space:pre-wrap">${esc(j.isi)}</p>${j.pesertaRapat ? `<p><b>Peserta rapat:</b> ${esc(j.pesertaRapat)}</p>` : ""}<div class="aksi"><button class="sek" data-x>Tutup</button></div>`, (m, t) => m.querySelector("[data-x]").onclick = t); });
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => konfirm("Hapus jurnal ini?", () => coba(() => db.collection("jurnal_bersama").doc(b.dataset.h).update({dihapus: true}), "Dihapus")));
+  el.querySelector("[data-tambah]").onclick = () => formModal("Jurnal bersama", `<label>Jenis</label><select name="j"><option value="HARIAN">Harian</option><option value="NOTULEN">Notulen rapat</option></select><label>Judul</label><input name="t"><label>Isi</label><textarea name="i" rows="8"></textarea><label>Peserta rapat (untuk notulen)</label><input name="p">`, (m) => {
+    const t = v(m, "t").trim(); if (!t) { toast("Judul wajib diisi"); return false; }
+    coba(() => db.collection("jurnal_bersama").add({penulisUid: me.uid, penulisNama: me.nama, desa: me.desa, jenis: v(m, "j"), judul: t, isi: v(m, "i"), pesertaRapat: v(m, "p").trim(), tanggalMillis: Date.now(), dihapus: false}), "Jurnal dibagikan");
+  });
+};
+
+HAL.pengumuman = (el) => {
+  const baris = urutBaru(aktif("pengumuman"));
+  el.innerHTML = `<div class="bar">${admin ? `<button data-tambah>+ Buat pengumuman</button>` : `<span class="tag">Pengumuman dibuat oleh admin</span>`}</div>` + (baris.length ? `<div class="cards">${baris.map((p) => { const baca = (p.dibacaOleh || []).includes(me.uid); return `<div class="card"><span class="tag ${baca ? "" : "warn"}">${baca ? "Sudah dibaca" : "Baru"}</span> <small style="color:var(--mut)">${tglJam(p.tanggalMillis)}</small><h3 style="margin-top:8px">${esc(p.judul)}</h3><p style="white-space:pre-wrap">${esc(p.isi)}</p><p style="font-size:12px;color:var(--mut)">${esc(p.penulisNama)} · dibaca ${(p.dibacaOleh || []).length} orang</p><div class="aksi" style="justify-content:flex-start">${baca ? "" : `<button class="kecil" data-r="${p.id}">Tandai dibaca</button>`}${admin ? `<button class="bahaya kecil" data-h="${p.id}">Hapus</button>` : ""}</div></div>`; }).join("")}</div>` : `<div class="kosong">Belum ada pengumuman.</div>`);
+  el.querySelectorAll("[data-r]").forEach((b) => b.onclick = () => coba(() => db.collection("pengumuman").doc(b.dataset.r).update({dibacaOleh: firebase.firestore.FieldValue.arrayUnion(me.uid)})));
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => konfirm("Hapus pengumuman ini?", () => coba(() => db.collection("pengumuman").doc(b.dataset.h).update({dihapus: true}), "Dihapus")));
+  const t = el.querySelector("[data-tambah]"); if (t) t.onclick = () => formModal("Pengumuman baru", `<label>Judul</label><input name="j"><label>Isi</label><textarea name="i" rows="6"></textarea>`, (m) => {
+    const j = v(m, "j").trim(); if (!j) { toast("Judul wajib diisi"); return false; }
+    coba(() => db.collection("pengumuman").add({judul: j, isi: v(m, "i"), penulisNama: me.nama, tanggalMillis: Date.now(), dibacaOleh: [], dihapus: false}), "Pengumuman dibuat");
+  });
+};
+
+HAL.polling = (el) => {
+  const baris = urutBaru(aktif("polling"));
+  el.innerHTML = `<div class="bar">${admin ? `<button data-tambah>+ Buat polling</button>` : `<span class="tag">Polling dibuat oleh admin</span>`}</div>` + (baris.length ? `<div class="cards">${baris.map((p) => { const suara = p.suara || {}, tot = Object.keys(suara).length, mine = suara[me.uid]; return `<div class="card"><span class="tag ${p.ditutup ? "bad" : "ok"}">${p.ditutup ? "Ditutup" : "Terbuka"}</span><h3 style="margin-top:8px">${esc(p.pertanyaan)}</h3>${(p.opsi || []).map((o, i) => { const c = Object.values(suara).filter((x) => x === i).length, pct = tot ? Math.round(c * 100 / tot) : 0; return `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;gap:8px"><span>${mine === i ? "✔ " : ""}${esc(o)}</span><small>${c} (${pct}%)</small></div><div class="bg"><i style="width:${pct}%"></i></div>${!p.ditutup && mine === undefined ? `<button class="kecil sek" style="margin-top:4px" data-v="${p.id}" data-i="${i}">Pilih</button>` : ""}</div>`; }).join("")}<p style="font-size:12px;color:var(--mut)">${tot} suara</p>${admin ? `<div class="aksi" style="justify-content:flex-start">${p.ditutup ? "" : `<button class="sek kecil" data-c="${p.id}">Tutup</button>`}<button class="bahaya kecil" data-h="${p.id}">Hapus</button></div>` : ""}</div>`; }).join("")}</div>` : `<div class="kosong">Belum ada polling.</div>`);
+  el.querySelectorAll("[data-v]").forEach((b) => b.onclick = () => coba(() => db.collection("polling").doc(b.dataset.v).update(new firebase.firestore.FieldPath("suara", me.uid), +b.dataset.i), "Suara tercatat"));
+  el.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => coba(() => db.collection("polling").doc(b.dataset.c).update({ditutup: true})));
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => konfirm("Hapus polling ini?", () => coba(() => db.collection("polling").doc(b.dataset.h).update({dihapus: true}), "Dihapus")));
+  const t = el.querySelector("[data-tambah]"); if (t) t.onclick = () => formModal("Polling baru", `<label>Pertanyaan</label><input name="q"><label>Pilihan (satu per baris, minimal 2)</label><textarea name="o" rows="4"></textarea>`, (m) => {
+    const o = v(m, "o").split("\n").map((x) => x.trim()).filter(Boolean), q = v(m, "q").trim(); if (!q || o.length < 2) { toast("Isi pertanyaan dan minimal 2 pilihan"); return false; }
+    coba(() => db.collection("polling").add({pertanyaan: q, opsi: o, suara: {}, ditutup: false, penulisNama: me.nama, tanggalMillis: Date.now(), dihapus: false}), "Polling dibuat");
+  });
+};
+
+HAL.sholat = (el) => {
+  const kota = saring.kota || "Yogyakarta", j = jadwalHariIni(kota), now = new Date().getHours() + new Date().getMinutes() / 60, urut = j.filter((x) => x[0] !== "Terbit"), next = urut.find((x) => x[1] > now) || urut[0];
+  el.innerHTML = `<div class="bar"><select id="kt" style="max-width:240px">${Object.keys(KOTA).map((k) => `<option ${k === kota ? "selected" : ""}>${k}</option>`).join("")}</select><span class="tag">${new Date().toLocaleDateString("id-ID", {weekday: "long", day: "numeric", month: "long"})}</span></div>
+    <div class="grid">${j.map((x) => `<div class="k" style="${x === next ? "outline:2px solid var(--vio)" : ""}"><b>${jamFmt(x[1])}</b><span>${x[0]}${x === next ? " · berikutnya" : ""}</span></div>`).join("")}</div>
+    <p style="color:var(--mut)">Perhitungan offline memakai parameter Kemenag RI (Subuh 20°, Isya 18°, Ashar mazhab Syafi'i, ihtiyath +2 menit). Hasilnya perkiraan; cocokkan dengan jadwal resmi setempat. Zona waktu WIB.</p>`;
+  $("kt").onchange = (e) => { saring.kota = e.target.value; gambar(); };
+};
+
+HAL.riwayat = (el) => {
+  const baris = urutBaru(data.riwayat || []).slice(0, 400);
+  const kol = [["Waktu", (r) => tglJam(r.waktu)], ["Oleh", (r) => esc(r.olehNama)], ["Aksi", (r) => `<span class="tag">${esc(r.aksi)}</span>`], ["Data", (r) => esc(r.tabel)], ["Rincian", (r) => esc(r.ringkas)]];
+  el.innerHTML = `<div class="bar"><span class="tag">400 perubahan terakhir · tidak bisa diubah atau dihapus</span><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris);
+  ikatCsv(el, "riwayat", [["Waktu", (r) => tglJam(r.waktu)], ["Oleh", (r) => r.olehNama], ["Aksi", (r) => r.aksi], ["Data", (r) => r.tabel], ["Rincian", (r) => r.ringkas]], baris);
+};
+
+HAL.cari = (el) => {
+  const q = kata.toLowerCase(), cocok = (...s) => s.some((x) => String(x ?? "").toLowerCase().includes(q)), H = [];
+  aktif("anggota").filter((a) => cocok(a.nama, a.divisi)).forEach((a) => H.push(["Anggota", a.nama, a.divisi, "anggota"]));
+  aktif("proker").filter((p) => cocok(p.namaProker, p.picNama, p.target)).forEach((p) => H.push(["Proker", p.namaProker, p.divisiPenanggungJawab, "proker"]));
+  aktif("surat").filter((s) => cocok(s.perihal, s.nomorSurat, s.tujuanAtauPengirim)).forEach((s) => H.push(["Surat", s.perihal, s.nomorSurat, "surat"]));
+  aktif("inventaris").filter((b) => cocok(b.namaBarang, b.keterangan)).forEach((b) => H.push(["Inventaris", b.namaBarang, b.kondisi, "inventaris"]));
+  aktif("nota").filter((n) => cocok(n.keterangan, n.prokerTerkait)).forEach((n) => H.push(["Nota", n.keterangan, rp(n.nominal), "nota"]));
+  aktif("tugas").filter((t) => cocok(t.judul, t.deskripsi, t.untukNama)).forEach((t) => H.push(["Tugas", t.judul, t.untukNama, "tugas"]));
+  aktif("pengumuman").filter((p) => cocok(p.judul, p.isi)).forEach((p) => H.push(["Pengumuman", p.judul, "", "pengumuman"]));
+  aktif("jurnal_bersama").filter((j) => cocok(j.judul, j.isi)).forEach((j) => H.push(["Jurnal", j.judul, j.penulisNama, "jurnal"]));
+  MENU.forEach(([, m]) => m.forEach((x) => { if (!x[3] && cocok(x[2])) H.push(["Menu", x[2], "", x[0]]); }));
+  el.innerHTML = `<p style="color:var(--mut)">${H.length} hasil untuk “${esc(kata)}”</p>` + (H.length ? `<div class="cards">${H.slice(0, 80).map((h) => `<div class="card" style="cursor:pointer" data-go="${h[3]}"><span class="tag">${h[0]}</span><h3 style="margin-top:8px">${esc(h[1])}</h3><p>${esc(h[2])}</p></div>`).join("")}</div>` : `<div class="kosong">Tidak ada hasil.</div>`);
+  el.querySelectorAll("[data-go]").forEach((c) => c.onclick = () => { halaman = c.dataset.go; kata = ""; $("cari").value = ""; bangunMenu(); gambar(); });
+};
 </script>
 </body>
 </html>

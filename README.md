@@ -154,5 +154,5 @@ baru untuk moderasi jurnal dan pembacaan saran oleh admin.
 - Templat Surat PDF (divisi Sekretaris): Undangan, Permohonan, Pemberitahuan, Terima Kasih; opsional dicatat sebagai surat keluar.
 
 ## Tahap F: versi PC (web)
-Folder `web/` adalah dasbor web (baca-saja) dengan login NIM yang sama, tabel yang bisa dicari dan diurutkan, ekspor CSV, dan cetak. Diterbitkan lewat GitHub Pages oleh `.github/workflows/web-pages.yml`.
+Folder `web/` adalah aplikasi web dan PC lengkap (baca dan tulis) dengan login NIM yang sama, tabel yang bisa dicari dan diurutkan, ekspor CSV, dan cetak. Diterbitkan lewat GitHub Pages oleh `.github/workflows/web-pages.yml`.
 Pengaturan satu kali: isi `web/firebase-config.js` dari Firebase Console (Web app), tambahkan domain `alk-99.github.io` di Authentication > Settings > Authorized domains, lalu aktifkan Pages (Settings > Pages > Source: GitHub Actions).
