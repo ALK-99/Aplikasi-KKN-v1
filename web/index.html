@@ -211,7 +211,8 @@ auth.onAuthStateChanged(async (u) => {
   if (!prof || prof.akunDiblokir || !prof.desaId) {
     $("pesan").textContent = prof && prof.akunDiblokir ? "Akun diblokir." : "Akun belum punya desa. Buka aplikasi HP sekali dulu."; await auth.signOut(); return;
   }
-  desaId = prof.desaId; me = {uid: u.uid, nama: prof.namaLengkap || "Pengguna", desa: prof.desa || desaId, peran: prof.peran};
+  desaId = prof.desaId; me = {uid: u.uid, nama: prof.namaLengkap || "Pengguna", desa: prof.desa || desaId, peran: prof.peran, prof};
+  try { db.collection("users").doc(u.uid).update({terakhirAktifMillis: Date.now()}); } catch (e) {}
   try { admin = (await db.collection("admins").doc(u.uid).get()).exists; } catch (e) { admin = false; }
   $("desa").textContent = me.desa; $("siapa").textContent = me.nama + (admin ? " · admin" : "");
   $("login").hidden = true; $("app").hidden = false;
@@ -233,7 +234,7 @@ const MENU = [
 ];
 const JUDUL = {}; MENU.forEach(([, m]) => m.forEach((x) => JUDUL[x[0]] = x[2])); JUDUL.cari = "Hasil Pencarian";
 function bangunMenu() {
-  $("menu").innerHTML = MENU.map(([g, items]) => (g ? `<div class="grp">${g}</div>` : "") + items.map(([k, ik, n, s]) =>
+  $("menu").innerHTML = MENU.map(([g, items]) => (g ? `<div class="grp">${g}</div>` : "") + items.filter((x) => x[4] !== "admin" || (typeof BOLEH_KENDALI === "function" && BOLEH_KENDALI())).map(([k, ik, n, s]) =>
     `<button class="mn ${halaman===k?"on":""} ${s?"off":""}" data-k="${k}"><i>${ik}</i>${n}${s?`<span class="seg">segera</span>`:""}</button>`).join("")).join("");
   $("menu").querySelectorAll(".mn:not(.off)").forEach((b) => b.onclick = () => { halaman = b.dataset.k; kata = ""; $("cari").value = ""; saring = {}; bangunMenu(); gambar(); });
 }
@@ -311,12 +312,13 @@ HAL.anggota = (el) => {
   const kol = [["Nama", (r) => `<b>${esc(r.nama)}</b>`], ["Divisi", (r) => esc(r.divisi)], ["Status", (r) => r.aktif === false ? `<span class="tag bad">Nonaktif</span>` : `<span class="tag ok">Aktif</span>`]];
   const baris = aktif("anggota").sort((a, b) => a.nama.localeCompare(b.nama));
   el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah anggota</button><span class="sp"></span>${tombolCsv()}</div>` +
-    tabel(kol, baris, (r) => `<button class="sek kecil" data-t="${r.id}">${r.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>`);
+    tabel(kol, baris, (r) => `<button class="sek kecil" data-u="${r.id}">Ubah</button> <button class="sek kecil" data-t="${r.id}">${r.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>`);
   ikatCsv(el, "anggota", kol.map((c) => [c[0], (r) => r[c[0] === "Nama" ? "nama" : c[0] === "Divisi" ? "divisi" : "aktif"]]), baris);
   el.querySelector("[data-tambah]").onclick = () => formModal("Tambah anggota", `<label>Nama</label><input name="n"><label>Divisi</label><input name="d" placeholder="mis. Sekretaris">`, (m) => {
     const n = v(m, "n").trim(); if (!n) { toast("Nama wajib diisi"); return false; }
     coba(() => tulis("anggota", "tambah", n, dk("anggota").doc(), {nama: n, divisi: v(m, "d").trim(), aktif: true}, true), "Anggota ditambahkan");
   });
+  el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const a = baris.find((x) => x.id === b.dataset.u); formModal("Ubah anggota", `<label>Nama</label><input name="n" value="${esc(a.nama)}"><label>Divisi</label><input name="d" value="${esc(a.divisi)}">`, (m) => { const n = v(m, "n").trim(); if (!n) { toast("Nama wajib diisi"); return false; } coba(() => tulis("anggota", "ubah", `${a.nama} → ${n}`, dk("anggota").doc(a.id), {nama: n, divisi: v(m, "d").trim()}, false), "Anggota diperbarui"); }); });
   el.querySelectorAll("[data-t]").forEach((b) => b.onclick = () => { const a = baris.find((x) => x.id === b.dataset.t), akt = a.aktif === false; coba(() => tulis("anggota", akt ? "aktifkan" : "nonaktifkan", a.nama, dk("anggota").doc(a.id), {aktif: akt}, false), "Diperbarui"); });
 };
 
@@ -346,13 +348,14 @@ HAL.surat = (el) => {
   const baris = urutBaru(aktif("surat")).filter((s) => !f || s.jenis === f);
   const kol = [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => `<span class="tag ${r.jenis==="MASUK"?"warn":"ok"}">${r.jenis==="MASUK"?"Masuk":"Keluar"}</span>`], ["Nomor", (r) => esc(r.nomorSurat)], ["Perihal", (r) => `<b>${esc(r.perihal)}</b>`], ["Tujuan / Pengirim", (r) => esc(r.tujuanAtauPengirim)]];
   el.innerHTML = `<div class="bar"><button data-tambah>+ Catat surat</button><div class="chips">${[["","Semua"],["MASUK","Masuk"],["KELUAR","Keluar"]].map((c) => `<button class="chip ${f===c[0]?"on":""}" data-f="${c[0]}">${c[1]}</button>`).join("")}</div><span class="sp"></span>${tombolCsv()}</div>` +
-    tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+    tabel(kol, baris, (r) => `<button class="sek kecil" data-u="${r.id}">Ubah</button> <button class="bahaya" data-h="${r.id}">Hapus</button>`);
   ikatCsv(el, "surat", [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => r.jenis], ["Nomor", (r) => r.nomorSurat], ["Perihal", (r) => r.perihal], ["Tujuan/Pengirim", (r) => r.tujuanAtauPengirim]], baris);
   el.querySelectorAll("[data-f]").forEach((b) => b.onclick = () => { saring.js = b.dataset.f; gambar(); });
   el.querySelector("[data-tambah]").onclick = () => formModal("Catat surat", `<label>Jenis</label><select name="j"><option value="KELUAR">Surat keluar</option><option value="MASUK">Surat masuk</option></select><label>Nomor</label><input name="no"><label>Perihal</label><input name="p"><label>Tujuan / Pengirim</label><input name="t">`, (m) => {
     const p = v(m, "p").trim(); if (!p) { toast("Perihal wajib diisi"); return false; }
     coba(() => tulis("surat", "tambah", `${v(m, "j")} · ${p}`, dk("surat").doc(), {tanggalMillis: Date.now(), jenis: v(m, "j"), nomorSurat: v(m, "no").trim(), perihal: p, tujuanAtauPengirim: v(m, "t").trim(), dihapus: false}, true), "Surat dicatat");
   });
+  el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.u); formModal("Ubah surat", `<label>Nomor</label><input name="no" value="${esc(x.nomorSurat)}"><label>Perihal</label><input name="p" value="${esc(x.perihal)}"><label>${x.jenis === "MASUK" ? "Dari" : "Kepada"}</label><input name="t" value="${esc(x.tujuanAtauPengirim)}">`, (m) => { const p = v(m, "p").trim(); if (!p) { toast("Perihal wajib diisi"); return false; } coba(() => tulis("surat", "ubah", p, dk("surat").doc(x.id), {nomorSurat: v(m, "no").trim(), perihal: p, tujuanAtauPengirim: v(m, "t").trim()}, false), "Surat diperbarui"); }); });
   el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => { const s = baris.find((x) => x.id === b.dataset.h); konfirm(`Hapus surat "${s.perihal}"?`, () => coba(() => tulis("surat", "hapus", s.perihal, dk("surat").doc(s.id), {dihapus: true}, false), "Dihapus")); });
 };
 
@@ -438,20 +441,21 @@ function detailProker(id) {
 HAL.inventaris = (el) => {
   const baris = aktif("inventaris").sort((a, b) => a.namaBarang.localeCompare(b.namaBarang));
   const kol = [["Barang", (r) => `<b>${esc(r.namaBarang)}</b>`], ["Jumlah", (r) => r.jumlah], ["Kondisi", (r) => esc(r.kondisi)], ["Keterangan", (r) => esc(r.keterangan)]];
-  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah barang</button><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah barang</button><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="sek kecil" data-u="${r.id}">Ubah</button> <button class="bahaya" data-h="${r.id}">Hapus</button>`);
   ikatCsv(el, "inventaris", [["Barang", (r) => r.namaBarang], ["Jumlah", (r) => r.jumlah], ["Kondisi", (r) => r.kondisi], ["Keterangan", (r) => r.keterangan]], baris);
   el.querySelector("[data-tambah]").onclick = () => formModal("Tambah barang", `<label>Nama barang</label><input name="n"><div class="row2"><div><label>Jumlah</label><input type="number" name="j" value="1"></div><div><label>Kondisi</label><input name="k" value="Baik"></div></div><label>Keterangan</label><input name="ket">`, (m) => {
     const n = v(m, "n").trim(); if (!n) { toast("Nama wajib diisi"); return false; }
     const j = Math.max(0, parseInt(v(m, "j")) || 0);
     coba(() => tulis("inventaris", "tambah", `${n} (${j})`, dk("inventaris").doc(), {namaBarang: n, jumlah: j, kondisi: v(m, "k").trim() || "Baik", keterangan: v(m, "ket").trim(), dihapus: false}, true), "Barang ditambahkan");
   });
+  el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.u); formModal("Ubah barang", `<label>Nama barang</label><input name="n" value="${esc(x.namaBarang)}"><div class="row2"><div><label>Jumlah</label><input type="number" name="j" value="${x.jumlah}"></div><div><label>Kondisi</label><input name="k" value="${esc(x.kondisi)}"></div></div><label>Keterangan</label><input name="ket" value="${esc(x.keterangan)}">`, (m) => { const n = v(m, "n").trim(), j = Math.max(0, parseInt(v(m, "j")) || 0); if (!n || j <= 0) { toast("Isi nama dan jumlah"); return false; } coba(() => tulis("inventaris", "ubah", `${n} (${j})`, dk("inventaris").doc(x.id), {namaBarang: n, jumlah: j, kondisi: v(m, "k").trim() || "Baik", keterangan: v(m, "ket").trim()}, false), "Barang diperbarui"); }); });
   el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.h); konfirm(`Hapus "${x.namaBarang}"?`, () => coba(() => tulis("inventaris", "hapus", x.namaBarang, dk("inventaris").doc(x.id), {dihapus: true}, false), "Dihapus")); });
 };
 
 HAL.nota = (el) => {
   const f = saring.nj || "", baris = urutBaru(aktif("nota")).filter((n) => !f || n.jenis === f);
   const kol = [["Foto", (r) => r.foto ? `<img class="thumb" src="${src(r.foto)}" data-f="${r.id}">` : "-"], ["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => `<span class="tag">${esc(r.jenis)}</span>`], ["Keterangan", (r) => `<b>${esc(r.keterangan)}</b>`], ["Proker", (r) => esc(r.prokerTerkait)], ["Nominal", (r) => rp(r.nominal)]];
-  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah nota</button><div class="chips">${[["","Semua"],["NOTA","Nota"],["KWITANSI","Kwitansi"]].map((c) => `<button class="chip ${f===c[0]?"on":""}" data-j="${c[0]}">${c[1]}</button>`).join("")}</div><span class="tag ok">Total ${rp(baris.reduce((s, n) => s + (n.nominal || 0), 0))}</span><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah nota</button><div class="chips">${[["","Semua"],["NOTA","Nota"],["KWITANSI","Kwitansi"]].map((c) => `<button class="chip ${f===c[0]?"on":""}" data-j="${c[0]}">${c[1]}</button>`).join("")}</div><span class="tag ok">Total ${rp(baris.reduce((s, n) => s + (n.nominal || 0), 0))}</span><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="sek kecil" data-u="${r.id}">Ubah</button> <button class="bahaya" data-h="${r.id}">Hapus</button>`);
   ikatCsv(el, "nota", [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => r.jenis], ["Keterangan", (r) => r.keterangan], ["Proker", (r) => r.prokerTerkait], ["Nominal", (r) => r.nominal]], baris);
   el.querySelectorAll("[data-j]").forEach((b) => b.onclick = () => { saring.nj = b.dataset.j; gambar(); });
   el.querySelectorAll("[data-f]").forEach((i) => i.onclick = () => lihatFoto(baris.find((n) => n.id === i.dataset.f).foto));
@@ -459,6 +463,7 @@ HAL.nota = (el) => {
     const k = v(m, "k").trim(), n = Math.round(+v(m, "n") || 0); if (!k || n <= 0) { toast("Isi keterangan dan nominal"); return false; }
     await coba(async () => { const fl = m.querySelector("[name=f]").files[0], foto = fl ? await kompres(fl) : ""; await tulis("nota", "tambah", `${v(m, "j")} · ${k} · Rp${n}`, dk("nota").doc(), {tanggalMillis: Date.now(), keterangan: k, nominal: n, prokerTerkait: v(m, "p"), jenis: v(m, "j"), foto, dihapus: false}, true); }, "Nota ditambahkan");
   });
+  el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.u); formModal("Ubah nota", `<label>Keterangan</label><input name="k" value="${esc(x.keterangan)}"><label>Nominal (Rp)</label><input type="number" name="n" value="${x.nominal}"><label>Proker terkait</label><select name="p"><option value="">(tidak ada)</option>${aktif("proker").map((p) => `<option ${p.namaProker === x.prokerTerkait ? "selected" : ""}>${esc(p.namaProker)}</option>`).join("")}</select>`, (m) => { const k = v(m, "k").trim(), n = Math.round(+v(m, "n") || 0); if (!k || n <= 0) { toast("Isi keterangan dan nominal"); return false; } coba(() => tulis("nota", "ubah", `${x.jenis} · ${k} · Rp${n}`, dk("nota").doc(x.id), {keterangan: k, nominal: n, prokerTerkait: v(m, "p")}, false), "Nota diperbarui"); }); });
   el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.h); konfirm(`Hapus nota "${x.keterangan}"?`, () => coba(() => tulis("nota", "hapus", x.keterangan, dk("nota").doc(x.id), {dihapus: true}, false), "Dihapus")); });
 };
 
@@ -560,6 +565,196 @@ HAL.cari = (el) => {
   el.innerHTML = `<p style="color:var(--mut)">${H.length} hasil untuk “${esc(kata)}”</p>` + (H.length ? `<div class="cards">${H.slice(0, 80).map((h) => `<div class="card" style="cursor:pointer" data-go="${h[3]}"><span class="tag">${h[0]}</span><h3 style="margin-top:8px">${esc(h[1])}</h3><p>${esc(h[2])}</p></div>`).join("")}</div>` : `<div class="kosong">Tidak ada hasil.</div>`);
   el.querySelectorAll("[data-go]").forEach((c) => c.onclick = () => { halaman = c.dataset.go; kata = ""; $("cari").value = ""; bangunMenu(); gambar(); });
 };
+
+/* ====================== TAMBAHAN: profil, laporan, cadangan, peta, pengaturan, kendali, pengingat, pembaruan ====================== */
+const BOLEH_KENDALI = () => admin || (me && me.peran === "DEVELOPER");
+const lain = MENU.find((g) => g[0] === "Lainnya")[1];
+lain.unshift(["profil","👤","Profil Saya"]);
+lain.splice(1, 0, ["laporan","📄","Laporan & Cadangan"], ["peta","🗺️","Peta & Lokasi"]);
+lain.push(["pengaturan","⚙️","Pengaturan"], ["kendali","🛡️","Pusat Kendali","","admin"]);
+lain.forEach((x) => JUDUL[x[0]] = x[2]);
+
+const versiApp = () => (window.kkn && window.kkn.versi) ? window.kkn.versi() : Promise.resolve("");
+const bukaLuar = (u) => window.open(u, "_blank");
+const hariIniStr = () => new Date().toLocaleDateString("id-ID", {day: "numeric", month: "long", year: "numeric"});
+
+/* ---------- PDF umum (kop + tabel) ---------- */
+function dokPdfHtml(judul, sub, kepala, baris, tambahan = "") {
+  const e = (s) => esc(s);
+  return `<!doctype html><meta charset="utf-8"><style>@page{size:A4 landscape;margin:16mm}body{font:12px/1.45 "Segoe UI",Arial,sans-serif;color:#000}.kop{text-align:center;border-bottom:3px double #000;padding-bottom:6px;margin-bottom:12px}.kop b{font-size:16px;display:block}h2{margin:10px 0 2px;font-size:15px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #444;padding:5px 7px;text-align:left;vertical-align:top}th{background:#e9e9f2}.ttd{margin-top:30px;text-align:right}small{color:#444}</style>
+  <div class="kop"><b>KELOMPOK KKN AL-MUSHLIH 2027</b>Desa ${e(me.desa)}</div><h2>${e(judul)}</h2><small>${e(sub)} · dicetak ${hariIniStr()}</small>${tambahan}
+  <table><thead><tr>${kepala.map((k) => `<th>${e(k)}</th>`).join("")}</tr></thead><tbody>${baris.map((r) => `<tr>${r.map((c) => `<td>${e(c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${kepala.length}">Tidak ada data.</td></tr>`}</tbody></table>
+  <div class="ttd">${e(me.desa)}, ${hariIniStr()}<br>Sekretaris<br><br><br><br>${e(me.nama)}</div>`;
+}
+async function simpanDok(html, nama) {
+  if (window.kkn && window.kkn.simpanPdf) { const r = await window.kkn.simpanPdf(html, nama, true); if (r) toast("PDF disimpan"); }
+  else { const w = window.open("", "_blank"); w.document.write(html); w.document.close(); w.print(); }
+}
+
+/* ---------- Profil ---------- */
+HAL.profil = (el) => {
+  const p = me.prof || {};
+  el.innerHTML = `<div class="grid"><div class="k"><b style="font-size:16px">${esc(p.nim || "-")}</b><span>NIM</span></div><div class="k"><b style="font-size:16px;word-break:break-all">${esc(p.email || "-")}</b><span>Email</span></div><div class="k"><b style="font-size:16px">${esc(p.desa || "-")}</b><span>Desa (dikunci)</span></div><div class="k"><b style="font-size:16px">${esc(p.peran || "-")}${admin ? " · admin" : ""}</b><span>Peran</span></div></div>
+  <div class="card" style="max-width:560px"><h3>Ubah data diri</h3><label>Nama lengkap</label><input id="pn" value="${esc(me.nama)}"><label>Divisi</label><input id="pd" value="${esc(p.divisi || "")}" placeholder="mis. Sekretaris">
+  <p style="color:var(--mut);font-size:12px">Desa dikunci supaya data tiap desa tidak tercampur. Kalau salah, minta developer mengubahnya.</p>
+  <div class="aksi" style="justify-content:flex-start"><button data-s>Simpan perubahan</button></div></div>
+  <div class="card" style="max-width:560px;margin-top:14px"><h3>Keamanan</h3><p>Kami kirim tautan ke email terdaftar untuk membuat sandi baru.</p><button class="sek" data-g>Kirim tautan ganti sandi</button></div>`;
+  el.querySelector("[data-s]").onclick = () => { const n = $("pn").value.trim(); if (!n) { toast("Nama wajib diisi"); return; }
+    coba(async () => { await db.collection("users").doc(me.uid).update({namaLengkap: n, divisi: $("pd").value.trim()}); me.nama = n; me.prof = {...p, namaLengkap: n, divisi: $("pd").value.trim()}; $("siapa").textContent = n + (admin ? " · admin" : ""); }, "Profil disimpan"); };
+  el.querySelector("[data-g]").onclick = () => coba(() => auth.sendPasswordResetEmail(p.email), "Tautan dikirim ke " + p.email);
+};
+
+/* ---------- Peta ---------- */
+HAL.peta = (el) => {
+  const posko = localStorage.getItem("kkn_posko") || "";
+  const g = (q) => bukaLuar("https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q));
+  el.innerHTML = `<div class="card" style="max-width:640px"><h3>Cari tempat</h3><div class="bar" style="margin:0"><input id="pt" placeholder="mis. Balai Desa ${esc(me.desa)}"><button data-c>Buka di peta</button></div></div>
+  <div class="card" style="max-width:640px;margin-top:14px"><h3>Cari di sekitar posko</h3><div class="chips">${["Masjid","Puskesmas","Rumah sakit","Apotek","SPBU","ATM","Minimarket","Kantor polisi"].map((x) => `<button class="chip" data-n="${x}">${x}</button>`).join("")}</div></div>
+  <div class="card" style="max-width:640px;margin-top:14px"><h3>Lokasi posko</h3><p>Simpan nama atau alamat posko di komputer ini, lalu buka kapan saja.</p><div class="bar" style="margin:0"><input id="pp" value="${esc(posko)}" placeholder="Nama atau alamat posko"><button class="sek" data-sp>Simpan</button><button data-bp>Buka posko</button></div></div>`;
+  el.querySelector("[data-c]").onclick = () => { const q = $("pt").value.trim(); if (q) g(q); else toast("Ketik tempat dulu"); };
+  el.querySelectorAll("[data-n]").forEach((b) => b.onclick = () => { const po = localStorage.getItem("kkn_posko"); g(b.dataset.n + " dekat " + (po || me.desa)); });
+  el.querySelector("[data-sp]").onclick = () => { localStorage.setItem("kkn_posko", $("pp").value.trim()); toast("Lokasi posko disimpan"); };
+  el.querySelector("[data-bp]").onclick = () => { const q = $("pp").value.trim() || localStorage.getItem("kkn_posko"); if (q) g(q); else toast("Isi lokasi posko dulu"); };
+};
+
+/* ---------- Laporan & Cadangan ---------- */
+HAL.laporan = (el) => {
+  el.innerHTML = `<h3 style="margin-top:0">Laporan PDF</h3><div class="cards">${[["register","Register Surat","Semua surat masuk dan keluar"],["hadir","Rekap Absensi","Kehadiran tiap anggota"],["inv","Daftar Inventaris","Barang posko dan kondisinya"],["nota","Daftar Nota & Kwitansi","Pengeluaran beserta total"],["rekon","Rekonsiliasi Anggaran","Anggaran, realisasi, dan nota per proker"],["lpj","LPJ Proker","Laporan pertanggungjawaban satu proker"]].map((x) => `<div class="card"><h3>${x[1]}</h3><p>${x[2]}</p><div class="aksi" style="justify-content:flex-start"><button class="kecil" data-l="${x[0]}">Buat PDF</button></div></div>`).join("")}</div>
+  <h3>Cadangan & pemulihan</h3><div class="cards"><div class="card"><h3>Buat cadangan (ZIP)</h3><p>Seluruh data desa, dalam format yang sama dengan aplikasi HP, sehingga bisa dipulihkan di HP maupun PC.</p><div class="aksi" style="justify-content:flex-start"><button data-cad>Unduh cadangan</button></div></div>
+  <div class="card"><h3>Pulihkan dari cadangan</h3><p>Pilih berkas ZIP cadangan. Kamu akan melihat ringkasannya dulu sebelum apa pun diubah.</p><input type="file" accept=".zip" id="zp"></div></div>`;
+  const R = {
+    register: () => ["Register Surat", [["Tanggal","Jenis","Nomor","Perihal","Tujuan / Pengirim"], urutBaru(aktif("surat")).map((s) => [tgl(s.tanggalMillis), s.jenis === "MASUK" ? "Masuk" : "Keluar", s.nomorSurat, s.perihal, s.tujuanAtauPengirim])]],
+    hadir: () => ["Rekap Absensi", [["Nama","Divisi","Hadir","Tidak hadir","%"], aktif("anggota").map((a) => { const l = aktif("absensi").filter((x) => x.anggotaId === a.id), h = l.filter((x) => x.hadir).length, t = l.length - h; return [a.nama, a.divisi, h, t, (l.length ? Math.round(h * 100 / l.length) : 0) + "%"]; })]],
+    inv: () => ["Daftar Inventaris Posko", [["Barang","Jumlah","Kondisi","Keterangan"], aktif("inventaris").map((b) => [b.namaBarang, b.jumlah, b.kondisi, b.keterangan])]],
+    nota: () => ["Daftar Nota dan Kwitansi", [["Tanggal","Jenis","Keterangan","Proker","Nominal"], urutBaru(aktif("nota")).map((n) => [tgl(n.tanggalMillis), n.jenis, n.keterangan, n.prokerTerkait, rp(n.nominal)]).concat([["","","","TOTAL", rp(aktif("nota").reduce((s, n) => s + (n.nominal || 0), 0))]])]],
+    rekon: () => ["Rekonsiliasi Anggaran", [["Proker","Anggaran","Realisasi dilaporkan","Total nota","Selisih"], aktif("proker").filter((p) => p.status !== "BATAL").map((p) => { const t = aktif("nota").filter((n) => n.prokerTerkait === p.namaProker).reduce((s, n) => s + (n.nominal || 0), 0); return [p.namaProker, rp(p.anggaran), rp(p.realisasi), rp(t), (p.realisasi || 0) === t ? "Cocok" : rp((p.realisasi || 0) - t)]; })]],
+  };
+  el.querySelectorAll("[data-l]").forEach((b) => b.onclick = () => {
+    const k = b.dataset.l;
+    if (k === "lpj") {
+      const pr = aktif("proker"); if (!pr.length) { toast("Belum ada proker"); return; }
+      return formModal("LPJ Proker", `<label>Pilih proker</label><select name="p">${pr.map((p) => `<option value="${p.id}">${esc(p.namaProker)}</option>`).join("")}</select>`, (m) => {
+        const p = pr.find((x) => x.id === v(m, "p")), notaP = aktif("nota").filter((n) => n.prokerTerkait === p.namaProker), bk = aktif("bukti").filter((x) => x.prokerId === p.id);
+        const info = `<p><b>Status:</b> ${esc(p.status)} · <b>PIC:</b> ${esc(p.picNama || "-")} · <b>Jadwal:</b> ${tgl(p.mulaiMillis)} – ${tgl(p.selesaiMillis)}<br><b>Target:</b> ${esc(p.target || "-")}<br><b>Anggaran:</b> ${rp(p.anggaran)} · <b>Realisasi:</b> ${rp(p.realisasi)}<br><b>Evaluasi:</b> ${esc(p.catatanEvaluasi || "-")}</p>${bk.length ? `<p><b>Bukti kegiatan:</b></p>` + bk.map((x) => `<div style="display:inline-block;width:30%;margin:0 1% 8px 0;vertical-align:top"><img src="${src(x.foto)}" style="width:100%"><br><small>${esc(x.catatan || "")}</small></div>`).join("") : ""}`;
+        simpanDok(dokPdfHtml("LPJ Proker: " + p.namaProker, "Laporan pertanggungjawaban", ["Tanggal","Jenis","Keterangan","Nominal"], notaP.map((n) => [tgl(n.tanggalMillis), n.jenis, n.keterangan, rp(n.nominal)]), info), `LPJ_${p.namaProker.replace(/\W+/g, "_")}.pdf`);
+      }, "Buat PDF");
+    }
+    const [j, [kep, bar]] = R[k](); simpanDok(dokPdfHtml(j, "Desa " + me.desa, kep, bar), `${j.replace(/\W+/g, "_")}.pdf`);
+  });
+  el.querySelector("[data-cad]").onclick = () => coba(buatCadangan);
+  $("zp").onchange = (e) => { const f = e.target.files[0]; if (f) bacaCadangan(f); };
+};
+async function muatJSZip() {
+  if (window.JSZip) return window.JSZip;
+  await new Promise((ok, gagal) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"; s.onload = ok; s.onerror = () => gagal(new Error("Tidak bisa memuat pustaka ZIP (periksa internet)")); document.head.appendChild(s); });
+  return window.JSZip;
+}
+const KOLEKSI_CAD = ["anggota","absensi","proker","surat","inventaris","nota","bukti"];
+async function buatCadangan() {
+  toast("Menyiapkan cadangan…"); const JSZip = await muatJSZip(), t = Date.now(), desaJson = {};
+  for (const n of KOLEKSI_CAD.concat("riwayat")) { const s = await dk(n).get(); desaJson[n] = s.docs.map((d) => ({id: d.id, data: d.data()})); }
+  const root = {format: "kkn-backup", versi: 2, dibuat: t, desaId, desaNama: me.desa, lokal: {jurnal: [], nota: []}, desa: desaJson};
+  const ringkas = {dibuat: new Date(t).toISOString(), desa: me.desa, dari: "Aplikasi PC", jumlah: Object.fromEntries(Object.entries(desaJson).map(([k, a]) => [k, a.length]))};
+  const z = new JSZip(); z.file("data.json", JSON.stringify(root)); z.file("baca-saja.json", JSON.stringify(ringkas, null, 2));
+  const blob = await z.generateAsync({type: "blob", compression: "DEFLATE"}), a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "cadangan-kkn-" + new Date(t).toISOString().slice(0, 16).replace(/[-:T]/g, "") + ".zip"; a.click(); toast("Cadangan diunduh");
+}
+async function bacaCadangan(file) {
+  try {
+    const JSZip = await muatJSZip(), z = await JSZip.loadAsync(file), f = z.file("data.json"); if (!f) throw new Error("Bukan berkas cadangan KKN (data.json tidak ada).");
+    const j = JSON.parse(await f.async("string")); if (j.format !== "kkn-backup") throw new Error("Bukan berkas cadangan KKN.");
+    if ((j.versi || 0) > 2) throw new Error("Cadangan dari versi yang lebih baru. Perbarui aplikasi dulu.");
+    if (j.desaId !== desaId) throw new Error(`Cadangan ini milik desa lain (${j.desaId}), sedangkan akun ini di ${desaId}.`);
+    const jml = KOLEKSI_CAD.reduce((s, k) => s + ((j.desa && j.desa[k]) || []).length, 0);
+    formModal("Pulihkan cadangan ini?", `<p>Desa <b>${esc(j.desaNama)}</b>, dibuat ${tglJam(j.dibuat)}.<br>${jml} data akan dipulihkan. Dokumen dengan ID sama ditimpa isi cadangan; data yang dibuat setelah cadangan dibiarkan.</p>`, async () => {
+      await coba(async () => {
+        const t = Date.now(), kerja = [];
+        for (const n of KOLEKSI_CAD) for (const d of (j.desa[n] || [])) kerja.push([dk(n).doc(d.id), {...d.data, diubahOleh: me.uid, diubahOlehNama: me.nama, diubahPada: t}]);
+        for (let i = 0; i < kerja.length; i += 100) { const b = db.batch(); kerja.slice(i, i + 100).forEach(([r, d]) => b.set(r, d)); await b.commit(); }
+        await dk("riwayat").doc().set({tabel: "cadangan", aksi: "pulihkan", targetId: "", ringkas: `${kerja.length} data dipulihkan dari cadangan`, oleh: me.uid, olehNama: me.nama, waktu: t});
+      }, "Cadangan dipulihkan");
+    }, "Pulihkan");
+  } catch (e) { toast(e.message); }
+}
+
+/* ---------- Pengaturan ---------- */
+const DARURAT = [["Polisi","110"],["Ambulans / gawat darurat","118 atau 119"],["Pemadam kebakaran","113"],["Badan SAR Nasional","115"],["PLN (gangguan listrik)","123"],["Nomor darurat umum","112"]];
+HAL.pengaturan = (el) => {
+  el.innerHTML = `<div class="cards"><div class="card"><h3>Tampilan</h3><div class="chips">${["auto","terang","gelap"].map((t, i) => `<button class="chip ${temaIdx === i ? "on" : ""}" data-th="${i}">${["Ikuti sistem","Terang","Gelap"][i]}</button>`).join("")}</div></div>
+  <div class="card"><h3>Pengingat</h3><p>Notifikasi tugas, jadwal proker, absensi, dan pengumuman yang belum dibuka. Diulang tiap 15 menit sampai kamu membukanya.</p><label><input type="checkbox" id="pgOn" style="width:auto" ${pengingatAktif() ? "checked" : ""}> Aktif</label></div>
+  <div class="card"><h3>Pembaruan</h3><p id="vtxt">Memeriksa…</p><div class="aksi" style="justify-content:flex-start"><button class="sek" data-cek>Cek sekarang</button></div></div>
+  <div class="card"><h3>Panduan</h3><p>Lihat lagi pengantar singkat aplikasi.</p><button class="sek" data-pn>Buka panduan</button></div></div>
+  <h3>Nomor darurat</h3>${tabel([["Layanan", (r) => `<b>${r[0]}</b>`], ["Nomor", (r) => r[1]]], DARURAT)}
+  <h3>Saran & masukan</h3><div class="card" style="max-width:640px"><textarea id="sr" rows="4" placeholder="Tulis saran atau masalah yang kamu temui…"></textarea><div class="aksi"><button data-kirim>Kirim</button></div></div>
+  <h3>Tentang</h3><div class="card" style="max-width:640px"><p>Aplikasi KKN Al-Mushlih 2027 (versi PC) untuk administrasi internal kelompok KKN. Data memakai akun dan database yang sama dengan aplikasi HP.</p></div>`;
+  el.querySelectorAll("[data-th]").forEach((b) => b.onclick = () => { temaIdx = +b.dataset.th; localStorage.setItem("kkn_tema", TEMA[temaIdx]); pasangTema(); gambar(); });
+  $("pgOn").onchange = (e) => { localStorage.setItem("kkn_pengingat", e.target.checked ? "1" : "0"); if (e.target.checked && "Notification" in window) Notification.requestPermission(); };
+  el.querySelector("[data-pn]").onclick = panduan;
+  el.querySelector("[data-cek]").onclick = () => cekPembaruan(true);
+  cekPembaruan(false);
+  el.querySelector("[data-kirim]").onclick = () => { const t = $("sr").value.trim(); if (!t) { toast("Tulis dulu sarannya"); return; } coba(async () => { await db.collection("feedback").add({uid: me.uid, isi: t, dikirimPadaMillis: Date.now()}); $("sr").value = ""; }, "Terima kasih, saran terkirim"); };
+};
+
+/* ---------- Pusat Kendali (admin/developer) ---------- */
+HAL.kendali = (el) => {
+  if (!BOLEH_KENDALI()) { el.innerHTML = `<div class="kosong">Menu ini khusus admin/developer.</div>`; return; }
+  if (!HAL.kendali.mulai) { HAL.kendali.mulai = true;
+    db.collection("users").onSnapshot((s) => { data.semuaUsers = s.docs.map((d) => ({id: d.id, ...d.data()})); if (halaman === "kendali") gambar(); }, () => { data.semuaUsers = []; });
+    db.collection("feedback").onSnapshot((s) => { data.saran = s.docs.map((d) => ({id: d.id, ...d.data()})); if (halaman === "kendali") gambar(); }, () => { data.saran = []; }); }
+  const u = (data.semuaUsers || []).sort((a, b) => (b.terakhirAktifMillis || 0) - (a.terakhirAktifMillis || 0)), sar = (data.saran || []).sort((a, b) => (b.dikirimPadaMillis || 0) - (a.dikirimPadaMillis || 0));
+  const kol = [["Nama", (r) => `<b>${esc(r.namaLengkap)}</b><br><small style="color:var(--mut)">${esc(r.nim)} · ${esc(r.email)}</small>`], ["Desa", (r) => esc(r.desa)], ["Divisi", (r) => esc(r.divisi)], ["Peran", (r) => esc(r.peran)], ["Terakhir aktif", (r) => tglJam(r.terakhirAktifMillis)], ["Status", (r) => r.akunDiblokir ? `<span class="tag bad">Diblokir</span>` : `<span class="tag ok">Aktif</span>`]];
+  el.innerHTML = `<div class="grid"><div class="k"><b>${u.length}</b><span>Akun terdaftar (maks 20)</span></div><div class="k"><b>${u.filter((x) => x.akunDiblokir).length}</b><span>Diblokir</span></div><div class="k"><b>${new Set(u.map((x) => x.desaId).filter(Boolean)).size}</b><span>Desa</span></div><div class="k"><b>${sar.length}</b><span>Saran masuk</span></div></div><div class="bar"><span class="sp"></span>${tombolCsv()}</div>` +
+    tabel(kol, u, (r) => r.id === me.uid ? "" : `<button class="sek kecil" data-b="${r.id}">${r.akunDiblokir ? "Buka blokir" : "Blokir"}</button>`) + `<h3>Saran masuk</h3>` + (sar.length ? `<div class="cards">${sar.map((x) => `<div class="card"><small style="color:var(--mut)">${tglJam(x.dikirimPadaMillis)} · ${esc((u.find((y) => y.id === x.uid) || {}).namaLengkap || x.uid)}</small><p style="white-space:pre-wrap">${esc(x.isi)}</p></div>`).join("")}</div>` : `<div class="kosong">Belum ada saran. (Hanya admin yang bisa membaca.)</div>`);
+  ikatCsv(el, "akun", [["Nama", (r) => r.namaLengkap], ["NIM", (r) => r.nim], ["Email", (r) => r.email], ["Desa", (r) => r.desa], ["Divisi", (r) => r.divisi], ["Peran", (r) => r.peran], ["Diblokir", (r) => r.akunDiblokir ? "ya" : "tidak"]], u);
+  el.querySelectorAll("[data-b]").forEach((b) => b.onclick = () => { const x = u.find((y) => y.id === b.dataset.b); konfirm(`${x.akunDiblokir ? "Buka blokir" : "Blokir"} ${x.namaLengkap}?`, () => coba(() => db.collection("users").doc(x.id).update({akunDiblokir: !x.akunDiblokir}), "Diperbarui")); });
+};
+
+/* ---------- Pengingat (notifikasi desktop, diulang sampai dibuka) ---------- */
+const pengingatAktif = () => localStorage.getItem("kkn_pengingat") !== "0";
+function kumpulPengingat() {
+  if (!me) return []; const L = [], n = Date.now(), hari = awalHari(n), kode = new Date().toISOString().slice(0, 10);
+  aktif("tugas").filter((t) => t.untukUid === me.uid && !t.selesai && (!t.deadlineMillis || t.deadlineMillis < n + 864e5)).forEach((t) => L.push(["tugas:" + t.id, "Tugas: " + t.judul]));
+  aktif("proker").filter((p) => p.status !== "SELESAI" && p.status !== "BATAL").forEach((p) => { if (p.mulaiMillis >= hari && p.mulaiMillis < hari + 2 * 864e5) L.push(["proker-mulai:" + p.id + ":" + kode, "Proker dimulai: " + p.namaProker]); else if (p.selesaiMillis && p.selesaiMillis < hari) L.push(["proker-lewat:" + p.id, "Proker lewat jadwal: " + p.namaProker]); });
+  if (new Date().getHours() >= 16 && aktif("anggota").some((a) => a.aktif !== false) && !aktif("absensi").some((a) => a.tanggalMillis === hari)) L.push(["absen:" + kode, "Absensi hari ini belum dicatat"]);
+  aktif("pengumuman").filter((p) => !(p.dibacaOleh || []).includes(me.uid) && p.tanggalMillis > n - 3 * 864e5).forEach((p) => L.push(["pengumuman:" + p.id, "Pengumuman: " + (p.judul || "(tanpa judul)")]));
+  const sudah = JSON.parse(localStorage.getItem("kkn_dilihat") || "[]"); return L.filter((x) => !sudah.includes(x[0]));
+}
+function tandaiDilihat(kunci) { const s = JSON.parse(localStorage.getItem("kkn_dilihat") || "[]"); localStorage.setItem("kkn_dilihat", JSON.stringify(s.concat(kunci).slice(-300))); }
+setInterval(() => {
+  if (!me || $("app").hidden || !pengingatAktif() || !("Notification" in window) || Notification.permission !== "granted") return;
+  const L = kumpulPengingat(), terakhir = +localStorage.getItem("kkn_notif_terakhir") || 0;
+  if (!L.length || Date.now() - terakhir < 15 * 60 * 1000) return;
+  localStorage.setItem("kkn_notif_terakhir", Date.now());
+  const n = new Notification(L.length + " pengingat belum dibuka", {body: L.slice(0, 4).map((x) => x[1]).join("\n"), requireInteraction: true});
+  n.onclick = () => { tandaiDilihat(L.map((x) => x[0])); window.focus(); halaman = "beranda"; bangunMenu(); gambar(); n.close(); };
+}, 60 * 1000);
+if ("Notification" in window && Notification.permission === "default" && pengingatAktif()) setTimeout(() => Notification.requestPermission(), 4000);
+
+/* ---------- Pembaruan aplikasi PC ---------- */
+async function cekPembaruan(manual) {
+  const v = await versiApp(), t = $("vtxt");
+  if (!v) { if (t) t.textContent = "Versi web: selalu yang terbaru."; return; }
+  try {
+    const r = await (await fetch("https://api.github.com/repos/ALK-99/Aplikasi-KKN-v1/releases?per_page=30")).json();
+    const rel = r.find((x) => !x.draft && /^pc-v\d/.test(x.tag_name) && (x.assets || []).some((a) => /Setup.*\.exe$/i.test(a.name)));
+    const baru = rel ? rel.tag_name.replace("pc-v", "") : "", lebih = (a, b) => { const x = a.split(".").map(Number), y = b.split(".").map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
+    if (rel && lebih(baru, v)) {
+      const url = rel.assets.find((a) => /Setup.*\.exe$/i.test(a.name)).browser_download_url;
+      if (t) t.innerHTML = `Versi terpasang ${esc(v)}. <b>Tersedia ${esc(baru)}.</b> <button class="kecil" data-u>Unduh</button>`;
+      if (t) t.querySelector("[data-u]").onclick = () => bukaLuar(url);
+      if (!$("bannerUpdate")) { const b = document.createElement("div"); b.id = "bannerUpdate"; b.style.cssText = "background:var(--gold);color:#000;padding:8px 26px;font-weight:600;display:flex;gap:12px;align-items:center"; b.innerHTML = `Pembaruan ${esc(baru)} tersedia <button class="kecil" style="background:#000">Unduh</button>`; b.querySelector("button").onclick = () => bukaLuar(url); document.querySelector(".kanan").prepend(b); }
+    } else if (t) t.textContent = `Versi terpasang ${v}. Sudah yang terbaru.`;
+  } catch (e) { if (t) t.textContent = manual ? "Gagal memeriksa. Periksa internet." : `Versi terpasang ${v}.`; }
+}
+setTimeout(() => { if (me) cekPembaruan(false); }, 6000);
+
+/* ---------- Panduan awal ---------- */
+function panduan() {
+  const P = [["Selamat datang 👋", "Ini aplikasi KKN Al-Mushlih 2027 untuk PC. Datanya sama dengan aplikasi HP: yang kamu isi di sini langsung muncul di HP, dan sebaliknya."], ["Menu di kiri", "Menu dibagi per divisi: Sekretaris, Bendahara, Media, dan Umum. Ctrl+K untuk mencari apa saja."], ["Isi data", "Tombol + di tiap halaman untuk menambah. Tombol Ubah untuk memperbaiki, Hapus untuk menyembunyikan. Semua perubahan tercatat di Riwayat."], ["Laporan & cadangan", "Buat PDF (register surat, LPJ, rekonsiliasi) dan cadangan ZIP dari menu Laporan & Cadangan."]];
+  let i = 0; const m = modal(`<div id="pg"></div>`, () => {}); const gam = () => { m.querySelector("#pg").innerHTML = `<h2>${P[i][0]}</h2><p style="font-size:15px">${P[i][1]}</p><div class="aksi"><span style="flex:1;color:var(--mut)">${i + 1}/${P.length}</span>${i ? `<button class="sek" data-p>Kembali</button>` : ""}<button data-n>${i < P.length - 1 ? "Lanjut" : "Mulai"}</button></div>`; const pb = m.querySelector("[data-p]"); if (pb) pb.onclick = () => { i--; gam(); }; m.querySelector("[data-n]").onclick = () => { if (i < P.length - 1) { i++; gam(); } else { localStorage.setItem("kkn_panduan", "1"); m.tutup(); } }; }; gam();
+}
+setTimeout(() => { if (me && !localStorage.getItem("kkn_panduan")) panduan(); }, 1500);
+
 </script>
 </body>
 </html>

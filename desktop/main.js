@@ -22,11 +22,13 @@ ipcMain.handle("simpan-pdf", async (event, html, nama) => {
   const tersembunyi = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
   try {
     await tersembunyi.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
-    const pdf = await tersembunyi.webContents.printToPDF({ pageSize: "A4", printBackground: true });
+    const pdf = await tersembunyi.webContents.printToPDF({ pageSize: "A4", printBackground: true, preferCSSPageSize: true });
     fs.writeFileSync(tujuan.filePath, pdf);
     return true;
   } finally { tersembunyi.destroy(); }
 });
+
+ipcMain.handle("versi", () => app.getVersion());
 
 app.whenReady().then(buka);
 app.on("window-all-closed", () => app.quit());

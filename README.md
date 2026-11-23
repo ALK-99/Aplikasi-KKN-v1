@@ -156,3 +156,8 @@ baru untuk moderasi jurnal dan pembacaan saran oleh admin.
 ## Tahap F: versi PC (web)
 Folder `web/` adalah aplikasi web dan PC lengkap (baca dan tulis) dengan login NIM yang sama, tabel yang bisa dicari dan diurutkan, ekspor CSV, dan cetak. Diterbitkan lewat GitHub Pages oleh `.github/workflows/web-pages.yml`.
 Pengaturan satu kali: isi `web/firebase-config.js` dari Firebase Console (Web app), tambahkan domain `alk-99.github.io` di Authentication > Settings > Authorized domains, lalu aktifkan Pages (Settings > Pages > Source: GitHub Actions).
+
+## Tahap G: mode demo dan paritas PC dan Android
+- Mode demo: semua akun yang login boleh membuat tugas, kas, pengumuman, dan polling. Aturan ada di `firestore.rules` (publish ulang), flag `MODE_DEMO` di KoordinasiViewModel. Saat produksi, kembalikan ke admin.
+- Android: ubah data anggota, surat, inventaris, nota. Pembaruan hanya membaca rilis APK (tag `v` + angka), rilis PC (`pc-v...`) otomatis pre-release.
+- PC: profil, ubah data, laporan PDF, cadangan/pulihkan ZIP (sama dengan HP), peta, pengaturan (tema, pengingat, saran, nomor darurat), Pusat Kendali (admin), notifikasi berulang, cek pembaruan, panduan awal.
