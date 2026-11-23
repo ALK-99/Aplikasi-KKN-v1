@@ -15,9 +15,33 @@
   "build": {
     "appId": "com.kkn.almushlih.pc",
     "productName": "KKN Al-Mushlih 2027",
-    "files": ["main.js", "app/**/*"],
-    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }] },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true },
-    "artifactName": "KKN-Al-Mushlih-PC-${version}-${target}.${ext}"
+    "files": [
+      "main.js",
+      "app/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "KKN-Al-Mushlih-PC-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "KKN-Al-Mushlih-PC-Portable-${version}.${ext}"
+    }
   }
 }
