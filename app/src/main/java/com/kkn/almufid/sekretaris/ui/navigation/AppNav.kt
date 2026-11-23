@@ -23,6 +23,8 @@ import com.kkn.almufid.sekretaris.ui.screens.arsip.NotaViewModel
 import com.kkn.almufid.sekretaris.ui.screens.home.HomeScreen
 import com.kkn.almufid.sekretaris.ui.screens.inventaris.InventarisScreen
 import com.kkn.almufid.sekretaris.ui.screens.inventaris.InventarisViewModel
+import com.kkn.almufid.sekretaris.ui.screens.ajar.AjarScreen
+import com.kkn.almufid.sekretaris.ui.screens.ajar.AjarViewModel
 import com.kkn.almufid.sekretaris.ui.screens.jurnal.JurnalScreen
 import com.kkn.almufid.sekretaris.ui.screens.jurnal.JurnalViewModel
 import com.kkn.almufid.sekretaris.data.auth.AuthRepository
@@ -127,6 +129,10 @@ fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
                 composable(Tujuan.INVENTARIS.rute) {
                     val vm: InventarisViewModel = viewModel(factory = GenericViewModelFactory { InventarisViewModel(desaRepo) })
                     InventarisScreen(vm)
+                }
+                composable(Tujuan.AJAR.rute) {
+                    val vm: AjarViewModel = viewModel(factory = GenericViewModelFactory { AjarViewModel(desaRepo) })
+                    AjarScreen(vm)
                 }
                 composable(Tujuan.PENGUMUMAN.rute) {
                     val vm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })

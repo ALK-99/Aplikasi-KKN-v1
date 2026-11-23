@@ -13,6 +13,7 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     PROKER("proker", "Program Kerja", Icons.Default.Checklist),
     ARSIP("arsip", "Arsip Nota", Icons.Default.Receipt),
     INVENTARIS("inventaris", "Inventaris Posko", Icons.Default.Inventory2),
+    AJAR("ajar", "Jadwal Mengajar", Icons.Default.School),
     PENGUMUMAN("pengumuman", "Pengumuman", Icons.Default.Campaign),
     POLLING("polling", "Polling", Icons.Default.Poll),
     TUGAS("tugas", "Tugas & Kalender", Icons.Default.Event),
@@ -53,7 +54,7 @@ private val MEDIA = DivisiMenu(
     listOf(Tujuan.JURNAL)
 )
 private val PENDIDIKAN = DivisiMenu(
-    "Pendidikan", "Segera hadir", Icons.Default.School, emptyList(), segera = true
+    "Pendidikan", "Jadwal mengajar dan materi", Icons.Default.School, listOf(Tujuan.AJAR)
 )
 
 /**

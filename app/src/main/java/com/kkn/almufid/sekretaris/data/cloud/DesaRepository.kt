@@ -182,6 +182,14 @@ class DesaRepository(
         )
     }
 
+    fun alirAjar(): Flow<List<AjarDesa>> = alirKoleksi("ajar") { d ->
+        if (d.dihapus()) null else AjarDesa(
+            id = d.id, hari = (d.getLong("hari") ?: 1L).toInt(), jam = d.getString("jam") ?: "",
+            lembaga = d.getString("lembaga") ?: "", materi = d.getString("materi") ?: "",
+            pengajarNama = d.getString("pengajarNama") ?: "", catatan = d.getString("catatan") ?: "", jejak = d.jejak(),
+        )
+    }
+
     fun alirRiwayat(): Flow<List<RiwayatDesa>> = alirKoleksi(
         "riwayat", { it.orderBy("waktu", Query.Direction.DESCENDING).limit(300) }
     ) { d ->
@@ -369,6 +377,27 @@ class DesaRepository(
         tulis(k, "surat", "hapus", s.perihal, koleksi(k, "surat").document(s.id), data, false)
     }
 
+    // -- jadwal mengajar (divisi Pendidikan)
+    private fun dataAjar(hari: Int, jam: String, lembaga: String, materi: String, pengajar: String, catatan: String) = mapOf<String, Any>(
+        "hari" to hari, "jam" to jam.trim(), "lembaga" to lembaga.trim(), "materi" to materi.trim(),
+        "pengajarNama" to pengajar.trim(), "catatan" to catatan.trim(),
+    )
+
+    suspend fun tambahAjar(hari: Int, jam: String, lembaga: String, materi: String, pengajar: String, catatan: String): HasilAuth<Unit> = aman { k ->
+        val data = dataAjar(hari, jam, lembaga, materi, pengajar, catatan) + mapOf("dihapus" to false) + jejakBaru(k, System.currentTimeMillis())
+        tulis(k, "ajar", "tambah", "${materi.trim().ifBlank { lembaga.trim() }} (hari $hari)", koleksi(k, "ajar").document(), data, true)
+    }
+
+    suspend fun ubahAjar(a: AjarDesa, hari: Int, jam: String, lembaga: String, materi: String, pengajar: String, catatan: String): HasilAuth<Unit> = aman { k ->
+        val data = dataAjar(hari, jam, lembaga, materi, pengajar, catatan) + jejakUbah(k, System.currentTimeMillis())
+        tulis(k, "ajar", "ubah", materi.trim().ifBlank { lembaga.trim() }, koleksi(k, "ajar").document(a.id), data, false)
+    }
+
+    suspend fun hapusAjar(a: AjarDesa): HasilAuth<Unit> = aman { k ->
+        val data = mapOf<String, Any>("dihapus" to true) + jejakUbah(k, System.currentTimeMillis())
+        tulis(k, "ajar", "hapus", a.materi.ifBlank { a.lembaga }, koleksi(k, "ajar").document(a.id), data, false)
+    }
+
     // -- inventaris
     suspend fun tambahBarang(nama: String, jumlah: Int, kondisi: String, keterangan: String): HasilAuth<Unit> = aman { k ->
         val data = mapOf<String, Any>(
@@ -463,7 +492,7 @@ class DesaRepository(
     // ------------------------------------------------------------ cadangan
 
     /** Koleksi data desa yang ikut dicadangkan dan dipulihkan (riwayat hanya dicadangkan sebagai arsip). */
-    val koleksiCadangan = listOf("anggota", "absensi", "proker", "surat", "inventaris", "nota", "bukti")
+    val koleksiCadangan = listOf("anggota", "absensi", "proker", "surat", "inventaris", "nota", "bukti", "ajar")
 
     /** Identitas desa untuk berkas cadangan, atau null kalau belum login / desa belum diisi. */
     suspend fun identitasDesa(): Pair<String, String>? = konteks()?.let { it.desaId to it.desaNama }

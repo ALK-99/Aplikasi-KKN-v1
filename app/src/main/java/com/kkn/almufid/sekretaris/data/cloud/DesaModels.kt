@@ -91,6 +91,17 @@ data class InventarisDesa(
     val jejak: Jejak = Jejak(),
 )
 
+data class AjarDesa(
+    val id: String = "",
+    val hari: Int = 1,
+    val jam: String = "",
+    val lembaga: String = "",
+    val materi: String = "",
+    val pengajarNama: String = "",
+    val catatan: String = "",
+    val jejak: Jejak = Jejak(),
+)
+
 /** Satu baris catatan perubahan (tidak bisa diubah atau dihapus setelah ditulis). */
 data class RiwayatDesa(
     val id: String = "",

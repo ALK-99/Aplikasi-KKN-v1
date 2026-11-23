@@ -187,7 +187,7 @@ object Cadangan {
     }
 
     /** Nama koleksi desa yang dipulihkan (sama dengan DesaRepository.koleksiCadangan). */
-    private object DesaKoleksi { val sumber = listOf("anggota", "absensi", "proker", "surat", "inventaris", "nota", "bukti") }
+    private object DesaKoleksi { val sumber = listOf("anggota", "absensi", "proker", "surat", "inventaris", "nota", "bukti", "ajar") }
 
     // ------------------------------------------------------------ memulihkan
 
