@@ -1,5 +1,7 @@
 package com.kkn.almufid.sekretaris.ui.screens.riwayat
 
+import com.kkn.almufid.sekretaris.ui.components.BarPenyaring
+import com.kkn.almufid.sekretaris.ui.components.rememberPenyaring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -50,7 +52,17 @@ fun RiwayatScreen(vm: RiwayatViewModel) {
     val semua by vm.riwayat.collectAsState()
     var pilihan by remember { mutableStateOf<String?>(null) }
     val tabel = semua.map { it.tabel }.distinct().sorted()
-    val tampil = if (pilihan == null) semua else semua.filter { it.tabel == pilihan }
+    val pny = rememberPenyaring()
+    val awal = if (pilihan == null) semua else semua.filter { it.tabel == pilihan }
+    val tampil = pny.terapkan(
+        awal, { "${it.ringkas} ${it.olehNama} ${it.aksi}" },
+        listOf<Pair<String, Comparator<RiwayatDesa>>>(
+            "Waktu" to compareBy { it.waktu },
+            "Oleh" to compareBy { it.olehNama.lowercase() },
+            "Aksi" to compareBy { it.aksi },
+        ),
+        { it.olehNama.ifBlank { "-" } }
+    )
 
     Column(Modifier.fillMaxSize()) {
         Text(
@@ -66,6 +78,7 @@ fun RiwayatScreen(vm: RiwayatViewModel) {
                 FilterChip(selected = pilihan == t, onClick = { pilihan = t }, label = { Text(namaTabel(t)) })
             }
         }
+        BarPenyaring(pny, listOf("Waktu", "Oleh", "Aksi"), "pengubah", awal.map { it.olehNama.ifBlank { "-" } }.distinct().sorted(), tampil.size, awal.size)
         if (tampil.isEmpty()) {
             KosongState("Belum ada catatan perubahan.")
         } else {

@@ -1,5 +1,7 @@
 package com.kkn.almufid.sekretaris.ui.screens.inventaris
 
+import com.kkn.almufid.sekretaris.ui.components.BarPenyaring
+import com.kkn.almufid.sekretaris.ui.components.rememberPenyaring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,17 +38,30 @@ fun InventarisScreen(viewModel: InventarisViewModel) {
     var dialogTerbuka by remember { mutableStateOf(false) }
     var diubah by remember { mutableStateOf<InventarisDesa?>(null) }
 
+    val pny = rememberPenyaring()
+    val tampil = pny.terapkan(
+        daftar, { "${it.namaBarang} ${it.kondisi} ${it.keterangan}" },
+        listOf<Pair<String, Comparator<InventarisDesa>>>(
+            "Nama" to compareBy { it.namaBarang.lowercase() },
+            "Jumlah" to compareBy { it.jumlah },
+            "Kondisi" to compareBy { it.kondisi.lowercase() },
+        ),
+        { it.kondisi }
+    )
     Box(Modifier.fillMaxSize()) {
         if (daftar.isEmpty()) {
             KosongState("Belum ada barang inventaris posko. Tekan + untuk menambah.")
         } else {
+            Column(Modifier.fillMaxSize()) {
+            BarPenyaring(pny, listOf("Nama", "Jumlah", "Kondisi"), "kondisi", daftar.map { it.kondisi }.distinct().sorted(), tampil.size, daftar.size)
             LazyColumn(
                 contentPadding = PaddingValues(18.dp, 8.dp, 18.dp, 110.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                itemsIndexed(daftar, key = { _, b -> b.id }) { i, b ->
+                itemsIndexed(tampil, key = { _, b -> b.id }) { i, b ->
                     KartuBarang(b, Modifier.munculBertahap(i), onUbah = { diubah = b }) { viewModel.hapusBarang(b) }
                 }
+            }
             }
         }
         FabGradien(Icons.Default.Add, "Tambah barang", Modifier.align(Alignment.BottomEnd).padding(20.dp)) {

@@ -1,5 +1,7 @@
 package com.kkn.almufid.sekretaris.ui.screens.arsip
 
+import com.kkn.almufid.sekretaris.ui.components.BarPenyaring
+import com.kkn.almufid.sekretaris.ui.components.rememberPenyaring
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,7 +60,19 @@ fun ArsipScreen(viewModel: NotaViewModel) {
     var dialogTerbuka by remember { mutableStateOf(false) }
     var diubah by remember { mutableStateOf<NotaDesa?>(null) }
 
+    val pny = rememberPenyaring()
+    val tampil = pny.terapkan(
+        daftar, { "${it.keterangan} ${it.prokerTerkait} ${it.jenis}" },
+        listOf<Pair<String, Comparator<NotaDesa>>>(
+            "Tanggal" to compareBy { it.tanggalMillis },
+            "Nominal" to compareBy { it.nominal },
+            "Keterangan" to compareBy { it.keterangan.lowercase() },
+        ),
+        { it.jenis }
+    )
     Box(Modifier.fillMaxSize()) {
+      Column(Modifier.fillMaxSize()) {
+        BarPenyaring(pny, listOf("Tanggal", "Nominal", "Keterangan"), "jenis", daftar.map { it.jenis }.distinct().sorted(), tampil.size, daftar.size)
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(2),
             contentPadding = PaddingValues(18.dp, 4.dp, 18.dp, 110.dp),
@@ -71,12 +85,13 @@ fun ArsipScreen(viewModel: NotaViewModel) {
                     KosongState("Belum ada nota tersimpan. Tekan + lalu ambil foto nota.")
                 }
             }
-            itemsIndexed(daftar, key = { _, n -> n.id }) { i, nota ->
+            itemsIndexed(tampil, key = { _, n -> n.id }) { i, nota ->
                 TileNota(nota, if (i % 3 == 0) 0.8f else 1.1f, Modifier.munculBertahap(i), onUbah = { diubah = nota }) {
                     viewModel.hapusNota(nota)
                 }
             }
         }
+      }
         FabGradien(Icons.Default.Add, "Tambah nota", Modifier.align(Alignment.BottomEnd).padding(20.dp)) {
             dialogTerbuka = true
         }

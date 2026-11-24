@@ -1,5 +1,7 @@
 package com.kkn.almufid.sekretaris.ui.screens.proker
 
+import com.kkn.almufid.sekretaris.ui.components.BarPenyaring
+import com.kkn.almufid.sekretaris.ui.components.rememberPenyaring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -50,6 +52,16 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
     val pesan by viewModel.pesan.collectAsState()
     var dialogTerbuka by remember { mutableStateOf(false) }
     var idDikelola by remember { mutableStateOf<String?>(null) }
+    val pny = rememberPenyaring()
+    val tampil = pny.terapkan(
+        daftar, { "${it.namaProker} ${it.divisiPenanggungJawab} ${it.target}" },
+        listOf<Pair<String, Comparator<ProkerDesa>>>(
+            "Nama" to compareBy { it.namaProker.lowercase() },
+            "Mulai" to compareBy { it.mulaiMillis },
+            "Status" to compareBy { it.status.ordinal },
+        ),
+        { labelStatus(it.status) }
+    )
     val selesai = daftar.count { it.status == StatusProker.SELESAI }
     val aktif = daftar.count { it.status != StatusProker.BATAL }
     val frac by animateFloatAsState(if (aktif == 0) 0f else selesai.toFloat() / aktif, tween(800), label = "proker")
@@ -61,6 +73,7 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
                 Spacer(Modifier.height(10.dp))
                 BatangProgres(frac)
             }
+            BarPenyaring(pny, listOf("Nama", "Mulai", "Status"), "status", StatusProker.entries.map { labelStatus(it) }, tampil.size, daftar.size)
             if (daftar.isEmpty()) {
                 KosongState("Belum ada program kerja. Tekan + untuk menambahkan.")
             } else {
@@ -68,7 +81,7 @@ fun ProkerScreen(viewModel: ProkerViewModel) {
                     contentPadding = PaddingValues(18.dp, 10.dp, 18.dp, 110.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    itemsIndexed(daftar, key = { _, p -> p.id }) { i, p ->
+                    itemsIndexed(tampil, key = { _, p -> p.id }) { i, p ->
                         KartuProker(
                             proker = p,
                             modifier = Modifier.munculBertahap(i),

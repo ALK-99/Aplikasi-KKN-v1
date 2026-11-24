@@ -1,5 +1,7 @@
 package com.kkn.almufid.sekretaris.ui.screens.surat
 
+import com.kkn.almufid.sekretaris.ui.components.BarPenyaring
+import com.kkn.almufid.sekretaris.ui.components.rememberPenyaring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,7 +40,17 @@ fun SuratScreen(viewModel: SuratViewModel) {
     var dialogTerbuka by remember { mutableStateOf(false) }
     var diubah by remember { mutableStateOf<SuratDesa?>(null) }
     var filter by remember { mutableStateOf<JenisSurat?>(null) }
-    val tampil = remember(daftar, filter) { if (filter == null) daftar else daftar.filter { it.jenis == filter } }
+    val pny = rememberPenyaring()
+    val awal = if (filter == null) daftar else daftar.filter { it.jenis == filter }
+    val tampil = pny.terapkan(
+        awal, { "${it.perihal} ${it.nomorSurat} ${it.tujuanAtauPengirim}" },
+        listOf<Pair<String, Comparator<SuratDesa>>>(
+            "Tanggal" to compareBy { it.tanggalMillis },
+            "Perihal" to compareBy { it.perihal.lowercase() },
+            "Nomor" to compareBy { it.nomorSurat.lowercase() },
+        ),
+        { it.tujuanAtauPengirim.ifBlank { "-" } }
+    )
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -47,6 +59,8 @@ fun SuratScreen(viewModel: SuratViewModel) {
                 PilChip("Masuk", filter == JenisSurat.MASUK, { filter = JenisSurat.MASUK })
                 PilChip("Keluar", filter == JenisSurat.KELUAR, { filter = JenisSurat.KELUAR })
             }
+            BarPenyaring(pny, listOf("Tanggal", "Perihal", "Nomor"), "tujuan/pengirim",
+                awal.map { it.tujuanAtauPengirim.ifBlank { "-" } }.distinct().sorted().take(30), tampil.size, awal.size)
             if (tampil.isEmpty()) {
                 KosongState("Belum ada surat tercatat. Tekan + untuk menambah.")
             } else {
