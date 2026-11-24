@@ -85,6 +85,7 @@ fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
     val rute = posisi?.destination?.route ?: Tujuan.RUTE_HOME
     val judul = Tujuan.entries.firstOrNull { it.rute == rute }?.judul
 
+    com.kkn.almufid.sekretaris.pengingat.PemantauGetar()
     Surface(Modifier.fillMaxSize(), color = Ground, contentColor = TeksUtama) {
         Column(Modifier.fillMaxSize()) {
             if (judul != null) HeaderHalaman(judul) { navController.popBackStack() }

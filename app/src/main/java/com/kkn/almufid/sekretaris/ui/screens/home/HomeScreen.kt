@@ -187,14 +187,15 @@ private fun PengumumanRingkas(
 /** Jadwal sholat khusus Yogyakarta (WIB), dihitung di HP tanpa internet. */
 @Composable
 private fun SholatYogyakarta(onClick: () -> Unit) {
-    val kota = remember { DAFTAR_KOTA.first { it.nama == "Yogyakarta" } }
+    val konteks = androidx.compose.ui.platform.LocalContext.current
+    val kota = remember { com.kkn.almufid.sekretaris.ui.screens.ibadah.KotaPilihan.kota(konteks) }
     val wib = remember { TimeZone.getTimeZone("Asia/Jakarta") }
     var sekarang by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) { delay(30_000); sekarang = System.currentTimeMillis() }
     }
     val kal = Calendar.getInstance(wib).apply { timeInMillis = sekarang }
-    val jadwal = remember(kal.get(Calendar.YEAR), kal.get(Calendar.DAY_OF_YEAR)) {
+    val jadwal = remember(kota, kal.get(Calendar.YEAR), kal.get(Calendar.DAY_OF_YEAR)) {
         WaktuSholat.hitung(
             kota.lintang, kota.bujur, 7.0,
             kal.get(Calendar.YEAR), kal.get(Calendar.MONTH) + 1, kal.get(Calendar.DAY_OF_MONTH)

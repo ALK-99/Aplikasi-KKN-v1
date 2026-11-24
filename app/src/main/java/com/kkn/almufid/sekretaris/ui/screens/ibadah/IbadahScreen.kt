@@ -25,12 +25,11 @@ private val NAMA_BULAN_HIJRIAH = listOf(
     "Rajab", "Syaban", "Ramadhan", "Syawal", "Dzulqaidah", "Dzulhijjah"
 )
 
-private fun bacaKota(context: Context): Int =
-    context.getSharedPreferences("ibadah_prefs", Context.MODE_PRIVATE).getInt("kota", 0)
-        .coerceIn(0, DAFTAR_KOTA.size - 1)
+private fun bacaKota(context: Context): Int = KotaPilihan.indeks(context)
 
 private fun simpanKota(context: Context, indeks: Int) {
-    context.getSharedPreferences("ibadah_prefs", Context.MODE_PRIVATE).edit().putInt("kota", indeks).apply()
+    KotaPilihan.simpan(context, indeks)
+    com.kkn.almufid.sekretaris.pengingat.PengingatSholat.jadwalkan(context)
 }
 
 @Composable
@@ -73,6 +72,18 @@ fun IbadahScreen() {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DAFTAR_KOTA.forEachIndexed { i, k ->
                 PilChip(k.nama, i == kotaIdx, { kotaIdx = i; simpanKota(context, i) })
+            }
+        }
+        var ingat by remember { mutableStateOf(com.kkn.almufid.sekretaris.pengingat.PengingatSholat.aktif(context)) }
+        KartuGelap(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Ingatkan 10 menit sebelum adzan", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text("Notifikasi dengan getar dan pesan islami, tanpa internet.", fontSize = 11.sp, color = TeksRedup)
+                }
+                androidx.compose.material3.Switch(checked = ingat, onCheckedChange = {
+                    ingat = it; com.kkn.almufid.sekretaris.pengingat.PengingatSholat.atur(context, it)
+                })
             }
         }
         KartuGelap(Modifier.fillMaxWidth()) {

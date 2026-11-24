@@ -22,6 +22,7 @@ class SekretarisApp : Application() {
         try {
             com.kkn.almufid.sekretaris.pengingat.PengingatWorker.buatSaluran(this)
             com.kkn.almufid.sekretaris.pengingat.PengingatWorker.jadwalkan(this)
+            com.kkn.almufid.sekretaris.pengingat.PengingatSholat.jadwalkan(this)
         } catch (e: Exception) { /* pengingat tidak boleh membuat app crash */ }
     }
 }

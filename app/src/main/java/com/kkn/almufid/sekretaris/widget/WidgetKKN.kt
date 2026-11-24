@@ -32,7 +32,7 @@ class WidgetKKN : AppWidgetProvider() {
             if (ids.isEmpty()) return
             val tampilan = RemoteViews(context.packageName, R.layout.widget_kkn)
 
-            val kota = DAFTAR_KOTA.first { it.nama == "Yogyakarta" }
+            val kota = com.kkn.almufid.sekretaris.ui.screens.ibadah.KotaPilihan.kota(context)
             val kal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Jakarta"))
             val jadwal = WaktuSholat.hitung(
                 kota.lintang, kota.bujur, 7.0,

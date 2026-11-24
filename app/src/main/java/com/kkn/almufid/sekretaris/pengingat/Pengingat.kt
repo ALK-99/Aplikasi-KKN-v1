@@ -71,6 +71,7 @@ class PengingatWorker(context: Context, params: WorkerParameters) : CoroutineWor
 
     override suspend fun doWork(): Result {
         val ctx = applicationContext
+        try { PengingatSholat.jadwalkan(ctx) } catch (e: Exception) { }
         val uid = try { FirebaseAuth.getInstance().currentUser?.uid } catch (e: Exception) { null } ?: return Result.success()
         if (!PengingatPref.aktif(ctx)) {
             NotificationManagerCompat.from(ctx).cancel(ID_NOTIF)
@@ -133,6 +134,11 @@ class PengingatWorker(context: Context, params: WorkerParameters) : CoroutineWor
         ambil(koordinasi.alirPengumuman())
             .filter { uid !in it.dibacaOleh && it.tanggalMillis >= sekarang - 3L * 24 * 3600 * 1000 }
             .forEach { hasil += ItemPengingat("pengumuman:${it.id}", "Pengumuman: ${it.judul.ifBlank { "(tanpa judul)" }}", "Belum kamu baca") }
+
+        // Polling terbuka yang belum kamu beri suara (3 hari terakhir).
+        ambil(koordinasi.alirPolling())
+            .filter { !it.ditutup && uid !in it.suara.keys && it.tanggalMillis >= sekarang - 3L * 24 * 3600 * 1000 }
+            .forEach { hasil += ItemPengingat("polling:${it.id}", "Polling: ${it.pertanyaan}", "Belum kamu isi") }
 
         return hasil
     }

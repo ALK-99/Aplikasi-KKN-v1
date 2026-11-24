@@ -5,16 +5,9 @@ import kotlin.math.*
 data class Kota(val nama: String, val lintang: Double, val bujur: Double)
 
 val DAFTAR_KOTA = listOf(
-    Kota("Surabaya", -7.2575, 112.7521),
-    Kota("Jombang", -7.5467, 112.2331),
-    Kota("Mojokerto", -7.4704, 112.4401),
-    Kota("Malang", -7.9666, 112.6326),
-    Kota("Yogyakarta", -7.7956, 110.3695),
     Kota("Jakarta", -6.2088, 106.8456),
-    Kota("Bandung", -6.9175, 107.6191),
-    Kota("Medan", 3.5952, 98.6722),
-    Kota("Makassar", -5.1477, 119.4327),
-    Kota("Denpasar", -8.6500, 115.2167),
+    Kota("Yogyakarta", -7.7956, 110.3695),
+    Kota("Surabaya", -7.2575, 112.7521),
 )
 
 /** Jam dalam desimal (mis. 4.5 = 04:30), sudah dalam zona waktu yang diminta. */
