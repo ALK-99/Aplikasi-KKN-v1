@@ -443,7 +443,7 @@ class DesaRepository(
                 kerja += koleksi(k, "absensi").document("${aid}_${it.tanggalMillis}") to
                     (mapOf<String, Any>(
                         "anggotaId" to aid, "anggotaNama" to (namaAnggota[it.anggotaId] ?: "(anggota lama)"),
-                        "tanggalMillis" to it.tanggalMillis, "hadir" to it.hadir, "status" to it.status, "keterangan" to it.keterangan,
+                        "tanggalMillis" to it.tanggalMillis, "hadir" to it.hadir, "status" to (if (it.hadir) "HADIR" else "ALPA"), "keterangan" to it.keterangan,
                     ) + jb)
             }
             proker.forEach {
