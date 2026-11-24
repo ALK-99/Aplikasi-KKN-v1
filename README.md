@@ -170,3 +170,11 @@ Menu Jadwal Mengajar (hari, jam, lembaga/kelas, materi, pengajar, catatan) di An
 - Edit isi tugas, kas, pengumuman, polling; absensi Hadir/Izin/Sakit/Alpa (`status`, `hadir` tetap sinkron).
 - PC: ikon aplikasi, mode offline (cache Firestore + antrean tulis), pasang pembaruan otomatis dari GitHub, baki sistem (tombol X menyembunyikan), jalan otomatis saat Windows menyala.
 - Pantauan Desa (admin baca semua desa) dan Jurnal Pribadi di PC. **Wajib publish ulang `firestore.rules`** (aturan baca admin + `users/{uid}/jurnal_pribadi`).
+
+## Tahap J
+- Peta Android: lokasi posko yang disimpan kini benar-benar terkunci. Pencarian sekitar (masjid, SPBU, dll.) memakai titik posko, ada tombol "Sekitar saya" untuk GPS. Riwayat pencarian (8 terakhir). "Di mana saya sekarang" bekerja tanpa internet: koordinat, Plus Code, jarak dan arah dari posko (alamat teks butuh internet, memakai alamat terakhir bila offline).
+- Waktu sholat: hanya Jakarta, Yogyakarta, Surabaya. Bug PC (waktu sama untuk semua kota) diperbaiki. Pengingat islami 10 menit sebelum adzan (PC dan Android).
+- Ekspor Word (.docx) selain PDF di PC dan Android.
+- Saring dan urutkan di menu yang datanya banyak (PC semua tabel; Android Surat, Inventaris, Nota, Riwayat, Proker, Tugas, Kas, Pengumuman).
+- Getar saat ada pengumuman atau polling baru (Android).
+- Asisten (PC dan Android): perintah bahasa Indonesia untuk kas, tugas, pengumuman, inventaris, surat, plus tanya saldo/tugas/proker/absensi. Selalu minta konfirmasi. Mode pintar opsional memakai kunci Gemini gratis milik pengguna.
