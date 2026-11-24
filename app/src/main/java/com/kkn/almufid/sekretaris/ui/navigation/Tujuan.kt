@@ -9,7 +9,7 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     JURNAL("jurnal", "Jurnal & Notulen", Icons.Default.MenuBook),
     ABSENSI("absensi", "Absensi", Icons.Default.HowToReg),
     SURAT("surat", "Surat Masuk/Keluar", Icons.Default.Mail),
-    TEMPLAT_SURAT("templat-surat", "Templat Surat PDF", Icons.Default.Description),
+    DOKUMEN("dokumen", "Dokumen & PDF", Icons.Default.PictureAsPdf),
     PROKER("proker", "Program Kerja", Icons.Default.Checklist),
     ARSIP("arsip", "Arsip Nota", Icons.Default.Receipt),
     INVENTARIS("inventaris", "Inventaris Posko", Icons.Default.Inventory2),
@@ -22,7 +22,6 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     PETA("peta", "Peta", Icons.Default.Map),
     REKONSILIASI("rekonsiliasi", "Rekonsiliasi Kas", Icons.Default.AccountBalance),
     RIWAYAT("riwayat", "Riwayat Perubahan", Icons.Default.History),
-    LAPORAN("laporan", "Laporan & Backup", Icons.Default.Description),
     PROFIL("profil", "Profil Saya", Icons.Default.Person),
     PENGATURAN("pengaturan", "Pengaturan", Icons.Default.Settings),
     PENCARIAN("cari", "Pencarian", Icons.Default.Search);
@@ -42,8 +41,8 @@ class DivisiMenu(
 )
 
 private val SEKRETARIS = DivisiMenu(
-    "Sekretaris", "Absensi, surat, proker, inventaris, tugas", Icons.Default.EditNote,
-    listOf(Tujuan.ABSENSI, Tujuan.SURAT, Tujuan.TEMPLAT_SURAT, Tujuan.PROKER, Tujuan.INVENTARIS, Tujuan.TUGAS)
+    "Sekretaris", "Absensi, surat, proker, inventaris, tugas, dokumen & PDF", Icons.Default.EditNote,
+    listOf(Tujuan.ABSENSI, Tujuan.SURAT, Tujuan.PROKER, Tujuan.INVENTARIS, Tujuan.TUGAS, Tujuan.DOKUMEN)
 )
 private val BENDAHARA = DivisiMenu(
     "Bendahara", "Kas, nota dan kwitansi, rekonsiliasi", Icons.Default.AccountBalanceWallet,
@@ -78,7 +77,7 @@ enum class KategoriMenu(
         listOf(Tujuan.PENGUMUMAN, Tujuan.POLLING, Tujuan.IBADAH, Tujuan.PETA)
     ),
     LAINNYA(
-        "Lainnya", "Riwayat, laporan, backup, dan pengaturan", Icons.Default.MoreHoriz,
-        listOf(Tujuan.RIWAYAT, Tujuan.LAPORAN, Tujuan.PENGATURAN)
+        "Lainnya", "Riwayat dan pengaturan", Icons.Default.MoreHoriz,
+        listOf(Tujuan.RIWAYAT, Tujuan.PENGATURAN)
     )
 }

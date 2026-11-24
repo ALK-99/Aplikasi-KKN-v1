@@ -105,7 +105,7 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
                     itemsIndexed(anggota, key = { _, a -> a.id }) { i, orang ->
                         BarisAbsensi(
                             nama = orang.nama, divisi = orang.divisi,
-                            hadir = statusPerAnggota[orang.id]?.hadir,
+                            status = statusPerAnggota[orang.id]?.status,
                             aktif = orang.aktif,
                             dicatatOleh = statusPerAnggota[orang.id]?.jejak?.diubahOlehNama?.ifBlank { null },
                             modifier = Modifier.munculBertahap(i),
@@ -127,7 +127,7 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
                         if (lihatNonaktif) {
                             items(nonaktifLain) { orang ->
                                 BarisAbsensi(
-                                    nama = orang.nama, divisi = orang.divisi, hadir = null,
+                                    nama = orang.nama, divisi = orang.divisi, status = null,
                                     aktif = false, dicatatOleh = null, modifier = Modifier,
                                     onUbah = {}, onAturAktif = { viewModel.aturAktif(orang, true) }
                                 )
@@ -199,18 +199,16 @@ private fun CincinPersen(persen: Float) {
 private fun BarisAbsensi(
     nama: String,
     divisi: String,
-    hadir: Boolean?,
+    status: String?,
     aktif: Boolean,
     dicatatOleh: String?,
     modifier: Modifier,
-    onUbah: (Boolean) -> Unit,
+    onUbah: (String) -> Unit,
     onUbahData: () -> Unit = {},
     onAturAktif: () -> Unit
 ) {
-    Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Surface1).padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Surface1).padding(12.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         AvatarGradien(inisialDari(nama), 42.dp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -227,12 +225,15 @@ private fun BarisAbsensi(
                 fontWeight = FontWeight.Bold, modifier = Modifier.tekanPegas(onUbahData).padding(top = 2.dp)
             )
         }
-        if (aktif || hadir != null) {
-            PilKecil("Hadir", hadir == true, HijauTua) { onUbah(true) }
-            Spacer(Modifier.width(6.dp))
-            PilKecil("Absen", hadir == false, Pink) { onUbah(false) }
+    }
+    if (aktif || status != null) {
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PilKecil("Hadir", status == "HADIR", HijauTua) { onUbah("HADIR") }
+            PilKecil("Izin", status == "IZIN", Gold) { onUbah("IZIN") }
+            PilKecil("Sakit", status == "SAKIT", VioletTerang) { onUbah("SAKIT") }
+            PilKecil("Alpa", status == "ALPA", Pink) { onUbah("ALPA") }
         }
-
+    }
     }
 }
 

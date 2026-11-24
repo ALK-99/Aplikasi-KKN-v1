@@ -228,4 +228,17 @@ class KoordinasiRepository(
     suspend fun hapusKas(id: String) = aman {
         db.collection("kas").document(id).update("dihapus", true).await()
     }
+
+    suspend fun ubahPengumuman(id: String, judul: String, isi: String) = aman {
+        db.collection("pengumuman").document(id).update("judul", judul, "isi", isi).await()
+    }
+    suspend fun ubahPolling(id: String, pertanyaan: String, opsi: List<String>) = aman {
+        db.collection("polling").document(id).update("pertanyaan", pertanyaan, "opsi", opsi).await()
+    }
+    suspend fun ubahTugas(id: String, judul: String, deskripsi: String) = aman {
+        db.collection("tugas").document(id).update("judul", judul, "deskripsi", deskripsi).await()
+    }
+    suspend fun ubahKas(id: String, jumlah: Long, kategori: String, keterangan: String) = aman {
+        db.collection("kas").document(id).update("jumlah", jumlah, "kategori", kategori, "keterangan", keterangan).await()
+    }
 }

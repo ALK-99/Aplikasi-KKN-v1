@@ -31,6 +31,7 @@ enum class JenisLaporan(val judul: String, val keterangan: String, val mime: Str
     JURNAL_PRIBADI_PDF("Jurnal Pribadi (PDF)", "Catatan pribadi di HP ini", "application/pdf"),
     KAS_PDF("Kas Kelompok (PDF)", "Saldo dan seluruh transaksi", "application/pdf"),
     REKAP_MINGGUAN_PDF("Rekap 7 Hari Terakhir (PDF)", "Jurnal, tugas, dan kas seminggu ini", "application/pdf"),
+    REKAP_ABSENSI_PDF("Rekap Absensi Bulan Ini (PDF)", "Hadir, izin, sakit, dan alpa tiap anggota", "application/pdf"),
     ABSENSI_CSV("Absensi (CSV)", "Bisa dibuka di Excel", "text/csv"),
     INVENTARIS_CSV("Inventaris (CSV)", "Daftar barang dan kondisinya", "text/csv"),
     TUGAS_CSV("Tugas (CSV)", "Semua tugas, penerima, dan status", "text/csv"),
@@ -186,6 +187,29 @@ class LaporanViewModel(
                     "keluar ${formatRupiah(kas.filter { !it.masuk }.sumOf { it.jumlah })}"
                 PembuatLaporan.pdf(appContext, "rekap-mingguan.pdf", "Rekap 7 Hari Terakhir", cap, baris)
             }
+            JenisLaporan.REKAP_ABSENSI_PDF -> {
+                val kal = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.DAY_OF_MONTH, 1)
+                    set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+                }
+                val awal = kal.timeInMillis
+                val bulan = java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale("id", "ID")).format(java.util.Date(awal))
+                val data = ambil(desa.alirAbsensi()).filter { it.tanggalMillis >= awal }
+                val baris = mutableListOf("Nama | Hadir | Izin | Sakit | Alpa | Persen hadir", "")
+                data.groupBy { it.anggotaId }.values
+                    .sortedBy { it.first().anggotaNama.lowercase() }
+                    .forEach { l ->
+                        val h = l.count { it.status == "HADIR" }
+                        val i = l.count { it.status == "IZIN" }
+                        val sk = l.count { it.status == "SAKIT" }
+                        val a = l.count { it.status == "ALPA" }
+                        val persen = if (l.isEmpty()) 0 else h * 100 / l.size
+                        baris += "${l.first().anggotaNama} | $h | $i | $sk | $a | $persen%"
+                    }
+                if (data.isEmpty()) baris += "Belum ada data absensi bulan ini."
+                PembuatLaporan.pdf(appContext, "rekap-absensi.pdf", "Rekap Absensi $bulan", cap, baris)
+            }
             JenisLaporan.ABSENSI_CSV -> {
                 val data = ambil(desa.alirAbsensi()).sortedWith(compareBy({ it.tanggalMillis }, { it.anggotaNama }))
                 PembuatLaporan.csv(
@@ -193,7 +217,7 @@ class LaporanViewModel(
                     data.map {
                         listOf(
                             formatTanggal(it.tanggalMillis).substringBefore(","), it.anggotaNama,
-                            if (it.hadir) "Hadir" else "Tidak hadir", it.keterangan, it.jejak.diubahOlehNama
+                            it.status.lowercase().replaceFirstChar { c -> c.uppercase() }, it.keterangan, it.jejak.diubahOlehNama
                         )
                     }
                 )

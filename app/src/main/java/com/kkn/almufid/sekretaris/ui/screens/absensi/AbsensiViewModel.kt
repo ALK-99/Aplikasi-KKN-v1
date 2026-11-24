@@ -70,10 +70,10 @@ class AbsensiViewModel(private val desa: DesaRepository) : ViewModel() {
         viewModelScope.launch { lapor(desa.aturAnggotaAktif(anggota, aktif)) }
     }
 
-    fun tandaiKehadiran(anggota: AnggotaDesa, hadir: Boolean, keterangan: String = "") {
+    fun tandaiKehadiran(anggota: AnggotaDesa, status: String, keterangan: String = "") {
         val tanggal = _tanggalDipilih.value
         val sudahAda = absensiHariIni.value.any { it.anggotaId == anggota.id }
-        viewModelScope.launch { lapor(desa.simpanAbsensi(anggota, tanggal, hadir, keterangan, sudahAda)) }
+        viewModelScope.launch { lapor(desa.simpanAbsensi(anggota, tanggal, status, keterangan, sudahAda)) }
     }
 
     fun tutupPesan() { _pesan.value = null }

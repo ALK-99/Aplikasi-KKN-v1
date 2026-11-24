@@ -115,9 +115,6 @@ fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
                     val vm: SuratViewModel = viewModel(factory = GenericViewModelFactory { SuratViewModel(desaRepo) })
                     SuratScreen(vm)
                 }
-                composable(Tujuan.TEMPLAT_SURAT.rute) {
-                    com.kkn.almufid.sekretaris.ui.screens.templat.TemplatSuratScreen(desaRepo)
-                }
                 composable(Tujuan.PROKER.rute) {
                     val vm: ProkerViewModel = viewModel(factory = GenericViewModelFactory { ProkerViewModel(desaRepo) })
                     ProkerScreen(vm)
@@ -164,11 +161,11 @@ fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
                 }
                 composable(Tujuan.IBADAH.rute) { IbadahScreen() }
                 composable(Tujuan.PETA.rute) { PetaScreen() }
-                composable(Tujuan.LAPORAN.rute) {
+                composable(Tujuan.DOKUMEN.rute) {
                     val vm: LaporanViewModel = viewModel(factory = GenericViewModelFactory {
                         LaporanViewModel(app.applicationContext, db, desaRepo, JurnalBersamaRepository(), KoordinasiRepository())
                     })
-                    LaporanScreen(vm)
+                    com.kkn.almufid.sekretaris.ui.screens.dokumen.DokumenScreen(vm, desaRepo)
                 }
                 composable(Tujuan.PROFIL.rute) {
                     val vm: ProfilViewModel = viewModel(factory = GenericViewModelFactory { ProfilViewModel(AuthRepository()) })

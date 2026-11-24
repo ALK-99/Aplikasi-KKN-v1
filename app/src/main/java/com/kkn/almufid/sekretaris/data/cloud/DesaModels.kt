@@ -33,6 +33,8 @@ data class AbsensiDesa(
     val hadir: Boolean = false,
     val keterangan: String = "",
     val jejak: Jejak = Jejak(),
+    /** HADIR, IZIN, SAKIT, atau ALPA. Data lama tanpa status dibaca dari [hadir]. */
+    val status: String = if (hadir) "HADIR" else "ALPA",
 )
 
 data class ProkerDesa(

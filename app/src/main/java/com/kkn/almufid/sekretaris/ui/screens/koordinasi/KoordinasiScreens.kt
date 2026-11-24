@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -93,6 +94,10 @@ fun PengumumanScreen(vm: KoordinasiViewModel) {
 @Composable
 private fun KartuPengumuman(p: Pengumuman, vm: KoordinasiViewModel, admin: Boolean, modifier: Modifier) {
     val sudahBaca = vm.uidSaya in p.dibacaOleh
+    var ubah by remember { mutableStateOf(false) }
+    if (ubah) DialogUbah("Ubah Pengumuman", listOf(Bidang("Judul", p.judul), Bidang("Isi", p.isi)), { ubah = false }) {
+        vm.ubahPengumuman(p.id, it[0], it[1]); ubah = false
+    }
     // Tampil di layar = dianggap dibaca.
     LaunchedEffect(p.id, sudahBaca) {
         if (!sudahBaca && vm.uidSaya.isNotEmpty()) vm.tandaiDibaca(p.id)
@@ -108,6 +113,7 @@ private fun KartuPengumuman(p: Pengumuman, vm: KoordinasiViewModel, admin: Boole
                 Text("${p.penulisNama} · ${formatTanggal(p.tanggalMillis)}", color = TeksRedup, fontSize = 11.sp)
             }
             if (admin) {
+                IconButton(onClick = { ubah = true }) { Icon(Icons.Default.Edit, "Ubah", tint = TeksRedup) }
                 IconButton(onClick = { vm.hapusPengumuman(p.id) }) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
             }
         }
@@ -175,6 +181,12 @@ fun PollingScreen(vm: KoordinasiViewModel) {
 private fun KartuPolling(p: Polling, vm: KoordinasiViewModel, admin: Boolean, modifier: Modifier) {
     val pilihanSaya = p.suara[vm.uidSaya]
     val total = p.suara.size
+    var ubah by remember { mutableStateOf(false) }
+    if (ubah) DialogUbah(
+        "Ubah Polling",
+        listOf(Bidang("Pertanyaan", p.pertanyaan)) + p.opsi.mapIndexed { i, o -> Bidang("Pilihan ${i + 1}", o) },
+        { ubah = false }
+    ) { vm.ubahPolling(p.id, it[0], it.drop(1)); ubah = false }
     KartuGelap(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -185,6 +197,7 @@ private fun KartuPolling(p: Polling, vm: KoordinasiViewModel, admin: Boolean, mo
                 )
             }
             if (admin) {
+                IconButton(onClick = { ubah = true }) { Icon(Icons.Default.Edit, "Ubah", tint = TeksRedup) }
                 IconButton(onClick = { vm.hapusPolling(p.id) }) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
             }
         }
@@ -326,6 +339,10 @@ private fun KartuTugas(t: Tugas, vm: KoordinasiViewModel, admin: Boolean, modifi
         else -> "$sisaHari hari lagi" to TeksRedup
     }
     val bolehCentang = admin || t.untukUid == vm.uidSaya
+    var ubah by remember { mutableStateOf(false) }
+    if (ubah) DialogUbah("Ubah Tugas", listOf(Bidang("Judul", t.judul), Bidang("Keterangan", t.deskripsi)), { ubah = false }) {
+        vm.ubahTugas(t.id, it[0], it[1]); ubah = false
+    }
     KartuGelap(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
@@ -340,6 +357,7 @@ private fun KartuTugas(t: Tugas, vm: KoordinasiViewModel, admin: Boolean, modifi
             }
             Text(label, fontSize = 11.sp, color = warna, fontWeight = FontWeight.Bold)
             if (admin) {
+                IconButton(onClick = { ubah = true }) { Icon(Icons.Default.Edit, "Ubah", tint = TeksRedup) }
                 IconButton(onClick = { vm.hapusTugas(t.id) }) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
             }
         }
@@ -353,6 +371,14 @@ fun KasScreen(vm: KoordinasiViewModel) {
     val daftar by vm.kas.collectAsState()
     val admin by vm.admin.collectAsState()
     var dialog by remember { mutableStateOf(false) }
+    var ubahKas by remember { mutableStateOf<Kas?>(null) }
+    ubahKas?.let { k ->
+        DialogUbah(
+            "Ubah Catatan Kas",
+            listOf(Bidang("Jumlah (Rp)", k.jumlah.toString(), angka = true), Bidang("Kategori", k.kategori), Bidang("Keterangan", k.keterangan)),
+            { ubahKas = null }
+        ) { vm.ubahKas(k.id, it[0], it[1], it[2]); ubahKas = null }
+    }
 
     val masuk = daftar.filter { it.masuk }.sumOf { it.jumlah }
     val keluar = daftar.filter { !it.masuk }.sumOf { it.jumlah }
@@ -394,6 +420,7 @@ fun KasScreen(vm: KoordinasiViewModel) {
                             color = if (k.masuk) Mint else Merah, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp
                         )
                         if (admin) {
+                            IconButton(onClick = { ubahKas = k }) { Icon(Icons.Default.Edit, "Ubah", tint = TeksRedup) }
                             IconButton(onClick = { vm.hapusKas(k.id) }) { Icon(Icons.Default.Delete, "Hapus", tint = TeksRedup) }
                         }
                     }

@@ -98,6 +98,23 @@ class KoordinasiViewModel(
         kerjakan { repo.tambahKas(namaSaya, masuk, jumlah, kategori.trim(), keterangan.trim()) }
     }
     fun hapusKas(id: String) { kerjakan { repo.hapusKas(id) } }
+    fun ubahPengumuman(id: String, judul: String, isi: String) {
+        if (judul.isBlank() || isi.isBlank()) { _pesan.value = "Judul dan isi tidak boleh kosong"; return }
+        kerjakan { repo.ubahPengumuman(id, judul.trim(), isi.trim()) }
+    }
+    fun ubahPolling(id: String, pertanyaan: String, opsi: List<String>) {
+        if (pertanyaan.isBlank() || opsi.any { it.isBlank() }) { _pesan.value = "Pertanyaan dan semua pilihan harus terisi"; return }
+        kerjakan { repo.ubahPolling(id, pertanyaan.trim(), opsi.map { it.trim() }) }
+    }
+    fun ubahTugas(id: String, judul: String, deskripsi: String) {
+        if (judul.isBlank()) { _pesan.value = "Judul tugas tidak boleh kosong"; return }
+        kerjakan { repo.ubahTugas(id, judul.trim(), deskripsi.trim()) }
+    }
+    fun ubahKas(id: String, jumlahTeks: String, kategori: String, keterangan: String) {
+        val jumlah = jumlahTeks.filter { it.isDigit() }.toLongOrNull()
+        if (jumlah == null || jumlah <= 0L) { _pesan.value = "Isi jumlah dengan angka lebih dari 0"; return }
+        kerjakan { repo.ubahKas(id, jumlah, kategori.trim(), keterangan.trim()) }
+    }
 }
 
 /** Ubah ke false (dan kembalikan aturan Firestore) saat aplikasi dipakai sungguhan. */

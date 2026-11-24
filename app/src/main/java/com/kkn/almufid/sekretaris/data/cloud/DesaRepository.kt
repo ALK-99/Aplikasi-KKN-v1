@@ -116,6 +116,7 @@ class DesaRepository(
             hadir = d.getBoolean("hadir") ?: false,
             keterangan = d.getString("keterangan") ?: "",
             jejak = d.jejak(),
+            status = d.getString("status") ?: if (d.getBoolean("hadir") == true) "HADIR" else "ALPA",
         )
     }
 
@@ -291,15 +292,16 @@ class DesaRepository(
     // -- absensi
     /** [sudahAda] true bila data absensi anggota itu pada tanggal tersebut sudah tercatat (menentukan buat baru atau ubah). */
     suspend fun simpanAbsensi(
-        anggota: AnggotaDesa, tanggalMillis: Long, hadir: Boolean, keterangan: String, sudahAda: Boolean,
+        anggota: AnggotaDesa, tanggalMillis: Long, status: String, keterangan: String, sudahAda: Boolean,
     ): HasilAuth<Unit> = aman { k ->
+        val hadir = status == "HADIR"
         val ref = koleksi(k, "absensi").document("${anggota.id}_$tanggalMillis")
         val t = System.currentTimeMillis()
         val isi = mapOf<String, Any>(
             "anggotaId" to anggota.id, "anggotaNama" to anggota.nama,
-            "tanggalMillis" to tanggalMillis, "hadir" to hadir, "keterangan" to keterangan,
+            "tanggalMillis" to tanggalMillis, "hadir" to hadir, "status" to status, "keterangan" to keterangan,
         )
-        val ringkas = "${anggota.nama}: ${if (hadir) "hadir" else "tidak hadir"}"
+        val ringkas = "${anggota.nama}: ${status.lowercase()}"
         if (sudahAda) tulis(k, "absensi", "ubah", ringkas, ref, isi + jejakUbah(k, t), false)
         else tulis(k, "absensi", "tambah", ringkas, ref, isi + jejakBaru(k, t), true)
     }
@@ -441,7 +443,7 @@ class DesaRepository(
                 kerja += koleksi(k, "absensi").document("${aid}_${it.tanggalMillis}") to
                     (mapOf<String, Any>(
                         "anggotaId" to aid, "anggotaNama" to (namaAnggota[it.anggotaId] ?: "(anggota lama)"),
-                        "tanggalMillis" to it.tanggalMillis, "hadir" to it.hadir, "keterangan" to it.keterangan,
+                        "tanggalMillis" to it.tanggalMillis, "hadir" to it.hadir, "status" to it.status, "keterangan" to it.keterangan,
                     ) + jb)
             }
             proker.forEach {
