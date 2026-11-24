@@ -67,6 +67,12 @@ fun LaporanScreen(vm: LaporanViewModel) {
         }
 
         Text("Laporan", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+        var word by remember { mutableStateOf(PembuatLaporan.formatWord) }
+        Text("Format laporan teks (surat, register, rekap, jurnal)", fontSize = 12.sp, color = TeksRedup)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PilChip("PDF", !word, { word = false; PembuatLaporan.formatWord = false }, Modifier.weight(1f))
+            PilChip("Word (bisa disunting)", word, { word = true; PembuatLaporan.formatWord = true }, Modifier.weight(1f))
+        }
         JenisLaporan.entries.filter { it != JenisLaporan.BACKUP_ZIP }.forEach { jenis ->
             KartuGelap(Modifier.fillMaxWidth().tekanPegas {
                 if (!sedangProses) vm.buat(jenis) { file, mime -> PembuatLaporan.bagikan(context, file, mime) }

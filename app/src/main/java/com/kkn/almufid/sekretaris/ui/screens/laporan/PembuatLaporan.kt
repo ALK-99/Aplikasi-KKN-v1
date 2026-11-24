@@ -24,7 +24,17 @@ object PembuatLaporan {
     fun teks(context: Context, namaFile: String, isi: String): File =
         File(folder(context), namaFile).apply { writeText(isi, Charsets.UTF_8) }
 
+    /** Bila true, laporan "PDF" dibuat sebagai berkas Word (.docx) supaya bisa disunting dulu. */
+    @Volatile var formatWord: Boolean = false
+
+    fun docx(context: Context, namaFile: String, judul: String, subjudul: String, baris: List<String>): File {
+        val file = File(folder(context), namaFile.removeSuffix(".pdf").removeSuffix(".docx") + ".docx")
+        DocxWriter.tulis(file, DocxWriter.dariBaris(judul, subjudul, baris), mendatar = false)
+        return file
+    }
+
     fun pdf(context: Context, namaFile: String, judul: String, subjudul: String, baris: List<String>): File {
+        if (formatWord) return docx(context, namaFile, judul, subjudul, baris)
         val doc = PdfDocument()
         val penulis = PenulisPdf(doc)
         penulis.halamanBaru()

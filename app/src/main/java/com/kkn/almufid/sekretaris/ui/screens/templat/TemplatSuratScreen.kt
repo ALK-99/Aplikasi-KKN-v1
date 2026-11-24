@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.sp
 import com.kkn.almufid.sekretaris.data.cloud.DesaRepository
 import com.kkn.almufid.sekretaris.data.entity.JenisSurat
 import com.kkn.almufid.sekretaris.ui.components.KartuGelap
+import com.kkn.almufid.sekretaris.ui.screens.laporan.BlokDocx
+import com.kkn.almufid.sekretaris.ui.screens.laporan.DocxWriter
+import com.kkn.almufid.sekretaris.ui.screens.laporan.MIME_DOCX
 import com.kkn.almufid.sekretaris.ui.screens.laporan.PembuatLaporan
 import com.kkn.almufid.sekretaris.ui.theme.*
 import kotlinx.coroutines.launch
@@ -73,6 +76,21 @@ private fun rakit(s: IsiSurat): List<String> {
     }
     paragraf += "Wassalamu'alaikum Warahmatullahi Wabarakatuh."
     return paragraf
+}
+
+private fun buatDocxSurat(context: Context, s: IsiSurat): File {
+    val blok = mutableListOf<BlokDocx>()
+    blok += BlokDocx.Paragraf("KELOMPOK KKN AL-MUSHLIH 2027", true, "center", 30)
+    blok += BlokDocx.Paragraf("Desa ${s.desa}", false, "center", 22)
+    blok += BlokDocx.Paragraf("", false)
+    blok += BlokDocx.Paragraf(s.tempatTanggal, false, "right")
+    blok += BlokDocx.Paragraf("Nomor : ${s.nomor.ifBlank { "-" }}\nLampiran : ${s.lampiran.ifBlank { "-" }}\nPerihal : ${s.perihal}")
+    blok += BlokDocx.Paragraf("Kepada Yth.\n${s.tujuan}")
+    rakit(s).forEach { blok += BlokDocx.Paragraf(it, false, "both") }
+    blok += BlokDocx.Paragraf("Hormat kami,\n\nKetua                                                           Sekretaris\n\n\n${s.ketua.ifBlank { "........................" }}                                     ${s.sekretaris.ifBlank { "........................" }}")
+    val file = File(File(context.cacheDir, "laporan").apply { mkdirs() }, "Surat_${s.jenis.name}.docx")
+    DocxWriter.tulis(file, blok)
+    return file
 }
 
 /** Menggambar surat resmi A4 (kop, nomor, isi, tanda tangan Ketua dan Sekretaris). */
@@ -204,6 +222,23 @@ fun TemplatSuratScreen(desa: DesaRepository) {
             },
             modifier = Modifier.fillMaxWidth().height(52.dp)
         ) { Text("Buat PDF Surat", fontWeight = FontWeight.Bold) }
+        Spacer(Modifier.height(8.dp))
+        androidx.compose.material3.OutlinedButton(
+            onClick = {
+                if (tujuan.isBlank()) { pesan = "Isi dulu bagian Kepada Yth."; return@OutlinedButton }
+                val judulPerihal = perihal.ifBlank { jenis.perihal }
+                val isiSurat = IsiSurat(jenis, nomor, lampiran, judulPerihal, tujuan, tempatTanggal, inti, hari, waktu, lokasi, ketua, sekretaris, namaDesa)
+                try {
+                    val file = buatDocxSurat(context, isiSurat)
+                    PembuatLaporan.bagikan(context, file, MIME_DOCX)
+                    pesan = "Berkas Word dibuat. Buka di Word/WPS untuk menyunting."
+                    if (catat) scope.launch { try { desa.tambahSurat(JenisSurat.KELUAR, nomor, judulPerihal, tujuan.lines().first()) } catch (e: Exception) { } }
+                } catch (e: Exception) {
+                    pesan = "Gagal membuat Word: ${e.message}"
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(48.dp)
+        ) { Text("Buat Word Surat (bisa disunting)", fontWeight = FontWeight.Bold) }
         pesan?.let { Text(it, color = Gold, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp)) }
         Spacer(Modifier.height(24.dp))
     }

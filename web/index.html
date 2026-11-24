@@ -132,6 +132,9 @@ const auth = firebase.auth(), db = firebase.firestore();
 // Mode offline: data terakhir tetap bisa dibaca, dan perubahan dikirim otomatis saat internet kembali.
 try { db.enablePersistence({synchronizeTabs: true}).catch(() => {}); } catch (e) {}
 
+/* Pilihan (select/filter) langsung diterapkan: lepas fokus lebih dulu supaya penyegaran halaman tidak dilewati. */
+document.addEventListener("change", (e) => { if (e.target && e.target.tagName === "SELECT" && e.target.closest("#isi")) e.target.blur(); }, true);
+
 /* ---------- state ---------- */
 let me = null, desaId = "", admin = false, data = {}, halaman = "beranda", kata = "", saring = {};
 const unsub = [];
@@ -271,7 +274,8 @@ const urutBaru = (a) => a.slice().sort((x, y) => (y.tanggalMillis || y.waktu || 
 const statusTag = (s) => `<span class="tag ${s==="SELESAI"?"ok":s==="BERJALAN"?"warn":s==="BATAL"?"bad":""}">${esc(({BELUM_MULAI:"Belum mulai",BERJALAN:"Berjalan",SELESAI:"Selesai",BATAL:"Batal"})[s]||s)}</span>`;
 
 /* ---------- waktu sholat (rumus yang sama dengan HP) ---------- */
-const KOTA = {Surabaya:[-7.2575,112.7521],Jombang:[-7.5467,112.2331],Mojokerto:[-7.4704,112.4401],Malang:[-7.9666,112.6326],Yogyakarta:[-7.7956,110.3695],Jakarta:[-6.2088,106.8456],Bandung:[-6.9175,107.6191],Medan:[3.5952,98.6722],Makassar:[-5.1477,119.4327],Denpasar:[-8.65,115.2167]};
+const KOTA = {Jakarta:[-6.2088,106.8456],Yogyakarta:[-7.7956,110.3695],Surabaya:[-7.2575,112.7521]};
+const kotaPilihan = () => { const k = localStorage.getItem("kkn_kota_sholat"); return KOTA[k] ? k : "Yogyakarta"; };
 function sholat(lin, buj, zona, T, B, H) {
   const R = Math.PI / 180, D = 180 / Math.PI, fix = (a, b) => a - b * Math.floor(a / b);
   let y = T, m = B; if (m <= 2) { y--; m += 12; } const a = Math.floor(y / 100), bb = 2 - a + Math.floor(a / 4);
@@ -295,7 +299,7 @@ HAL.beranda = (el) => {
   const ang = aktif("anggota").filter((a) => a.aktif !== false), hari = awalHari(Date.now());
   const hadir = aktif("absensi").filter((a) => a.tanggalMillis === hari && a.hadir).length;
   const kasM = aktif("kas").filter((k) => k.masuk !== false).reduce((s, k) => s + (k.jumlah || 0), 0), kasK = aktif("kas").filter((k) => k.masuk === false).reduce((s, k) => s + (k.jumlah || 0), 0);
-  const j = jadwalHariIni("Yogyakarta"), now = new Date().getHours() + new Date().getMinutes() / 60;
+  const j = jadwalHariIni(kotaPilihan()), now = new Date().getHours() + new Date().getMinutes() / 60;
   const urut = j.filter((x) => x[0] !== "Terbit"), next = urut.find((x) => x[1] > now) || urut[0];
   const perhatian = [];
   const nowMs = Date.now();
@@ -576,11 +580,11 @@ HAL.polling = (el) => {
 };
 
 HAL.sholat = (el) => {
-  const kota = saring.kota || "Yogyakarta", j = jadwalHariIni(kota), now = new Date().getHours() + new Date().getMinutes() / 60, urut = j.filter((x) => x[0] !== "Terbit"), next = urut.find((x) => x[1] > now) || urut[0];
-  el.innerHTML = `<div class="bar"><select id="kt" style="max-width:240px">${Object.keys(KOTA).map((k) => `<option ${k === kota ? "selected" : ""}>${k}</option>`).join("")}</select><span class="tag">${new Date().toLocaleDateString("id-ID", {weekday: "long", day: "numeric", month: "long"})}</span></div>
+  const kota = kotaPilihan(), j = jadwalHariIni(kota), now = new Date().getHours() + new Date().getMinutes() / 60, urut = j.filter((x) => x[0] !== "Terbit"), next = urut.find((x) => x[1] > now) || urut[0];
+  el.innerHTML = `<div class="bar"><select id="kt" style="max-width:240px">${Object.keys(KOTA).map((k) => `<option ${k === kota ? "selected" : ""}>${k}</option>`).join("")}</select><span class="tag">${new Date().toLocaleDateString("id-ID", {weekday: "long", day: "numeric", month: "long"})}</span><span class="tag ok">Pengingat 10 menit sebelum adzan: aktif</span></div>
     <div class="grid">${j.map((x) => `<div class="k" style="${x === next ? "outline:2px solid var(--vio)" : ""}"><b>${jamFmt(x[1])}</b><span>${x[0]}${x === next ? " · berikutnya" : ""}</span></div>`).join("")}</div>
     <p style="color:var(--mut)">Perhitungan offline memakai parameter Kemenag RI (Subuh 20°, Isya 18°, Ashar mazhab Syafi'i, ihtiyath +2 menit). Hasilnya perkiraan; cocokkan dengan jadwal resmi setempat. Zona waktu WIB.</p>`;
-  $("kt").onchange = (e) => { saring.kota = e.target.value; gambar(); };
+  $("kt").onchange = (e) => { localStorage.setItem("kkn_kota_sholat", e.target.value); gambar.paksa = true; try { gambar(); } finally { gambar.paksa = false; } };
 };
 
 HAL.riwayat = (el) => {
@@ -746,7 +750,7 @@ async function bacaCadangan(file) {
 const DARURAT = [["Polisi","110"],["Ambulans / gawat darurat","118 atau 119"],["Pemadam kebakaran","113"],["Badan SAR Nasional","115"],["PLN (gangguan listrik)","123"],["Nomor darurat umum","112"]];
 HAL.pengaturan = (el) => {
   el.innerHTML = `<div class="cards"><div class="card"><h3>Tampilan</h3><div class="chips">${["auto","terang","gelap"].map((t, i) => `<button class="chip ${temaIdx === i ? "on" : ""}" data-th="${i}">${["Ikuti sistem","Terang","Gelap"][i]}</button>`).join("")}</div></div>
-  <div class="card"><h3>Pengingat</h3><p>Notifikasi tugas, jadwal proker, absensi, dan pengumuman yang belum dibuka. Diulang tiap 15 menit sampai kamu membukanya.</p><label><input type="checkbox" id="pgOn" style="width:auto" ${pengingatAktif() ? "checked" : ""}> Aktif</label></div>
+  <div class="card"><h3>Pengingat</h3><p>Notifikasi tugas, jadwal proker, absensi, dan pengumuman yang belum dibuka. Diulang tiap 15 menit sampai kamu membukanya.</p><label><input type="checkbox" id="pgOn" style="width:auto" ${pengingatAktif() ? "checked" : ""}> Aktif</label><p style="margin-top:12px">Pengingat sholat 10 menit sebelum adzan (kota dipilih di menu Waktu Sholat).</p><label><input type="checkbox" id="pgSh" style="width:auto" ${sholatAktif() ? "checked" : ""}> Aktif</label></div>
   ${(window.kkn && window.kkn.mulaiOtomatis) ? `<div class="card"><h3>Aplikasi Windows</h3><p>Tombol X menyembunyikan aplikasi ke baki sistem (dekat jam) supaya pengingat tetap muncul. Untuk keluar total, klik kanan ikonnya lalu pilih Keluar.</p><label><input type="checkbox" id="oto" style="width:auto"> Jalankan otomatis saat Windows menyala</label></div>` : ""}
   <div class="card"><h3>Pembaruan</h3><p id="vtxt">Memeriksa…</p><div class="aksi" style="justify-content:flex-start"><button class="sek" data-cek>Cek sekarang</button></div></div>
   <div class="card"><h3>Panduan</h3><p>Lihat lagi pengantar singkat aplikasi.</p><button class="sek" data-pn>Buka panduan</button></div></div>
@@ -756,6 +760,7 @@ HAL.pengaturan = (el) => {
   el.querySelectorAll("[data-th]").forEach((b) => b.onclick = () => { temaIdx = +b.dataset.th; localStorage.setItem("kkn_tema", TEMA[temaIdx]); pasangTema(); gambar(); });
   $("pgOn").onchange = (e) => { localStorage.setItem("kkn_pengingat", e.target.checked ? "1" : "0"); if (e.target.checked && "Notification" in window) Notification.requestPermission(); };
   if ($("oto")) { window.kkn.mulaiOtomatis().then((a) => $("oto").checked = !!a); $("oto").onchange = (e) => window.kkn.mulaiOtomatis(e.target.checked).then((a) => toast(a ? "Akan jalan otomatis saat Windows menyala" : "Tidak jalan otomatis")); }
+  $("pgSh").onchange = (e) => { localStorage.setItem("kkn_sholat_ingat", e.target.checked ? "1" : "0"); if (e.target.checked && "Notification" in window) Notification.requestPermission(); };
   el.querySelector("[data-pn]").onclick = panduan;
   el.querySelector("[data-cek]").onclick = () => cekPembaruan(true);
   cekPembaruan(false);
@@ -827,6 +832,24 @@ setInterval(() => {
   n.onclick = () => { tandaiDilihat(L.map((x) => x[0])); window.focus(); halaman = "beranda"; bangunMenu(); gambar(); n.close(); };
 }, 60 * 1000);
 if ("Notification" in window && Notification.permission === "default" && pengingatAktif()) setTimeout(() => Notification.requestPermission(), 4000);
+
+/* ---------- Waktu sholat: segarkan tiap menit + pengingat islami 10 menit sebelum adzan ---------- */
+const PESAN_ISLAMI = ["Sesungguhnya sholat itu adalah kewajiban yang ditentukan waktunya atas orang-orang beriman. (QS. An-Nisa: 103)", "Perkara pertama yang dihisab dari seorang hamba pada hari kiamat adalah sholatnya. (HR. At-Tirmidzi)", "Jagalah sholat-sholatmu dan sholat wustha, dan berdirilah karena Allah dengan khusyuk. (QS. Al-Baqarah: 238)", "Sholat adalah tiang agama. (HR. Al-Baihaqi)", "Maka dirikanlah sholat untuk mengingat-Ku. (QS. Thaha: 14)", "Sholat berjamaah lebih utama 27 derajat daripada sholat sendirian. (HR. Bukhari dan Muslim)", "Rehatkan kami dengan sholat, wahai Bilal. (HR. Abu Dawud)"];
+const sholatAktif = () => localStorage.getItem("kkn_sholat_ingat") !== "0";
+function cekIngatSholat() {
+  if (!me || !sholatAktif() || !("Notification" in window) || Notification.permission !== "granted") return;
+  const n = new Date(), hariKode = n.toISOString().slice(0, 10), now = n.getHours() * 60 + n.getMinutes() + n.getSeconds() / 60;
+  jadwalHariIni(kotaPilihan()).filter((x) => x[0] !== "Terbit").forEach((x) => {
+    const adzan = Math.round(x[1] * 60), sisa = adzan - now, kunci = "kkn_ing_" + hariKode + x[0];
+    if (sisa > 0 && sisa <= 10 && !localStorage.getItem(kunci)) {
+      localStorage.setItem(kunci, "1");
+      new Notification(`${Math.max(1, Math.round(sisa))} menit lagi adzan ${x[0]} (${jamFmt(x[1])})`, {body: "Bersiap wudhu dan menunaikan sholat tepat waktu.\n" + PESAN_ISLAMI[Math.floor(Math.random() * PESAN_ISLAMI.length)], requireInteraction: true});
+    }
+  });
+  Object.keys(localStorage).filter((k) => k.startsWith("kkn_ing_") && !k.startsWith("kkn_ing_" + hariKode)).forEach((k) => localStorage.removeItem(k));
+}
+setInterval(() => { cekIngatSholat(); if ((halaman === "sholat" || halaman === "beranda") && me) gambar(); }, 30000);
+setTimeout(cekIngatSholat, 5000);
 
 /* ---------- Penanda offline ---------- */
 function penandaOffline() {

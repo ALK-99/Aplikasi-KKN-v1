@@ -146,7 +146,7 @@ class LaporanViewModel(
         viewModelScope.launch {
             try {
                 val file = withContext(Dispatchers.IO) { bangun(jenis) }
-                onSiap(file, jenis.mime)
+                onSiap(file, if (file.extension == "docx") MIME_DOCX else jenis.mime)
             } catch (e: Exception) {
                 _pesan.value = "Gagal membuat laporan: ${e.message ?: "kesalahan tidak diketahui"}"
             } finally {
