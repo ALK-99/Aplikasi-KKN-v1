@@ -178,3 +178,10 @@ Menu Jadwal Mengajar (hari, jam, lembaga/kelas, materi, pengajar, catatan) di An
 - Saring dan urutkan di menu yang datanya banyak (PC semua tabel; Android Surat, Inventaris, Nota, Riwayat, Proker, Tugas, Kas, Pengumuman).
 - Getar saat ada pengumuman atau polling baru (Android).
 - Asisten (PC dan Android): perintah bahasa Indonesia untuk kas, tugas, pengumuman, inventaris, surat, plus tanya saldo/tugas/proker/absensi. Selalu minta konfirmasi. Mode pintar opsional memakai kunci Gemini gratis milik pengguna.
+
+## Tahap K: Asisten lebih pintar
+- Asisten bukan menu lagi, tapi bola melayang di semua halaman (bisa digeser, menempel ke tepi, bisa dikecilkan). Panel membuka dari bola.
+- Perbaikan error 503: model dicoba berurutan (gemini-flash-latest, gemini-2.5-flash, gemini-flash-lite-latest, gemini-2.5-flash-lite), tiap model diulang sekali saat sibuk.
+- Unggah PDF, Word (.docx), Excel (.xlsx), CSV, TXT untuk screening dan entri banyak data sekaligus (butuh Mode pintar).
+- Riwayat obrolan dan ingatan pribadi tersimpan di perangkat; bisa dilihat dan dihapus.
+- Asisten tanpa kunci kini juga bisa sapaan, perkenalan, "ingat bahwa ...".
