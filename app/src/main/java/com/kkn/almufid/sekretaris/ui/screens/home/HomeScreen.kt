@@ -369,7 +369,6 @@ private fun MenuKartu(tujuan: Tujuan, modifier: Modifier, onClick: () -> Unit) {
         Tujuan.RIWAYAT -> Color(0xFF4A5AA8) to Color(0xFF9FB0FF)
         Tujuan.IBADAH -> Color(0xFF0B7A5C) to Color(0xFF2BD4A0)
         Tujuan.PETA -> Color(0xFF0E8CA0) to Color(0xFF5CE1E6)
-        Tujuan.ASISTEN -> Color(0xFF6A3FD6) to Color(0xFFB58BFF)
         Tujuan.PROFIL -> Color(0xFF0E7C9A) to Color(0xFF4FD1E8)
         Tujuan.PENGATURAN -> Color(0xFF5A6072) to Color(0xFF9AA0BF)
         Tujuan.PENCARIAN -> Color(0xFF3B5BDB) to Color(0xFF8FA8FF)

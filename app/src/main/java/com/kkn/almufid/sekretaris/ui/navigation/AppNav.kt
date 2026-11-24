@@ -87,6 +87,7 @@ fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
 
     com.kkn.almufid.sekretaris.pengingat.PemantauGetar()
     Surface(Modifier.fillMaxSize(), color = Ground, contentColor = TeksUtama) {
+        Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             if (judul != null) HeaderHalaman(judul) { navController.popBackStack() }
             NavHost(
@@ -160,10 +161,6 @@ fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
                     val vm: RiwayatViewModel = viewModel(factory = GenericViewModelFactory { RiwayatViewModel(desaRepo) })
                     RiwayatScreen(vm)
                 }
-                composable(Tujuan.ASISTEN.rute) {
-                    val vm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })
-                    com.kkn.almufid.sekretaris.ui.screens.asisten.AsistenScreen(vm, desaRepo)
-                }
                 composable(Tujuan.IBADAH.rute) { IbadahScreen() }
                 composable(Tujuan.PETA.rute) { PetaScreen() }
                 composable(Tujuan.DOKUMEN.rute) {
@@ -180,6 +177,9 @@ fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
                     PengaturanScreen(onLogout = onLogout, onPanduan = onPanduan)
                 }
             }
+        }
+        val asistenVm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })
+        com.kkn.almufid.sekretaris.ui.screens.asisten.AsistenOverlay(asistenVm, desaRepo)
         }
     }
 }

@@ -24,7 +24,6 @@ enum class Tujuan(val rute: String, val judul: String, val ikon: ImageVector) {
     RIWAYAT("riwayat", "Riwayat Perubahan", Icons.Default.History),
     PROFIL("profil", "Profil Saya", Icons.Default.Person),
     PENGATURAN("pengaturan", "Pengaturan", Icons.Default.Settings),
-    ASISTEN("asisten", "Asisten", Icons.Default.SmartToy),
     PENCARIAN("cari", "Pencarian", Icons.Default.Search);
 
     companion object {
@@ -74,8 +73,8 @@ enum class KategoriMenu(
         emptyList(), listOf(SEKRETARIS, BENDAHARA, MEDIA, PENDIDIKAN)
     ),
     UMUM(
-        "Menu Umum", "Asisten, pengumuman, polling, jadwal sholat, dan peta", Icons.Default.Public,
-        listOf(Tujuan.ASISTEN, Tujuan.PENGUMUMAN, Tujuan.POLLING, Tujuan.IBADAH, Tujuan.PETA)
+        "Menu Umum", "Pengumuman, polling, jadwal sholat, dan peta", Icons.Default.Public,
+        listOf(Tujuan.PENGUMUMAN, Tujuan.POLLING, Tujuan.IBADAH, Tujuan.PETA)
     ),
     LAINNYA(
         "Lainnya", "Riwayat dan pengaturan", Icons.Default.MoreHoriz,

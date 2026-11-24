@@ -237,7 +237,7 @@ const MENU = [
   ["Bendahara", [["nota","🧾","Arsip Nota"],["rekon","⚖️","Rekonsiliasi"],["kas","💰","Kas Kelompok"]]],
   ["Media", [["jurnal","📖","Jurnal & Notulen"]]],
   ["Pendidikan", [["ajar","🎓","Jadwal Mengajar"]]],
-  ["Umum", [["pengumuman","📣","Pengumuman"],["polling","📊","Polling"],["sholat","🕌","Waktu Sholat"],["asisten","🤖","Asisten"]]],
+  ["Umum", [["pengumuman","📣","Pengumuman"],["polling","📊","Polling"],["sholat","🕌","Waktu Sholat"]]],
   ["Lainnya", [["riwayat","🕘","Riwayat Perubahan"]]],
 ];
 const JUDUL = {}; MENU.forEach(([, m]) => m.forEach((x) => JUDUL[x[0]] = x[2])); JUDUL.cari = "Hasil Pencarian";
@@ -838,10 +838,16 @@ HAL.kendali = (el) => {
   el.querySelectorAll("[data-b]").forEach((b) => b.onclick = () => { const x = u.find((y) => y.id === b.dataset.b); konfirm(`${x.akunDiblokir ? "Buka blokir" : "Blokir"} ${x.namaLengkap}?`, () => coba(() => db.collection("users").doc(x.id).update({akunDiblokir: !x.akunDiblokir}), "Diperbarui")); });
 };
 
-/* ---------- Asisten KKN: bot gratis (paham perintah lokal + mode pintar Gemini opsional) ---------- */
-JUDUL.asisten = "Asisten";
+/* ---------- Asisten KKN: bola melayang, bot gratis (lokal + Gemini), file, riwayat, ingatan ---------- */
 const asistenLog = [];
-const ASISTEN_CONTOH = ["Catat kas masuk 50 ribu iuran anggota", "Kas keluar 25rb beli spidol", "Tugas buat poster untuk Fahmi besok", "Berapa saldo kas?", "Tugas apa yang belum selesai?", "Ringkasan hari ini"];
+const MODEL_BAWAAN = "gemini-flash-latest, gemini-2.5-flash, gemini-flash-lite-latest, gemini-2.5-flash-lite";
+const ASISTEN_CONTOH = ["Catat kas masuk 50 ribu iuran anggota", "Tugas buat poster untuk Fahmi besok", "Berapa saldo kas?", "Tugas apa yang belum selesai?", "Ringkasan hari ini"];
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const kunciIng = () => "kkn_as_ing_" + (me ? me.uid : "x"), kunciRiw = () => "kkn_as_riw_" + (me ? me.uid : "x");
+const bacaJson = (k) => { try { return JSON.parse(lsGet(k, "[]")) || []; } catch (e) { return []; } };
+const ingatan = () => bacaJson(kunciIng());
+function tambahIngatan(arr) { const a = ingatan(); (arr || []).forEach((t) => { t = String(t || "").trim().slice(0, 200); if (t && !a.some((x) => x.toLowerCase() === t.toLowerCase())) a.push(t); }); lsSet(kunciIng(), JSON.stringify(a.slice(-40))); }
 
 function uangDari(t) {
   const re = /(?:rp\.?\s*)?(\d{1,3}(?:\.\d{3})+|\d+(?:,\d+)?)\s*(juta|jt|ribu|rb|k)?\b/gi, semua = [];
@@ -870,8 +876,19 @@ const bersihKata = (t, buang) => buang.reduce((s, b) => s.replace(b, " "), t).re
 const kapital = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
 function saldoKas() { const k = aktif("kas"); const m = k.filter((x) => x.masuk).reduce((s, x) => s + (x.jumlah || 0), 0), o = k.filter((x) => !x.masuk).reduce((s, x) => s + (x.jumlah || 0), 0); return {m, o, saldo: m - o}; }
+function sosialLokal(q) {
+  const nama = me ? me.nama.split(" ")[0] : "";
+  if (/^(halo|hai|hi|hey|assalamu|salam|selamat (pagi|siang|sore|malam))/.test(q)) return `Halo ${nama}. Ada yang mau dicatat atau ditanyakan hari ini?`;
+  if (/siapa (kamu|anda)|kamu siapa|nama (kamu|mu)/.test(q)) return "Saya asisten KKN Al-Mushlih. Saya bantu sekretaris dan bendahara mencatat kas, tugas, pengumuman, inventaris, dan surat, serta menjawab soal data desa. Aktifkan Mode pintar untuk ngobrol bebas dan membaca file.";
+  if (/bisa apa|bantuan|help|cara pakai|fitur/.test(q)) return "Saya bisa: catat kas masuk/keluar, buat tugas, pengumuman, inventaris, surat; jawab saldo, tugas, proker, absensi. Dengan Mode pintar saya juga bisa ngobrol, membaca PDF/Word/Excel, dan mengingat kesulitanmu.";
+  if (/terima kasih|makasih|thanks/.test(q)) return "Sama-sama. Panggil saya kapan saja.";
+  let m = q.match(/^ingat(?:kan)?(?: bahwa| ya)?[\s:,]+(.+)/); if (m) { tambahIngatan([m[1]]); return "Siap, saya ingat: " + m[1]; }
+  if (/apa (yang )?(kamu )?ingat|ingatanmu/.test(q)) { const a = ingatan(); return a.length ? "Yang saya ingat:\n" + a.map((x) => "• " + x).join("\n") : "Belum ada yang saya ingat. Katakan \"ingat bahwa ...\" untuk menyimpan."; }
+  return null;
+}
 function pahamiLokal(teks) {
   const q = teks.toLowerCase().trim(), uang = uangDari(teks);
+  const sos = sosialLokal(q); if (sos) return {balasan: sos};
   const tanya = /^(berapa|siapa|apa|apakah|tampilkan|lihat|cek|ringkasan|rekap|status|daftar|bagaimana)|\?$/.test(q);
   if (tanya || (!/catat|tambah|buat|input|bikin|kirim/.test(q) && /saldo|ringkasan|rekap/.test(q))) {
     if (/saldo|kas/.test(q)) { const s = saldoKas(); return {balasan: `Kas kelompok: pemasukan ${rp(s.m)}, pengeluaran ${rp(s.o)}, saldo ${rp(s.saldo)}.`}; }
@@ -885,56 +902,129 @@ function pahamiLokal(teks) {
   if (/\bkas\b|pemasukan|pengeluaran|iuran|dana masuk|dana keluar/.test(q) && uang) {
     const masuk = !/keluar|pengeluaran|bayar|beli|belanja|biaya/.test(q) || /masuk|terima|iuran|pemasukan/.test(q) && !/keluar/.test(q);
     const ket = kapital(bersihKata(teks, [uang.teks, /catat|tambah|input|bikin/ig, /\bkas\b/ig, /\b(masuk|keluar)\b/ig, /\bsebesar\b|\bsejumlah\b|\buntuk\b/ig]));
-    return {balasan: "Saya siap mencatat ini ke kas. Cek dulu, lalu tekan Simpan.", aksi: {jenis: "kas", masuk, jumlah: uang.n, kategori: masuk ? "Pemasukan" : "Pengeluaran", keterangan: ket}};
+    return {balasan: "Saya siap mencatat ini ke kas. Cek dulu, lalu tekan Simpan.", aksi: [{jenis: "kas", masuk, jumlah: uang.n, kategori: masuk ? "Pemasukan" : "Pengeluaran", keterangan: ket}]};
   }
   if (/pengumuman/.test(q)) {
     const isi = bersihKata(teks, [/buat(kan)?|tambah|bikin|kirim/ig, /pengumuman/i]);
-    if (isi) return {balasan: "Pengumuman siap dibuat.", aksi: {jenis: "pengumuman", judul: kapital(isi.split(/\s+/).slice(0, 7).join(" ")), isi: kapital(isi)}};
+    if (isi) return {balasan: "Pengumuman siap dibuat.", aksi: [{jenis: "pengumuman", judul: kapital(isi.split(/\s+/).slice(0, 7).join(" ")), isi: kapital(isi)}]};
   }
   if (/\btugas\b/.test(q) && /(buat|tambah|bikin|beri|kasih|catat)/.test(q)) {
     const m = teks.match(/\buntuk\s+([A-Za-zÀ-ÿ'.\- ]+?)(?=\s+(besok|lusa|hari ini|minggu|senin|selasa|rabu|kamis|jumat|sabtu|tanggal|\d)|$)/i);
     const untuk = m ? m[1].trim() : "", judul = kapital(bersihKata(teks, [/buat(kan)?|tambah|bikin|beri|kasih|catat/ig, /\btugas\b/i, m ? m[0] : "", /\b(besok|lusa|hari ini|minggu depan|\d+\s*hari lagi|tanggal\s*\d+)\b/ig, /\b(senin|selasa|rabu|kamis|jumat|sabtu)\b/ig]));
-    if (judul) return {balasan: "Tugas siap dibuat.", aksi: {jenis: "tugas", judul, deskripsi: "", untuk: untuk, tenggat: tenggatDari(teks)}};
+    if (judul) return {balasan: "Tugas siap dibuat.", aksi: [{jenis: "tugas", judul, deskripsi: "", untuk: untuk, tenggat: tenggatDari(teks)}]};
   }
   if (/inventaris|barang/.test(q)) {
     const m = teks.match(/(\d+)\s*(buah|unit|pcs|biji|set|lembar|botol|rim)?/i), n = m ? +m[1] : 1;
     const nama = kapital(bersihKata(teks, [/tambah(kan)?|catat|input|masukkan|bikin/ig, /inventaris|barang/ig, m ? m[0] : "", /kondisi\s+\w+/ig, /\bke\b/ig]));
     const kond = (q.match(/kondisi\s+(\w+)/) || [])[1];
-    if (nama) return {balasan: "Barang siap ditambahkan ke inventaris.", aksi: {jenis: "inventaris", nama, jumlah: n, kondisi: kond ? kapital(kond) : "Baik", keterangan: ""}};
+    if (nama) return {balasan: "Barang siap ditambahkan ke inventaris.", aksi: [{jenis: "inventaris", nama, jumlah: n, kondisi: kond ? kapital(kond) : "Baik", keterangan: ""}]};
   }
   if (/surat (masuk|keluar)/.test(q)) {
     const jenis = /surat masuk/.test(q) ? "MASUK" : "KELUAR", no = (teks.match(/nomor\s*[:\-]?\s*([\w\/.\-]+)/i) || [])[1] || "";
     const perihal = kapital(bersihKata(teks, [/catat|tambah|input|bikin/ig, /surat (masuk|keluar)/i, /nomor\s*[:\-]?\s*[\w\/.\-]+/ig, /perihal|tentang/ig]));
-    if (perihal) return {balasan: "Surat siap dicatat di register.", aksi: {jenis: "surat", jenisSurat: jenis, nomor: no, perihal, pihak: ""}};
+    if (perihal) return {balasan: "Surat siap dicatat di register.", aksi: [{jenis: "surat", jenisSurat: jenis, nomor: no, perihal, pihak: ""}]};
   }
-  return {balasan: "Saya belum paham. Coba contoh: \"Catat kas masuk 50 ribu iuran\", \"Tugas buat laporan untuk Fahmi besok\", \"Tambah inventaris spidol 5 buah\", \"Berapa saldo kas?\". Untuk bahasa bebas, aktifkan Mode pintar (gratis) di bawah."};
+  return {balasan: "Saya belum paham perintah itu dalam mode biasa. Contoh: \"Catat kas masuk 50 ribu iuran\", \"Tugas buat laporan untuk Fahmi besok\", \"Berapa saldo kas?\". Untuk ngobrol bebas dan membaca file, aktifkan Mode pintar (gratis) lewat tombol ⚙."};
 }
 
-const GEMINI_MODEL = () => localStorage.getItem("kkn_gemini_model") || "gemini-flash-latest";
+/* ----- Baca file: PDF dikirim utuh ke Gemini; Word, Excel, CSV dibaca di komputer ini ----- */
+const u16 = (d, o) => d[o] | (d[o + 1] << 8), u32 = (d, o) => (d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24)) >>> 0;
+async function bukaZip(buf) {
+  const d = new Uint8Array(buf); let e = d.length - 22; while (e >= 0 && u32(d, e) !== 0x06054b50) e--;
+  if (e < 0) throw new Error("File bukan Word/Excel yang valid");
+  const n = u16(d, e + 10); let p = u32(d, e + 16), td = new TextDecoder(), out = {};
+  for (let i = 0; i < n; i++) {
+    const met = u16(d, p + 10), cs = u32(d, p + 20), nl = u16(d, p + 28), el = u16(d, p + 30), cl = u16(d, p + 32), lo = u32(d, p + 42), nm = td.decode(d.subarray(p + 46, p + 46 + nl));
+    p += 46 + nl + el + cl;
+    if (!/^(word\/document\.xml|xl\/sharedStrings\.xml|xl\/worksheets\/sheet\d+\.xml)$/.test(nm)) continue;
+    const st = lo + 30 + u16(d, lo + 26) + u16(d, lo + 28), dat = d.subarray(st, st + cs);
+    let teks; if (met === 0) teks = td.decode(dat); else { const s = new Blob([dat]).stream().pipeThrough(new DecompressionStream("deflate-raw")); teks = await new Response(s).text(); }
+    out[nm] = teks;
+  }
+  return out;
+}
+const dekode = (s) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, c) => String.fromCharCode(+c)).replace(/&amp;/g, "&");
+async function teksDariFile(f) {
+  const nm = f.name.toLowerCase();
+  if (/\.(csv|txt)$/.test(nm)) return (await f.text()).slice(0, 40000);
+  if (/\.xls$/.test(nm)) throw new Error("Format .xls lama belum bisa dibaca. Simpan sebagai .xlsx atau .csv lalu unggah lagi.");
+  const z = await bukaZip(await f.arrayBuffer());
+  if (/\.docx$/.test(nm)) {
+    const x = z["word/document.xml"]; if (!x) throw new Error("Isi Word tidak ditemukan");
+    return dekode(x.replace(/<\/w:p>/g, "\n").replace(/<\/w:tc>/g, " | ").replace(/<w:tab\/>/g, "\t").replace(/<[^>]+>/g, "")).replace(/\n{3,}/g, "\n\n").slice(0, 40000);
+  }
+  if (/\.xlsx$/.test(nm)) {
+    const ss = []; (z["xl/sharedStrings.xml"] || "").replace(/<si>([\s\S]*?)<\/si>/g, (_, s) => { ss.push(dekode([...s.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((m) => m[1]).join(""))); });
+    let hasil = "";
+    for (const k of Object.keys(z).filter((k) => /worksheets/.test(k)).sort()) {
+      hasil += `\n# Lembar ${k.match(/sheet(\d+)/)[1]}\n`; let baris = 0;
+      for (const r of z[k].matchAll(/<row[^>]*>([\s\S]*?)<\/row>/g)) {
+        if (baris++ > 300) break; const sel = [];
+        for (const c of r[1].matchAll(/<c ([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+          const tp = (c[1].match(/t="(\w+)"/) || [])[1], v = ((c[2] || "").match(/<v>([\s\S]*?)<\/v>/) || [])[1], is = ((c[2] || "").match(/<t[^>]*>([\s\S]*?)<\/t>/) || [])[1];
+          sel.push(tp === "s" ? ss[+v] || "" : tp === "inlineStr" ? dekode(is || "") : v === undefined ? "" : dekode(v));
+        }
+        hasil += sel.join("\t").replace(/\t+$/, "") + "\n";
+      }
+    }
+    return hasil.slice(0, 40000);
+  }
+  throw new Error("Format belum didukung. Pakai PDF, Word (.docx), Excel (.xlsx), CSV, atau TXT.");
+}
+const keBase64 = (buf) => { let s = "", d = new Uint8Array(buf); for (let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000)); return btoa(s); };
+
+/* ----- Gemini: rantai model cadangan, ulang saat sibuk (503/429) ----- */
+const modelRantai = () => lsGet("kkn_gemini_model", MODEL_BAWAAN).split(",").map((s) => s.trim()).filter(Boolean);
 function konteksAsisten() {
   const s = saldoKas(), p = aktif("proker");
   return `Tanggal hari ini: ${new Date().toISOString().slice(0, 10)}. Desa: ${me.desa}. Pengguna: ${me.nama}.
 Anggota: ${(data.users || []).map((u) => u.namaLengkap).join(", ")}.
 Saldo kas: ${s.saldo} (masuk ${s.m}, keluar ${s.o}). Total nota: ${aktif("nota").reduce((a, n) => a + (n.nominal || 0), 0)}.
 Tugas belum selesai: ${aktif("tugas").filter((t) => !t.selesai).slice(0, 15).map((t) => `${t.judul} (${t.untukNama || "-"}, tenggat ${t.deadlineMillis ? keInput(t.deadlineMillis) : "-"})`).join("; ") || "tidak ada"}.
-Proker: ${p.slice(0, 15).map((x) => `${x.namaProker} [${x.status}]`).join("; ") || "belum ada"}.`;
+Proker: ${p.slice(0, 15).map((x) => `${x.namaProker} [${x.status}]`).join("; ") || "belum ada"}.
+Catatan kas terbaru: ${aktif("kas").slice(0, 12).map((x) => `${x.masuk ? "+" : "-"}${x.jumlah} ${x.keterangan || x.kategori || ""}`).join("; ") || "kosong"}.`;
 }
-async function pahamiGemini(teks, kunci) {
-  const sistem = `Kamu asisten sekretaris dan bendahara KKN. Jawab singkat dalam bahasa Indonesia. Balas HANYA JSON: {"balasan": string, "aksi": null atau objek}. Jenis aksi:
+const tunggu = (ms) => new Promise((r) => setTimeout(r, ms));
+async function pahamiGemini(teks, kunci, lampiran) {
+  const ing = ingatan();
+  const sistem = `Kamu "Asisten KKN", asisten pribadi yang cerdas, hangat, dan teliti untuk sekretaris dan bendahara KKN. Jawab dalam bahasa Indonesia yang jelas dan ringkas. Kamu boleh ngobrol, menjawab pertanyaan umum, menjelaskan, memberi saran, dan membantu mengelola data desa.
+Balas HANYA JSON: {"balasan": string, "aksi": [objek...], "ingat": [string...]}.
+"aksi" boleh kosong atau berisi banyak entri (maksimal 25) yang diusulkan untuk disimpan. Pengguna selalu mengonfirmasi, jadi usulkan bila data jelas. Jenis:
 {"jenis":"kas","masuk":bool,"jumlah":angka rupiah,"kategori":string,"keterangan":string}
 {"jenis":"tugas","judul":string,"deskripsi":string,"untuk":nama anggota atau "","tenggat":"YYYY-MM-DD" atau ""}
 {"jenis":"pengumuman","judul":string,"isi":string}
 {"jenis":"inventaris","nama":string,"jumlah":angka,"kondisi":string,"keterangan":string}
-{"jenis":"surat","jenisSurat":"MASUK"|"KELUAR","nomor":string,"perihal":string,"pihak":string}
-Jika pengguna hanya bertanya, jawab dari DATA dan aksi null. Jangan mengarang angka yang tidak ada di DATA. Jika ragu, tanyakan di "balasan" dan aksi null.
-DATA:\n${konteksAsisten()}`;
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL())}:generateContent`, {method: "POST", headers: {"Content-Type": "application/json", "x-goog-api-key": kunci}, body: JSON.stringify({systemInstruction: {parts: [{text: sistem}]}, contents: [{role: "user", parts: [{text: teks}]}], generationConfig: {responseMimeType: "application/json", temperature: 0.2}})});
-  if (!r.ok) { const e = await r.text(); throw new Error(r.status + " " + e.slice(0, 160)); }
-  const j = await r.json(), t = j.candidates && j.candidates[0] && j.candidates[0].content.parts.map((x) => x.text).join("");
-  const o = JSON.parse(t.replace(/^```json|```$/g, "").trim());
-  const a = o.aksi && o.aksi.jenis ? o.aksi : null;
-  if (a && a.jenis === "tugas") a.tenggat = a.tenggat ? new Date(a.tenggat + "T23:59:00").getTime() : 0;
-  return {balasan: String(o.balasan || "Selesai."), aksi: a};
+{"jenis":"surat","jenisSurat":"MASUK" atau "KELUAR","nomor":string,"perihal":string,"pihak":string}
+Jika ada file: ringkas isinya, lakukan screening (cek duplikat, angka janggal, total tidak cocok, tanggal aneh, data kurang), lalu usulkan entri bila relevan.
+"ingat": catatan singkat yang layak diingat jangka panjang tentang pengguna (kesulitan yang ia alami, kebiasaan, preferensi, konteks kegiatan). Kosongkan bila tidak ada hal baru.
+Jawab pertanyaan data hanya dari DATA; jangan mengarang angka yang tidak ada. Bila ragu atau data kurang, tanyakan di "balasan".
+INGATAN TENTANG PENGGUNA:
+${ing.length ? ing.map((x) => "- " + x).join("\n") : "(belum ada)"}
+DATA DESA:
+${konteksAsisten()}`;
+  const riw = bacaJson(kunciRiw()).slice(-12).map((x) => ({role: x.r === "u" ? "user" : "model", parts: [{text: x.t}]}));
+  const bagian = [{text: teks}]; if (lampiran && lampiran.pdf) bagian.push({inlineData: {mimeType: "application/pdf", data: lampiran.pdf}}); if (lampiran && lampiran.teks) bagian[0].text += `\n\n[ISI FILE ${lampiran.nama}]\n${lampiran.teks}`;
+  const badan = JSON.stringify({systemInstruction: {parts: [{text: sistem}]}, contents: [...riw, {role: "user", parts: bagian}], generationConfig: {responseMimeType: "application/json", temperature: 0.4}});
+  let galat = "";
+  for (const m of modelRantai()) for (let i = 0; i < 2; i++) {
+    let r; try { r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {method: "POST", headers: {"Content-Type": "application/json", "x-goog-api-key": kunci}, body: badan}); } catch (e) { throw new Error("Tidak ada koneksi internet"); }
+    if (r.ok) {
+      const j = await r.json(), t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts.map((x) => x.text).join("");
+      if (!t) { galat = m + ": jawaban kosong"; break; }
+      let o; try { o = JSON.parse(t.replace(/^```json|```$/g, "").trim()); } catch (e) { o = {balasan: t}; }
+      let a = Array.isArray(o.aksi) ? o.aksi : o.aksi && o.aksi.jenis ? [o.aksi] : [];
+      a = a.filter((x) => x && x.jenis).slice(0, 25).map((x) => { if (x.jenis === "tugas") x.tenggat = typeof x.tenggat === "string" && x.tenggat ? new Date(x.tenggat + "T23:59:00").getTime() : +x.tenggat || 0; return x; });
+      return {balasan: String(o.balasan || "Selesai."), aksi: a, ingat: Array.isArray(o.ingat) ? o.ingat : []};
+    }
+    const tx = await r.text(); let pesan = tx; try { pesan = JSON.parse(tx).error.message; } catch (e) {}
+    galat = `${m}: ${r.status}`;
+    if ([429, 500, 502, 503, 504].includes(r.status)) { if (i === 0) await tunggu(1500); continue; }
+    if (r.status === 404) break;
+    if (r.status === 400 && /API key/i.test(pesan)) throw new Error("Kunci API tidak valid. Periksa lagi kunci di pengaturan.");
+    if (r.status === 401 || r.status === 403) throw new Error("Kunci ditolak (" + r.status + "). Pastikan kunci dari aistudio.google.com/apikey.");
+    throw new Error(`${r.status} ${String(pesan).slice(0, 140)}`);
+  }
+  throw new Error("Semua model sedang sibuk atau tidak tersedia (" + galat + ")");
 }
 
 function ringkasAksi(a) {
@@ -948,41 +1038,97 @@ function ringkasAksi(a) {
 async function jalankanAksi(a) {
   if (a.jenis === "kas") return db.collection("kas").add({masuk: !!a.masuk, jumlah: Math.round(+a.jumlah || 0), kategori: a.kategori || "", keterangan: a.keterangan || "", penulisNama: me.nama, tanggalMillis: Date.now(), dihapus: false});
   if (a.jenis === "tugas") { const u = (data.users || []).find((x) => a.untuk && x.namaLengkap.toLowerCase().includes(String(a.untuk).toLowerCase().split(" ")[0])); return db.collection("tugas").add({judul: a.judul, deskripsi: a.deskripsi || "", untukUid: u ? u.id : "", untukNama: u ? u.namaLengkap : (a.untuk || ""), deadlineMillis: a.tenggat || 0, selesai: false, tanggalMillis: Date.now(), dihapus: false}); }
-  if (a.jenis === "pengumuman") { if (!admin) throw new Error("Pengumuman hanya bisa dibuat admin"); } if (a.jenis === "pengumuman") return db.collection("pengumuman").add({judul: a.judul, isi: a.isi, penulisNama: me.nama, tanggalMillis: Date.now(), dibacaOleh: [], dihapus: false});
+  if (a.jenis === "pengumuman") { if (!admin) throw new Error("Pengumuman hanya bisa dibuat admin"); return db.collection("pengumuman").add({judul: a.judul, isi: a.isi, penulisNama: me.nama, tanggalMillis: Date.now(), dibacaOleh: [], dihapus: false}); }
   if (a.jenis === "inventaris") return tulis("inventaris", "tambah", `${a.nama} (${a.jumlah})`, dk("inventaris").doc(), {namaBarang: a.nama, jumlah: Math.max(1, +a.jumlah || 1), kondisi: a.kondisi || "Baik", keterangan: a.keterangan || "", dihapus: false}, true);
   if (a.jenis === "surat") return tulis("surat", "tambah", `${a.jenisSurat} · ${a.perihal}`, dk("surat").doc(), {tanggalMillis: Date.now(), jenis: a.jenisSurat === "MASUK" ? "MASUK" : "KELUAR", nomorSurat: a.nomor || "", perihal: a.perihal, tujuanAtauPengirim: a.pihak || "", dihapus: false}, true);
   throw new Error("Jenis aksi tidak dikenal");
 }
 
-HAL.asisten = (el) => {
-  const kunci = localStorage.getItem("kkn_gemini") || "";
-  el.innerHTML = `<div class="card" style="max-width:760px"><div id="chat" style="min-height:260px;max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px"></div>
-    <div class="chips" style="margin:12px 0">${ASISTEN_CONTOH.map((c) => `<button class="chip" data-c>${esc(c)}</button>`).join("")}</div>
-    <div class="bar" style="margin:0"><input id="as-in" placeholder="Tulis perintah, mis. catat kas masuk 100 ribu iuran" style="max-width:none"><button id="as-kirim">Kirim</button></div>
-    <details style="margin-top:14px"><summary style="cursor:pointer;color:var(--soft)">Mode pintar (gratis, bahasa bebas) ${kunci ? "· aktif" : "· belum aktif"}</summary>
-      <p style="color:var(--mut)">Tanpa ini, asisten tetap bekerja memahami perintah umum (offline, gratis). Mode pintar memakai Google Gemini lewat kunci API gratis milikmu sendiri: buka aistudio.google.com/apikey, masuk dengan akun Google, klik Create API key, salin, tempel di sini. Kunci hanya disimpan di komputer ini. Saat dipakai, pertanyaanmu dan ringkasan data desa (saldo, tugas, proker, nama anggota) dikirim ke Google. Tidak ada tarif, tapi ada batas pemakaian harian.</p>
-      <div class="bar" style="margin:0"><input id="as-key" type="password" placeholder="Kunci API Gemini" value="${esc(kunci)}"><input id="as-model" value="${esc(GEMINI_MODEL())}" style="max-width:200px" title="Nama model"><button class="sek" id="as-simpan">Simpan</button></div></details></div>`;
-  const chat = $("chat"), tambah = (peran, teks, aksi) => {
-    const d = document.createElement("div"); d.style.cssText = `align-self:${peran === "u" ? "flex-end" : "flex-start"};max-width:85%;padding:10px 14px;border-radius:14px;white-space:pre-wrap;background:${peran === "u" ? "var(--vio)" : "var(--s2)"};color:${peran === "u" ? "#fff" : "inherit"}`;
-    d.textContent = teks;
-    if (aksi) { const r = document.createElement("div"); r.style.cssText = "margin-top:8px;padding:8px;border-radius:10px;background:rgba(0,0,0,.18)"; r.innerHTML = `<b>${esc(ringkasAksi(aksi))}</b><div class="aksi" style="justify-content:flex-start;margin-top:8px"><button class="kecil" data-ok>Simpan</button><button class="sek kecil" data-no>Batal</button></div>`;
-      r.querySelector("[data-ok]").onclick = async () => { r.querySelectorAll("button").forEach((b) => b.disabled = true); try { await Promise.race([jalankanAksi(aksi), new Promise((s) => setTimeout(s, 6000))]); r.innerHTML = `<b>Tersimpan:</b> ${esc(ringkasAksi(aksi))}`; asistenLog.push(["b", "Tersimpan: " + ringkasAksi(aksi)]); } catch (e) { r.innerHTML = `Gagal menyimpan: ${esc(e.message)}`; } };
-      r.querySelector("[data-no]").onclick = () => { r.innerHTML = "Dibatalkan."; };
-      d.appendChild(r); }
-    chat.appendChild(d); chat.scrollTop = chat.scrollHeight; if (!aksi) asistenLog.push([peran, teks]); };
-  if (!asistenLog.length) asistenLog.push(["b", `Halo ${me.nama.split(" ")[0]}, saya asisten KKN. Saya bisa mencatat kas, membuat tugas dan pengumuman, menambah inventaris, mencatat surat, serta menjawab soal saldo, tugas, proker, dan absensi. Semua perubahan minta konfirmasi dulu.`]);
-  const lama = asistenLog.slice(); asistenLog.length = 0; lama.forEach((x) => tambah(x[0], x[1]));
-  const kirim = async (t) => {
-    t = (t || $("as-in").value).trim(); if (!t) return; $("as-in").value = ""; tambah("u", t);
-    let h; const k = localStorage.getItem("kkn_gemini");
-    if (k) { try { h = await pahamiGemini(t, k); } catch (e) { tambah("b", "Mode pintar gagal (" + e.message + "). Saya coba cara biasa."); h = pahamiLokal(t); } } else h = pahamiLokal(t);
-    tambah("b", h.balasan, h.aksi);
+/* ----- Bola melayang + panel ----- */
+(function () {
+  const css = document.createElement("style");
+  css.textContent = `#app[hidden]~#as-fab,#app[hidden]~#as-panel,#login:not([hidden])~#as-fab,#login:not([hidden])~#as-panel{display:none!important}
+#as-fab{position:fixed;z-index:15;width:50px;height:50px;border-radius:50%;padding:0;display:grid;place-items:center;font-size:24px;opacity:.88;box-shadow:0 6px 20px rgba(60,40,160,.4);touch-action:none;user-select:none;cursor:grab;transition:opacity .15s,width .15s,height .15s}
+#as-fab:hover{opacity:1}#as-fab.mini{width:16px;height:46px;border-radius:8px;font-size:0;opacity:.55}
+#as-panel{position:fixed;z-index:16;bottom:14px;width:min(410px,calc(100vw - 28px));height:min(580px,78vh);background:var(--s1);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh),0 10px 40px rgba(0,0,0,.3);display:none;flex-direction:column;overflow:hidden}
+#as-panel.buka{display:flex}#as-panel .ph{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line)}#as-panel .ph b{flex:1}
+#as-panel .ph button{padding:5px 9px;font-size:12px}#as-chat{flex:1;overflow:auto;display:flex;flex-direction:column;gap:9px;padding:12px}
+#as-panel .gel{max-width:88%;padding:9px 12px;border-radius:14px;white-space:pre-wrap;word-break:break-word}
+#as-panel .ft{padding:8px 10px;border-top:1px solid var(--line)}#as-panel .ft .bar{margin:0;gap:6px}#as-panel .ft input[type=text],#as-panel .ft input:not([type]){flex:1;min-width:0;max-width:none}
+#as-panel .cps{display:flex;gap:6px;overflow-x:auto;padding:0 10px 6px}#as-panel .cps .chip{white-space:nowrap;font-size:12px}
+#as-set{padding:10px 12px;border-top:1px solid var(--line);display:none;max-height:45%;overflow:auto;font-size:12px;color:var(--mut)}#as-set input{width:100%;margin:4px 0}`;
+  document.head.appendChild(css);
+  const fab = document.createElement("button"); fab.id = "as-fab"; fab.title = "Asisten KKN (geser untuk memindah)"; fab.textContent = "🤖";
+  const pan = document.createElement("div"); pan.id = "as-panel";
+  pan.innerHTML = `<div class="ph"><b>🤖 Asisten KKN</b><button class="sek" id="as-ing" title="Ingatan">🧠</button><button class="sek" id="as-gear" title="Pengaturan">⚙</button><button class="sek" id="as-min" title="Kecilkan bola">–</button><button class="sek" id="as-x" title="Tutup">✕</button></div>
+  <div id="as-chat"></div><div id="as-set"></div>
+  <div class="cps" id="as-cps">${ASISTEN_CONTOH.map((c) => `<button class="chip">${esc(c)}</button>`).join("")}</div>
+  <div class="ft"><div id="as-file" style="font-size:12px;color:var(--mut);display:none;margin-bottom:4px"></div><div class="bar"><button class="sek" id="as-clip" title="Unggah PDF, Word, Excel">📎</button><input id="as-in" placeholder="Tulis atau tanya apa saja…"><button id="as-kirim">Kirim</button></div></div>
+  <input type="file" id="as-pilih" accept=".pdf,.docx,.xlsx,.xls,.csv,.txt" hidden>`;
+  document.body.append(fab, pan);
+  const $a = (id) => document.getElementById(id);
+  let pos = (() => { try { return JSON.parse(lsGet("kkn_as_pos", "")) || {}; } catch (e) { return {}; } })(), mini = lsGet("kkn_as_mini", "0") === "1", file = null, drag = null, lagi = false;
+  const letak = () => {
+    const w = innerWidth, h = innerHeight, kiri = pos.kiri === true, y = Math.min(Math.max(pos.y == null ? h * 0.6 : pos.y, 70), h - 120);
+    fab.style.top = y + "px"; fab.style.bottom = "auto"; fab.style.left = kiri ? "6px" : "auto"; fab.style.right = kiri ? "auto" : "6px";
+    fab.classList.toggle("mini", mini); pan.style.left = kiri ? "14px" : "auto"; pan.style.right = kiri ? "auto" : "14px";
   };
-  $("as-kirim").onclick = () => kirim(); $("as-in").onkeydown = (e) => { if (e.key === "Enter") kirim(); };
-  el.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => kirim(b.textContent));
-  $("as-simpan").onclick = () => { localStorage.setItem("kkn_gemini", $("as-key").value.trim()); localStorage.setItem("kkn_gemini_model", $("as-model").value.trim() || "gemini-flash-latest"); toast("Pengaturan asisten disimpan"); gambar.paksa = true; try { gambar(); } finally { gambar.paksa = false; } };
-  $("as-in").focus();
-};
+  letak(); addEventListener("resize", letak);
+  fab.addEventListener("pointerdown", (e) => { drag = {x: e.clientX, y: e.clientY, py: fab.offsetTop, px: fab.offsetLeft, geser: false}; fab.setPointerCapture(e.pointerId); });
+  fab.addEventListener("pointermove", (e) => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 6) drag.geser = true; if (drag.geser) { fab.style.left = drag.px + dx + "px"; fab.style.right = "auto"; fab.style.top = drag.py + dy + "px"; } });
+  fab.addEventListener("pointerup", () => { if (!drag) return; const g = drag.geser; if (g) { pos = {kiri: fab.offsetLeft + 25 < innerWidth / 2, y: fab.offsetTop}; lsSet("kkn_as_pos", JSON.stringify(pos)); letak(); } else { if (mini) { mini = false; lsSet("kkn_as_mini", "0"); letak(); } else buka(true); } drag = null; });
+  $a("as-min").onclick = () => { mini = true; lsSet("kkn_as_mini", "1"); buka(false); letak(); };
+  $a("as-x").onclick = () => buka(false);
+  function buka(b) { pan.classList.toggle("buka", b); fab.style.display = b ? "none" : ""; if (b) { render(); $a("as-in").focus(); } }
+  window.bukaAsisten = buka;
+
+  const chat = $a("as-chat");
+  function gelembung(peran, teks, aksi) {
+    const d = document.createElement("div"); d.className = "gel"; d.style.cssText = `align-self:${peran === "u" ? "flex-end" : "flex-start"};background:${peran === "u" ? "var(--vio)" : "var(--s2)"};color:${peran === "u" ? "#fff" : "inherit"}`;
+    d.textContent = teks;
+    if (aksi && aksi.length) {
+      const sel = []; const tombolSemua = aksi.length > 1 ? document.createElement("button") : null;
+      aksi.forEach((a, i) => { const r = document.createElement("div"); r.style.cssText = "margin-top:8px;padding:7px 8px;border-radius:10px;background:rgba(0,0,0,.16)"; r.innerHTML = `<b>${esc(ringkasAksi(a))}</b><div class="aksi" style="justify-content:flex-start;margin-top:6px"><button class="kecil" data-ok>Simpan</button><button class="sek kecil" data-no>Batal</button></div>`;
+        const simpan = async () => { if (r.dataset.selesai) return; r.dataset.selesai = "1"; r.querySelectorAll("button").forEach((b) => b.disabled = true); try { await Promise.race([jalankanAksi(a), tunggu(6000)]); r.innerHTML = `<b>Tersimpan:</b> ${esc(ringkasAksi(a))}`; } catch (e) { r.innerHTML = `Gagal: ${esc(e.message)}`; } };
+        r.querySelector("[data-ok]").onclick = simpan; r.querySelector("[data-no]").onclick = () => { r.dataset.selesai = "1"; r.innerHTML = "Dibatalkan."; }; r._simpan = simpan; sel.push(r); d.appendChild(r); });
+      if (tombolSemua) { tombolSemua.textContent = `Simpan semua (${aksi.length})`; tombolSemua.style.marginTop = "8px"; tombolSemua.onclick = async () => { tombolSemua.disabled = true; for (const r of sel) await r._simpan(); }; d.appendChild(tombolSemua); }
+    }
+    chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d;
+  }
+  const simpanRiw = (r, t) => { const a = bacaJson(kunciRiw()); a.push({r, t: String(t).slice(0, 1500)}); lsSet(kunciRiw(), JSON.stringify(a.slice(-40))); };
+  function render() {
+    chat.innerHTML = ""; const riw = bacaJson(kunciRiw());
+    gelembung("b", `Halo ${me ? me.nama.split(" ")[0] : ""}, saya asisten KKN. Saya bisa mencatat data, menjawab soal data desa, membaca PDF/Word/Excel, dan mengingat kesulitanmu. Setiap perubahan minta konfirmasi dulu.`);
+    riw.forEach((x) => gelembung(x.r, x.t));
+  }
+  async function kirim(t) {
+    t = (t == null ? $a("as-in").value : t).trim(); const f = file; if (!t && !f) return; if (lagi) return;
+    if (!t) t = "Screening file ini: ringkas isinya, tandai kejanggalan, dan usulkan data yang bisa dimasukkan.";
+    $a("as-in").value = ""; file = null; $a("as-file").style.display = "none";
+    const tampil = (f ? "📎 " + f.name + "\n" : "") + t; gelembung("u", tampil); simpanRiw("u", tampil); lagi = true;
+    const tk = gelembung("b", "Berpikir…"); let h; const k = lsGet("kkn_gemini", "");
+    try {
+      let lamp = null; if (f) { if (/\.pdf$/i.test(f.name)) { if (f.size > 12e6) throw new Error("PDF terlalu besar (maks 12 MB)"); if (!k) throw new Error("Membaca PDF butuh Mode pintar. Aktifkan lewat tombol ⚙."); lamp = {pdf: keBase64(await f.arrayBuffer()), nama: f.name}; } else lamp = {teks: await teksDariFile(f), nama: f.name}; }
+      if (k) { try { h = await pahamiGemini(t, k, lamp); } catch (e) { if (lamp) throw e; h = pahamiLokal(t); h.balasan = "(Mode pintar gagal: " + e.message + ". Saya jawab dengan cara biasa.)\n" + h.balasan; } }
+      else { if (lamp) throw new Error("Membaca file butuh Mode pintar. Aktifkan lewat tombol ⚙."); h = pahamiLokal(t); }
+      if (h.ingat && h.ingat.length) tambahIngatan(h.ingat);
+    } catch (e) { h = {balasan: "Maaf, " + e.message, aksi: []}; }
+    tk.remove(); lagi = false; gelembung("b", h.balasan, h.aksi); simpanRiw("b", h.balasan + (h.aksi && h.aksi.length ? "\n[usulan: " + h.aksi.map(ringkasAksi).join("; ") + "]" : ""));
+  }
+  $a("as-kirim").onclick = () => kirim(); $a("as-in").onkeydown = (e) => { if (e.key === "Enter") kirim(); };
+  $a("as-cps").querySelectorAll(".chip").forEach((b) => b.onclick = () => kirim(b.textContent));
+  $a("as-clip").onclick = () => $a("as-pilih").click();
+  $a("as-pilih").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; if (!f) return; file = f; const el = $a("as-file"); el.style.display = ""; el.textContent = "📎 " + f.name + " (ketuk Kirim)"; };
+  function panelSet(mode) {
+    const s = $a("as-set"); if (s.dataset.mode === mode && s.style.display === "block") { s.style.display = "none"; return; } s.dataset.mode = mode; s.style.display = "block";
+    if (mode === "ing") { const a = ingatan(); s.innerHTML = `<b style="color:var(--tx)">Ingatan asisten</b><p>Hal yang saya ingat tentangmu agar bantuan makin pas. Disimpan hanya di komputer ini.</p>${a.length ? a.map((x, i) => `<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><span style="flex:1;color:var(--tx)">• ${esc(x)}</span><button class="bahaya kecil" data-i="${i}">Hapus</button></div>`).join("") : "<p>Belum ada.</p>"}<button class="sek kecil" id="as-riwx">Hapus riwayat obrolan</button>`;
+      s.querySelectorAll("[data-i]").forEach((b) => b.onclick = () => { const a2 = ingatan(); a2.splice(+b.dataset.i, 1); lsSet(kunciIng(), JSON.stringify(a2)); s.dataset.mode = ""; panelSet("ing"); });
+      $a("as-riwx").onclick = () => { lsSet(kunciRiw(), "[]"); render(); toast("Riwayat dihapus"); }; }
+    else { s.innerHTML = `<b style="color:var(--tx)">Mode pintar (gratis) ${lsGet("kkn_gemini", "") ? "· aktif" : "· belum aktif"}</b><p>Tanpa ini asisten hanya paham perintah umum. Mode pintar memakai Google Gemini dengan kunci API gratis milikmu: buka aistudio.google.com/apikey, masuk akun Google, klik Create API key, salin, tempel di bawah. Kunci hanya disimpan di komputer ini. Pertanyaan, file, dan ringkasan data desa dikirim ke Google. Model gratis tersedia dengan batas harian; langganan Gemini Pro di aplikasi Gemini tidak berlaku untuk kunci API.</p><input type="password" id="as-key" placeholder="Kunci API Gemini" value="${esc(lsGet("kkn_gemini", ""))}"><input id="as-model" value="${esc(lsGet("kkn_gemini_model", MODEL_BAWAAN))}" title="Daftar model dipisah koma; dicoba berurutan bila sibuk"><button class="kecil" id="as-simpan">Simpan</button>`;
+      $a("as-simpan").onclick = () => { lsSet("kkn_gemini", $a("as-key").value.trim()); lsSet("kkn_gemini_model", $a("as-model").value.trim() || MODEL_BAWAAN); s.style.display = "none"; toast("Pengaturan asisten disimpan"); }; }
+  }
+  $a("as-gear").onclick = () => panelSet("set"); $a("as-ing").onclick = () => panelSet("ing");
+})();
 
 /* ---------- Jurnal Pribadi (salinan dari HP, hanya pemilik yang bisa membaca) ---------- */
 HAL.jurnalpribadi = (el) => {
