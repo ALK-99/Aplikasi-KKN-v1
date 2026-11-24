@@ -10,6 +10,7 @@ import android.location.Location
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -116,6 +117,41 @@ fun PetaScreen() {
                 val t = TitikPosko(nama, l.latitude, l.longitude)
                 LokasiUtil.simpanPosko(context, t); posko = t; teksPosko = nama
                 infoPosko = "Posko dikunci ke posisi GPS saat ini."
+            }
+        }
+    }
+
+    // Hasil "Cari di sekitar" (diurutkan menurut jarak)
+    var hasil by remember { mutableStateOf<List<Tempat>>(emptyList()) }
+    var judulHasil by remember { mutableStateOf("") }
+    var infoHasil by remember { mutableStateOf("") }
+    var memuat by remember { mutableStateOf(false) }
+
+    fun cariDekat(kategori: String, pakaiGps: Boolean) {
+        scope.launch {
+            memuat = true; hasil = emptyList(); judulHasil = ""; infoHasil = "Mencari $kategori terdekat…"
+            var la: Double? = null; var lo: Double? = null; var asal = ""
+            if (pakaiGps) {
+                val l = LokasiUtil.posisiSekarang(context)
+                if (l != null) { la = l.latitude; lo = l.longitude; asal = "posisi GPS kamu" }
+            } else {
+                la = posko.lat; lo = posko.lng; asal = "posko (${posko.nama})"
+                if (la == null && posko.nama.isNotBlank()) {
+                    val k = LokasiUtil.cariKoordinat(context, posko.nama)
+                    if (k != null) { la = k.first; lo = k.second; posko = TitikPosko(posko.nama, k.first, k.second); LokasiUtil.simpanPosko(context, posko) }
+                }
+            }
+            if (la == null || lo == null) {
+                infoHasil = if (pakaiGps) "Posisi GPS belum didapat. Izinkan Lokasi lewat tombol \"Tunjukkan posisi saya\" di atas, lalu coba lagi."
+                else "Titik posko belum ada. Simpan & kunci lokasi posko dulu (butuh internet sekali)."
+                memuat = false; return@launch
+            }
+            val d = LokasiUtil.cariTerdekat(kategori, la, lo)
+            memuat = false
+            when {
+                d == null -> infoHasil = "Tidak bisa mengambil data. Periksa internet lalu coba lagi."
+                d.isEmpty() -> infoHasil = "Tidak ada $kategori dalam 30 km dari $asal."
+                else -> { hasil = d; judulHasil = "$kategori terdekat dari $asal"; infoHasil = "" }
             }
         }
     }
@@ -259,8 +295,8 @@ fun PetaScreen() {
             val terkunci = posko.lat != null && posko.lng != null
             Text(
                 when {
-                    pakaiSaya -> "Dicari di sekitar posisi GPS kamu sekarang."
-                    terkunci -> "Dicari di sekitar lokasi posko yang terkunci: ${posko.nama}"
+                    pakaiSaya -> "Dicari dari posisi GPS kamu sekarang, diurutkan dari yang paling dekat."
+                    terkunci -> "Dicari dari lokasi posko yang terkunci (${posko.nama}), diurutkan dari yang paling dekat."
                     posko.nama.isNotBlank() -> "Dicari di sekitar \"${posko.nama}\" (belum terkunci ke koordinat, simpan ulang saat online)."
                     else -> "Simpan lokasi posko di bawah supaya pencarian mengikuti posko, bukan GPS."
                 },
@@ -276,11 +312,32 @@ fun PetaScreen() {
                 Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     pasang.forEach { nama ->
                         PilChip(nama, false, {
-                            if (pakaiSaya) bukaPeta(context, nama) else bukaSekitar(context, nama, posko, null, null)
+                            cariDekat(nama, pakaiSaya)
                         }, Modifier.weight(1f))
                     }
                     if (pasang.size == 1) Spacer(Modifier.weight(1f))
                 }
+            }
+        }
+
+        // ---------- Hasil terdekat ----------
+        if (memuat || infoHasil.isNotBlank() || hasil.isNotEmpty()) {
+            KartuGelap(Modifier.fillMaxWidth()) {
+                if (judulHasil.isNotBlank()) Text(judulHasil, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                if (infoHasil.isNotBlank()) Text(infoHasil, fontSize = 12.sp, color = TeksRedup)
+                hasil.forEachIndexed { i, t ->
+                    Spacer(Modifier.height(8.dp))
+                    Column(Modifier.fillMaxWidth().clickable {
+                        bukaIntent(
+                            context, "geo:${t.lat},${t.lng}?q=${t.lat},${t.lng}(" + Uri.encode(t.nama) + ")",
+                            "https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}"
+                        )
+                    }) {
+                        Text("${i + 1}. ${t.nama}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("${LokasiUtil.teksJarak(t.jarak)} ke arah ${t.arah} · ketuk untuk navigasi", fontSize = 11.sp, color = TeksRedup)
+                    }
+                }
+                if (hasil.isNotEmpty()) Text("Data: OpenStreetMap. Tempat yang belum dipetakan di sana tidak akan muncul.", fontSize = 10.sp, color = TeksRedup, modifier = Modifier.padding(top = 10.dp))
             }
         }
 

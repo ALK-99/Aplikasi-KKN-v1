@@ -16,6 +16,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import kotlin.math.*
 
+/** Satu tempat hasil pencarian terdekat, sudah dihitung jaraknya dari titik pusat. */
+data class Tempat(val nama: String, val lat: Double, val lng: Double, val jarak: Double, val arah: String)
+
 /** Titik terkunci (posko). Disimpan dengan nama; koordinat kosong bila belum bisa dicari. */
 data class TitikPosko(val nama: String, val lat: Double?, val lng: Double?)
 
@@ -109,6 +112,59 @@ object LokasiUtil {
             }
         }
         return segar ?: terakhir
+    }
+
+    private val KATEGORI_OSM: Map<String, List<String>> = mapOf(
+        "Masjid" to listOf("[\"amenity\"=\"place_of_worship\"][\"religion\"=\"muslim\"]"),
+        "Puskesmas" to listOf("[\"amenity\"~\"^(clinic|doctors|hospital)\$\"]"),
+        "Rumah sakit" to listOf("[\"amenity\"=\"hospital\"]"),
+        "Apotek" to listOf("[\"amenity\"=\"pharmacy\"]"),
+        "SPBU" to listOf("[\"amenity\"=\"fuel\"]"),
+        "ATM" to listOf("[\"amenity\"=\"atm\"]", "[\"amenity\"=\"bank\"]"),
+        "Warung makan" to listOf("[\"amenity\"~\"^(restaurant|cafe|fast_food|food_court)\$\"]"),
+        "Minimarket" to listOf("[\"shop\"~\"^(convenience|supermarket)\$\"]"),
+    )
+
+    private fun kirimOverpass(kueri: String): String? {
+        for (server in listOf("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter")) {
+            try {
+                val c = java.net.URL(server).openConnection() as java.net.HttpURLConnection
+                try {
+                    c.requestMethod = "POST"; c.connectTimeout = 12000; c.readTimeout = 30000; c.doOutput = true
+                    c.setRequestProperty("User-Agent", "KKN-Al-Mushlih-Sekretaris/1.0")
+                    c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+                    c.outputStream.use { it.write(("data=" + java.net.URLEncoder.encode(kueri, "UTF-8")).toByteArray()) }
+                    if (c.responseCode in 200..299) return c.inputStream.bufferedReader().use { it.readText() }
+                } finally { c.disconnect() }
+            } catch (e: Exception) { /* coba server berikutnya */ }
+        }
+        return null
+    }
+
+    /**
+     * Tempat terdekat dari titik pusat, DIURUTKAN menurut jarak sebenarnya (data OpenStreetMap, gratis).
+     * Radius diperlebar bertahap (2, 5, 12, 30 km) sampai ketemu sedikitnya 3 tempat.
+     * Hasil null = tidak ada koneksi / server sibuk; daftar kosong = tidak ada tempat dalam 30 km.
+     */
+    suspend fun cariTerdekat(kategori: String, lat: Double, lng: Double): List<Tempat>? = withContext(Dispatchers.IO) {
+        val filter = KATEGORI_OSM[kategori] ?: return@withContext emptyList<Tempat>()
+        var terakhir: List<Tempat> = emptyList()
+        for (r in listOf(2000, 5000, 12000, 30000)) {
+            val kueri = "[out:json][timeout:25];(" + filter.joinToString("") { "nwr(around:$r,${String.format(Locale.US, "%.6f", lat)},${String.format(Locale.US, "%.6f", lng)})$it;" } + ");out center 120;"
+            val teks = kirimOverpass(kueri) ?: return@withContext null
+            val el = try { org.json.JSONObject(teks).optJSONArray("elements") } catch (e: Exception) { null } ?: return@withContext null
+            val daftar = mutableListOf<Tempat>()
+            for (i in 0 until el.length()) {
+                val o = el.getJSONObject(i)
+                val la = if (o.has("lat")) o.getDouble("lat") else o.optJSONObject("center")?.optDouble("lat") ?: continue
+                val lo = if (o.has("lon")) o.getDouble("lon") else o.optJSONObject("center")?.optDouble("lon") ?: continue
+                val nama = o.optJSONObject("tags")?.optString("name").orEmpty().ifBlank { "$kategori (tanpa nama)" }
+                daftar.add(Tempat(nama, la, lo, jarakMeter(lat, lng, la, lo), arah(lat, lng, la, lo)))
+            }
+            terakhir = daftar.sortedBy { it.jarak }.take(12)
+            if (terakhir.size >= 3) break
+        }
+        terakhir
     }
 
     fun jarakMeter(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
