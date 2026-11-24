@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.tasks.await
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -65,6 +66,33 @@ class LaporanViewModel(
     val pesan: StateFlow<String?> = _pesan.asStateFlow()
 
     fun tutupPesan() { _pesan.value = null }
+
+    /** Salin jurnal pribadi ke akun (hanya pemilik yang bisa membaca) agar bisa dibuka di aplikasi PC. */
+    fun kirimJurnalPribadi() {
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        if (uid == null) { _pesan.value = "Masuk dulu ke akun."; return }
+        viewModelScope.launch {
+            _sedangProses.value = true
+            try {
+                val data = db.jurnalDao().semuaJurnal().first()
+                val koleksi = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users").document(uid).collection("jurnal_pribadi")
+                data.chunked(400).forEach { bagian ->
+                    val batch = com.google.firebase.firestore.FirebaseFirestore.getInstance().batch()
+                    bagian.forEach {
+                        batch.set(koleksi.document("j${it.id}"), mapOf(
+                            "tanggalMillis" to it.tanggalMillis, "jenis" to it.jenis.name, "judul" to it.judul,
+                            "isi" to it.isi, "pesertaRapat" to it.pesertaRapat
+                        ))
+                    }
+                    batch.commit().await()
+                }
+                _pesan.value = "${data.size} jurnal pribadi terkirim ke akunmu. Buka menu Jurnal Pribadi di aplikasi PC."
+            } catch (e: Exception) {
+                _pesan.value = "Gagal mengirim: ${e.message}. Pastikan aturan Firestore terbaru sudah dipublish."
+            } finally { _sedangProses.value = false }
+        }
+    }
 
     /** Membaca berkas cadangan yang dipilih pengguna dan menampilkan ringkasannya, belum mengubah data. */
     fun bacaCadangan(uri: Uri) {

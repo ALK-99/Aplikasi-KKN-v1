@@ -129,6 +129,8 @@ if (!CFG) {
 }
 firebase.initializeApp(CFG);
 const auth = firebase.auth(), db = firebase.firestore();
+// Mode offline: data terakhir tetap bisa dibaca, dan perubahan dikirim otomatis saat internet kembali.
+try { db.enablePersistence({synchronizeTabs: true}).catch(() => {}); } catch (e) {}
 
 /* ---------- state ---------- */
 let me = null, desaId = "", admin = false, data = {}, halaman = "beranda", kata = "", saring = {};
@@ -147,7 +149,10 @@ async function tulis(tabel, aksi, ringkas, ref, isi, baru) {
   b.set(dk("riwayat").doc(), {tabel, aksi, targetId: ref.id, ringkas: String(ringkas).slice(0,160), oleh: me.uid, olehNama: me.nama, waktu: t});
   await b.commit();
 }
-async function coba(fn, ok) { try { await fn(); if (ok) toast(ok); } catch (e) { toast(e.code === "permission-denied" ? "Ditolak server (aturan Firestore / akun diblokir)." : "Gagal: " + e.message); } }
+async function coba(fn, ok) { try {
+    const lambat = Symbol(), h = await Promise.race([fn(), new Promise((r) => setTimeout(() => r(lambat), 6000))]);
+    if (h === lambat) { toast("Belum ada internet: tersimpan di PC ini dan dikirim otomatis nanti."); return; }
+    if (ok) toast(ok); } catch (e) { toast(e.code === "permission-denied" ? "Ditolak server (aturan Firestore / akun diblokir)." : "Gagal: " + e.message); } }
 
 /* ---------- foto: kompres ke JPEG base64 (sama dengan HP, maks ~180 KB) ---------- */
 function kompres(file) {
@@ -225,7 +230,7 @@ auth.onAuthStateChanged(async (u) => {
 /* ---------- menu ---------- */
 const MENU = [
   ["", [["beranda","🏠","Beranda"]]],
-  ["Sekretaris", [["absensi","✅","Absensi"],["anggota","👥","Anggota"],["surat","✉️","Surat Masuk/Keluar"],["templat","📝","Templat Surat PDF"],["proker","📋","Program Kerja"],["inventaris","📦","Inventaris Posko"],["tugas","🗓️","Tugas"]]],
+  ["Sekretaris", [["absensi","✅","Absensi"],["anggota","👥","Anggota"],["surat","✉️","Surat Masuk/Keluar"],["proker","📋","Program Kerja"],["inventaris","📦","Inventaris Posko"],["tugas","🗓️","Tugas"],["dokumen","📄","Dokumen & PDF"]]],
   ["Bendahara", [["nota","🧾","Arsip Nota"],["rekon","⚖️","Rekonsiliasi"],["kas","💰","Kas Kelompok"]]],
   ["Media", [["jurnal","📖","Jurnal & Notulen"]]],
   ["Pendidikan", [["ajar","🎓","Jadwal Mengajar"]]],
@@ -322,24 +327,41 @@ HAL.anggota = (el) => {
   el.querySelectorAll("[data-t]").forEach((b) => b.onclick = () => { const a = baris.find((x) => x.id === b.dataset.t), akt = a.aktif === false; coba(() => tulis("anggota", akt ? "aktifkan" : "nonaktifkan", a.nama, dk("anggota").doc(a.id), {aktif: akt}, false), "Diperbarui"); });
 };
 
+const stAbs = (x) => x.status || (x.hadir ? "HADIR" : "ALPA");
+function rekapAbsensi(dariMs) {
+  return aktif("anggota").sort((a, b) => a.nama.localeCompare(b.nama)).map((a) => {
+    const l = aktif("absensi").filter((x) => x.anggotaId === a.id && x.tanggalMillis >= dariMs), c = (s) => l.filter((x) => stAbs(x) === s).length;
+    return {n: a.nama, d: a.divisi || "", h: c("HADIR"), i: c("IZIN"), s: c("SAKIT"), a: c("ALPA"), tot: l.length};
+  }).filter((r) => r.tot > 0 || !dariMs);
+}
+const pct = (r) => (r.tot ? Math.round(r.h * 100 / r.tot) : 0) + "%";
+const KOL_REKAP = [["Nama", (r) => esc(r.n)], ["Hadir", (r) => r.h], ["Izin", (r) => r.i], ["Sakit", (r) => r.s], ["Alpa", (r) => r.a], ["%", pct]];
+const KOL_REKAP_CSV = [["Nama", (r) => r.n], ["Hadir", (r) => r.h], ["Izin", (r) => r.i], ["Sakit", (r) => r.s], ["Alpa", (r) => r.a], ["Persen hadir", pct]];
+function pdfRekapBulan() {
+  const d = new Date(), awal = new Date(d.getFullYear(), d.getMonth(), 1).getTime(), nm = d.toLocaleDateString("id-ID", {month: "long", year: "numeric"});
+  const r = rekapAbsensi(awal);
+  if (!r.length) { toast("Belum ada data absensi bulan ini"); return; }
+  simpanDok(dokPdfHtml("Rekap Absensi " + nm, "Desa " + me.desa, ["Nama", "Hadir", "Izin", "Sakit", "Alpa", "Persen hadir"], r.map((x) => [x.n, x.h, x.i, x.s, x.a, pct(x)])), `Rekap_Absensi_${nm.replace(/\W+/g, "_")}.pdf`);
+}
 HAL.absensi = (el) => {
   const tglPilih = saring.tgl || keInput(Date.now()), ms = kePengguna(tglPilih);
   const ang = aktif("anggota").filter((a) => a.aktif !== false).sort((a, b) => a.nama.localeCompare(b.nama));
   const ada = {}; aktif("absensi").filter((a) => a.tanggalMillis === ms).forEach((a) => ada[a.anggotaId] = a);
-  const hadir = Object.values(ada).filter((a) => a.hadir).length;
-  el.innerHTML = `<div class="bar"><input type="date" id="tg" value="${tglPilih}" style="max-width:190px"><span class="tag ok">${hadir} hadir</span><span class="tag">${ang.length - Object.keys(ada).length} belum dicatat</span><span class="sp"></span><button class="sek" data-semua>Hadirkan semua yang belum dicatat</button><button class="sek" data-rekap>Rekap</button></div>` +
+  const stA = (x) => x ? (x.status || (x.hadir ? "HADIR" : "ALPA")) : "", hadir = Object.values(ada).filter((a) => stA(a) === "HADIR").length;
+  el.innerHTML = `<div class="bar"><input type="date" id="tg" value="${tglPilih}" style="max-width:190px"><span class="tag ok">${hadir} hadir</span><span class="tag">${ang.length - Object.keys(ada).length} belum dicatat</span><span class="sp"></span><button class="sek" data-semua>Hadirkan semua yang belum dicatat</button><button class="sek" data-rekap>Rekap</button><button class="sek" data-pdfbln>Rekap bulan ini (PDF)</button></div>` +
     (ang.length ? `<div class="wrap"><table><thead><tr><th>Nama</th><th>Status</th><th>Keterangan</th><th></th></tr></thead><tbody>${ang.map((a) => { const x = ada[a.id]; return `<tr><td><b>${esc(a.nama)}</b><br><small style="color:var(--mut)">${esc(a.divisi)}</small></td>
-      <td><div class="chips"><button class="chip ${x && x.hadir ? "on" : ""}" data-h="${a.id}" data-v="1">Hadir</button><button class="chip ${x && !x.hadir ? "on" : ""}" data-h="${a.id}" data-v="0">Tidak</button></div></td>
-      <td><input data-ket="${a.id}" value="${esc(x ? x.keterangan : "")}" placeholder="izin / sakit / ..." style="min-width:160px"></td><td></td></tr>`; }).join("")}</tbody></table></div>` : `<div class="kosong">Tambahkan anggota dulu di menu Anggota.</div>`);
+      <td><div class="chips">${[["HADIR","Hadir"],["IZIN","Izin"],["SAKIT","Sakit"],["ALPA","Alpa"]].map((c) => `<button class="chip ${stA(x) === c[0] ? "on" : ""}" data-h="${a.id}" data-v="${c[0]}">${c[1]}</button>`).join("")}</div></td>
+      <td><input data-ket="${a.id}" value="${esc(x ? x.keterangan : "")}" placeholder="catatan (opsional)" style="min-width:160px"></td><td></td></tr>`; }).join("")}</tbody></table></div>` : `<div class="kosong">Tambahkan anggota dulu di menu Anggota.</div>`);
   $("tg").onchange = (e) => { saring.tgl = e.target.value; gambar(); };
-  const simpan = (a, h) => { const ket = el.querySelector(`[data-ket="${a.id}"]`).value, x = ada[a.id];
-    return tulis("absensi", x ? "ubah" : "tambah", `${a.nama}: ${h ? "hadir" : "tidak hadir"}`, dk("absensi").doc(`${a.id}_${ms}`), {anggotaId: a.id, anggotaNama: a.nama, tanggalMillis: ms, hadir: h, keterangan: ket}, !x); };
-  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => coba(() => simpan(ang.find((a) => a.id === b.dataset.h), b.dataset.v === "1"), "Tersimpan"));
-  el.querySelectorAll("[data-ket]").forEach((i) => i.onchange = () => { const a = ang.find((x) => x.id === i.dataset.ket); if (ada[a.id]) coba(() => simpan(a, ada[a.id].hadir), "Keterangan tersimpan"); else toast("Pilih Hadir/Tidak dulu"); });
-  el.querySelector("[data-semua]").onclick = () => coba(async () => { for (const a of ang.filter((x) => !ada[x.id])) await simpan(a, true); }, "Semua ditandai hadir");
+  const simpan = (a, st) => { const ket = el.querySelector(`[data-ket="${a.id}"]`).value, x = ada[a.id];
+    return tulis("absensi", x ? "ubah" : "tambah", `${a.nama}: ${st.toLowerCase()}`, dk("absensi").doc(`${a.id}_${ms}`), {anggotaId: a.id, anggotaNama: a.nama, tanggalMillis: ms, hadir: st === "HADIR", status: st, keterangan: ket}, !x); };
+  el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => coba(() => simpan(ang.find((a) => a.id === b.dataset.h), b.dataset.v), "Tersimpan"));
+  el.querySelectorAll("[data-ket]").forEach((i) => i.onchange = () => { const a = ang.find((x) => x.id === i.dataset.ket); if (ada[a.id]) coba(() => simpan(a, stA(ada[a.id])), "Keterangan tersimpan"); else toast("Pilih statusnya dulu"); });
+  el.querySelector("[data-semua]").onclick = () => coba(async () => { for (const a of ang.filter((x) => !ada[x.id])) await simpan(a, "HADIR"); }, "Semua ditandai hadir");
+  el.querySelector("[data-pdfbln]").onclick = () => pdfRekapBulan();
   el.querySelector("[data-rekap]").onclick = () => {
-    const rek = ang.map((a) => { const l = aktif("absensi").filter((x) => x.anggotaId === a.id); return {n: a.nama, h: l.filter((x) => x.hadir).length, t: l.filter((x) => !x.hadir).length}; });
-    modal(`<h2>Rekap kehadiran</h2>${tabel([["Nama", (r) => esc(r.n)], ["Hadir", (r) => r.h], ["Tidak hadir", (r) => r.t], ["%", (r) => (r.h + r.t ? Math.round(r.h * 100 / (r.h + r.t)) : 0) + "%"]], rek)}<div class="aksi"><button class="sek" data-x>Tutup</button><button data-c>Ekspor CSV</button></div>`, (m, t) => { m.querySelector("[data-x]").onclick = t; m.querySelector("[data-c]").onclick = () => csv("rekap-absensi", [["Nama", (r) => r.n], ["Hadir", (r) => r.h], ["Tidak hadir", (r) => r.t]], rek); });
+    const rek = rekapAbsensi(0);
+    modal(`<h2>Rekap kehadiran (semua waktu)</h2>${tabel(KOL_REKAP, rek)}<div class="aksi"><button class="sek" data-x>Tutup</button><button data-c>Ekspor CSV</button></div>`, (m, t) => { m.querySelector("[data-x]").onclick = t; m.querySelector("[data-c]").onclick = () => csv("rekap-absensi", KOL_REKAP_CSV, rek); });
   };
 };
 
@@ -360,7 +382,7 @@ HAL.surat = (el) => {
 };
 
 /* templat surat: pratinjau + simpan PDF */
-HAL.templat = (el) => {
+HAL.templatIsi = (el) => {
   const T = saring.tp || "UNDANGAN", F = saring.tf || {};
   const NAMA = {UNDANGAN: "Undangan", PERMOHONAN: "Permohonan", PEMBERITAHUAN: "Pemberitahuan", TERIMA_KASIH: "Terima Kasih"};
   const fld = (k, l, t = "input", ph = "") => `<label>${l}</label>${t === "textarea" ? `<textarea data-f="${k}" rows="3" placeholder="${ph}">${esc(F[k] || "")}</textarea>` : `<input data-f="${k}" value="${esc(F[k] ?? "")}" placeholder="${ph}">`}`;
@@ -479,19 +501,23 @@ HAL.rekon = (el) => {
 HAL.kas = (el) => {
   const baris = urutBaru(aktif("kas")), m = baris.filter((k) => k.masuk !== false).reduce((s, k) => s + (k.jumlah || 0), 0), kl = baris.filter((k) => k.masuk === false).reduce((s, k) => s + (k.jumlah || 0), 0);
   const kol = [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => `<span class="tag ${r.masuk===false?"bad":"ok"}">${r.masuk===false?"Keluar":"Masuk"}</span>`], ["Kategori", (r) => esc(r.kategori)], ["Keterangan", (r) => esc(r.keterangan)], ["Jumlah", (r) => `<b>${rp(r.jumlah)}</b>`], ["Oleh", (r) => esc(r.penulisNama)]];
-  el.innerHTML = `<div class="grid"><div class="k"><b style="color:var(--mint)">${rp(m)}</b><span>Pemasukan</span></div><div class="k"><b style="color:var(--red)">${rp(kl)}</b><span>Pengeluaran</span></div><div class="k"><b>${rp(m - kl)}</b><span>Saldo</span></div></div><div class="bar"><button data-tambah>+ Catat kas</button><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  el.innerHTML = `<div class="grid"><div class="k"><b style="color:var(--mint)">${rp(m)}</b><span>Pemasukan</span></div><div class="k"><b style="color:var(--red)">${rp(kl)}</b><span>Pengeluaran</span></div><div class="k"><b>${rp(m - kl)}</b><span>Saldo</span></div></div><div class="bar"><button data-tambah>+ Catat kas</button><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="sek kecil" data-u="${r.id}">Ubah</button> <button class="bahaya" data-h="${r.id}">Hapus</button>`);
   ikatCsv(el, "kas", [["Tanggal", (r) => tgl(r.tanggalMillis)], ["Jenis", (r) => r.masuk === false ? "Keluar" : "Masuk"], ["Kategori", (r) => r.kategori], ["Keterangan", (r) => r.keterangan], ["Jumlah", (r) => r.jumlah]], baris);
   el.querySelector("[data-tambah]").onclick = () => formModal("Catat kas", `<label>Jenis</label><select name="j"><option value="1">Pemasukan</option><option value="0">Pengeluaran</option></select><label>Jumlah (Rp)</label><input type="number" name="n"><label>Kategori</label><input name="k"><label>Keterangan</label><input name="ket">`, (m) => {
     const n = Math.round(+v(m, "n") || 0); if (n <= 0) { toast("Jumlah wajib diisi"); return false; }
     coba(() => db.collection("kas").add({masuk: v(m, "j") === "1", jumlah: n, kategori: v(m, "k").trim(), keterangan: v(m, "ket").trim(), penulisNama: me.nama, tanggalMillis: Date.now(), dihapus: false}), "Kas dicatat");
   });
+  el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const k = baris.find((x) => x.id === b.dataset.u); formModal("Ubah catatan kas", `<label>Jumlah (Rp)</label><input type="number" name="n" value="${k.jumlah || 0}"><label>Kategori</label><input name="k" value="${esc(k.kategori)}"><label>Keterangan</label><input name="ket" value="${esc(k.keterangan)}">`, (m) => {
+    const n = Math.round(+v(m, "n") || 0); if (n <= 0) { toast("Jumlah wajib diisi"); return false; }
+    coba(() => db.collection("kas").doc(k.id).update({jumlah: n, kategori: v(m, "k").trim(), keterangan: v(m, "ket").trim()}), "Kas diperbarui");
+  }); });
   el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => konfirm("Hapus catatan kas ini?", () => coba(() => db.collection("kas").doc(b.dataset.h).update({dihapus: true}), "Dihapus")));
 };
 
 HAL.tugas = (el) => {
   const baris = aktif("tugas").sort((a, b) => (a.selesai - b.selesai) || ((a.deadlineMillis || 9e15) - (b.deadlineMillis || 9e15)));
   const kol = [["", (r) => `<input type="checkbox" data-c="${r.id}" ${r.selesai ? "checked" : ""} style="width:18px;height:18px">`], ["Tugas", (r) => `<b style="${r.selesai ? "text-decoration:line-through;opacity:.6" : ""}">${esc(r.judul)}</b><br><small style="color:var(--mut)">${esc(r.deskripsi)}</small>`], ["Untuk", (r) => esc(r.untukNama || "-")], ["Tenggat", (r) => r.deadlineMillis ? `<span class="tag ${!r.selesai && r.deadlineMillis < Date.now() ? "bad" : ""}">${tgl(r.deadlineMillis)}</span>` : "-"]];
-  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah tugas</button><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah tugas</button><span class="sp"></span>${tombolCsv()}</div>` + tabel(kol, baris, (r) => `<button class="sek kecil" data-u="${r.id}">Ubah</button> <button class="bahaya" data-h="${r.id}">Hapus</button>`);
   ikatCsv(el, "tugas", [["Tugas", (r) => r.judul], ["Untuk", (r) => r.untukNama], ["Tenggat", (r) => tgl(r.deadlineMillis)], ["Selesai", (r) => r.selesai ? "ya" : "tidak"]], baris);
   el.querySelectorAll("[data-c]").forEach((c) => c.onchange = () => coba(() => db.collection("tugas").doc(c.dataset.c).update({selesai: c.checked})));
   el.querySelector("[data-tambah]").onclick = () => formModal("Tambah tugas", `<label>Judul</label><input name="j"><label>Deskripsi</label><textarea name="d" rows="2"></textarea><label>Untuk</label><select name="u">${(data.users || []).map((u) => `<option value="${u.id}">${esc(u.namaLengkap)}</option>`).join("")}</select><label>Tenggat</label><input type="date" name="t">`, (m) => {
@@ -499,6 +525,10 @@ HAL.tugas = (el) => {
     const u = (data.users || []).find((x) => x.id === v(m, "u"));
     coba(() => db.collection("tugas").add({judul: j, deskripsi: v(m, "d").trim(), untukUid: u ? u.id : "", untukNama: u ? u.namaLengkap : "", deadlineMillis: kePengguna(v(m, "t")), selesai: false, tanggalMillis: Date.now(), dihapus: false}), "Tugas ditambahkan");
   });
+  el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.u); formModal("Ubah tugas", `<label>Judul</label><input name="j" value="${esc(x.judul)}"><label>Deskripsi</label><textarea name="d" rows="2">${esc(x.deskripsi || "")}</textarea><label>Tenggat</label><input type="date" name="t" value="${x.deadlineMillis ? keInput(x.deadlineMillis) : ""}">`, (m) => {
+    const j = v(m, "j").trim(); if (!j) { toast("Judul wajib diisi"); return false; }
+    coba(() => db.collection("tugas").doc(x.id).update({judul: j, deskripsi: v(m, "d").trim(), deadlineMillis: v(m, "t") ? kePengguna(v(m, "t")) : x.deadlineMillis || 0}), "Tugas diperbarui");
+  }); });
   el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => konfirm("Hapus tugas ini?", () => coba(() => db.collection("tugas").doc(b.dataset.h).update({dihapus: true}), "Dihapus")));
 };
 
@@ -515,7 +545,11 @@ HAL.jurnal = (el) => {
 
 HAL.pengumuman = (el) => {
   const baris = urutBaru(aktif("pengumuman"));
-  el.innerHTML = `<div class="bar">${admin ? `<button data-tambah>+ Buat pengumuman</button>` : `<span class="tag">Pengumuman dibuat oleh admin</span>`}</div>` + (baris.length ? `<div class="cards">${baris.map((p) => { const baca = (p.dibacaOleh || []).includes(me.uid); return `<div class="card"><span class="tag ${baca ? "" : "warn"}">${baca ? "Sudah dibaca" : "Baru"}</span> <small style="color:var(--mut)">${tglJam(p.tanggalMillis)}</small><h3 style="margin-top:8px">${esc(p.judul)}</h3><p style="white-space:pre-wrap">${esc(p.isi)}</p><p style="font-size:12px;color:var(--mut)">${esc(p.penulisNama)} · dibaca ${(p.dibacaOleh || []).length} orang</p><div class="aksi" style="justify-content:flex-start">${baca ? "" : `<button class="kecil" data-r="${p.id}">Tandai dibaca</button>`}${admin ? `<button class="bahaya kecil" data-h="${p.id}">Hapus</button>` : ""}</div></div>`; }).join("")}</div>` : `<div class="kosong">Belum ada pengumuman.</div>`);
+  el.innerHTML = `<div class="bar">${admin ? `<button data-tambah>+ Buat pengumuman</button>` : `<span class="tag">Pengumuman dibuat oleh admin</span>`}</div>` + (baris.length ? `<div class="cards">${baris.map((p) => { const baca = (p.dibacaOleh || []).includes(me.uid); return `<div class="card"><span class="tag ${baca ? "" : "warn"}">${baca ? "Sudah dibaca" : "Baru"}</span> <small style="color:var(--mut)">${tglJam(p.tanggalMillis)}</small><h3 style="margin-top:8px">${esc(p.judul)}</h3><p style="white-space:pre-wrap">${esc(p.isi)}</p><p style="font-size:12px;color:var(--mut)">${esc(p.penulisNama)} · dibaca ${(p.dibacaOleh || []).length} orang</p><div class="aksi" style="justify-content:flex-start">${baca ? "" : `<button class="kecil" data-r="${p.id}">Tandai dibaca</button>`}${admin ? `<button class="sek kecil" data-u="${p.id}">Ubah</button><button class="bahaya kecil" data-h="${p.id}">Hapus</button>` : ""}</div></div>`; }).join("")}</div>` : `<div class="kosong">Belum ada pengumuman.</div>`);
+  el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const p = baris.find((x) => x.id === b.dataset.u); formModal("Ubah pengumuman", `<label>Judul</label><input name="j" value="${esc(p.judul)}"><label>Isi</label><textarea name="i" rows="6">${esc(p.isi || "")}</textarea>`, (m) => {
+    const j = v(m, "j").trim(); if (!j) { toast("Judul wajib diisi"); return false; }
+    coba(() => db.collection("pengumuman").doc(p.id).update({judul: j, isi: v(m, "i")}), "Pengumuman diperbarui");
+  }); });
   el.querySelectorAll("[data-r]").forEach((b) => b.onclick = () => coba(() => db.collection("pengumuman").doc(b.dataset.r).update({dibacaOleh: firebase.firestore.FieldValue.arrayUnion(me.uid)})));
   el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => konfirm("Hapus pengumuman ini?", () => coba(() => db.collection("pengumuman").doc(b.dataset.h).update({dihapus: true}), "Dihapus")));
   const t = el.querySelector("[data-tambah]"); if (t) t.onclick = () => formModal("Pengumuman baru", `<label>Judul</label><input name="j"><label>Isi</label><textarea name="i" rows="6"></textarea>`, (m) => {
@@ -526,7 +560,12 @@ HAL.pengumuman = (el) => {
 
 HAL.polling = (el) => {
   const baris = urutBaru(aktif("polling"));
-  el.innerHTML = `<div class="bar">${admin ? `<button data-tambah>+ Buat polling</button>` : `<span class="tag">Polling dibuat oleh admin</span>`}</div>` + (baris.length ? `<div class="cards">${baris.map((p) => { const suara = p.suara || {}, tot = Object.keys(suara).length, mine = suara[me.uid]; return `<div class="card"><span class="tag ${p.ditutup ? "bad" : "ok"}">${p.ditutup ? "Ditutup" : "Terbuka"}</span><h3 style="margin-top:8px">${esc(p.pertanyaan)}</h3>${(p.opsi || []).map((o, i) => { const c = Object.values(suara).filter((x) => x === i).length, pct = tot ? Math.round(c * 100 / tot) : 0; return `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;gap:8px"><span>${mine === i ? "✔ " : ""}${esc(o)}</span><small>${c} (${pct}%)</small></div><div class="bg"><i style="width:${pct}%"></i></div>${!p.ditutup && mine === undefined ? `<button class="kecil sek" style="margin-top:4px" data-v="${p.id}" data-i="${i}">Pilih</button>` : ""}</div>`; }).join("")}<p style="font-size:12px;color:var(--mut)">${tot} suara</p>${admin ? `<div class="aksi" style="justify-content:flex-start">${p.ditutup ? "" : `<button class="sek kecil" data-c="${p.id}">Tutup</button>`}<button class="bahaya kecil" data-h="${p.id}">Hapus</button></div>` : ""}</div>`; }).join("")}</div>` : `<div class="kosong">Belum ada polling.</div>`);
+  el.innerHTML = `<div class="bar">${admin ? `<button data-tambah>+ Buat polling</button>` : `<span class="tag">Polling dibuat oleh admin</span>`}</div>` + (baris.length ? `<div class="cards">${baris.map((p) => { const suara = p.suara || {}, tot = Object.keys(suara).length, mine = suara[me.uid]; return `<div class="card"><span class="tag ${p.ditutup ? "bad" : "ok"}">${p.ditutup ? "Ditutup" : "Terbuka"}</span><h3 style="margin-top:8px">${esc(p.pertanyaan)}</h3>${(p.opsi || []).map((o, i) => { const c = Object.values(suara).filter((x) => x === i).length, pct = tot ? Math.round(c * 100 / tot) : 0; return `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;gap:8px"><span>${mine === i ? "✔ " : ""}${esc(o)}</span><small>${c} (${pct}%)</small></div><div class="bg"><i style="width:${pct}%"></i></div>${!p.ditutup && mine === undefined ? `<button class="kecil sek" style="margin-top:4px" data-v="${p.id}" data-i="${i}">Pilih</button>` : ""}</div>`; }).join("")}<p style="font-size:12px;color:var(--mut)">${tot} suara</p>${admin ? `<div class="aksi" style="justify-content:flex-start">${p.ditutup ? "" : `<button class="sek kecil" data-c="${p.id}">Tutup</button>`}<button class="sek kecil" data-u="${p.id}">Ubah</button><button class="bahaya kecil" data-h="${p.id}">Hapus</button></div>` : ""}</div>`; }).join("")}</div>` : `<div class="kosong">Belum ada polling.</div>`);
+  el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const p = baris.find((x) => x.id === b.dataset.u); formModal("Ubah polling", `<label>Pertanyaan</label><input name="q" value="${esc(p.pertanyaan)}"><label>Pilihan (satu per baris; jumlahnya tidak bisa diubah supaya suara tetap benar)</label><textarea name="o" rows="4">${esc((p.opsi || []).join("\n"))}</textarea>`, (m) => {
+    const o = v(m, "o").split("\n").map((x) => x.trim()).filter(Boolean), q = v(m, "q").trim();
+    if (!q || o.length !== (p.opsi || []).length) { toast("Isi pertanyaan dan jumlah pilihan harus tetap " + (p.opsi || []).length); return false; }
+    coba(() => db.collection("polling").doc(p.id).update({pertanyaan: q, opsi: o}), "Polling diperbarui");
+  }); });
   el.querySelectorAll("[data-v]").forEach((b) => b.onclick = () => coba(() => db.collection("polling").doc(b.dataset.v).update(new firebase.firestore.FieldPath("suara", me.uid), +b.dataset.i), "Suara tercatat"));
   el.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => coba(() => db.collection("polling").doc(b.dataset.c).update({ditutup: true})));
   el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => konfirm("Hapus polling ini?", () => coba(() => db.collection("polling").doc(b.dataset.h).update({dihapus: true}), "Dihapus")));
@@ -581,13 +620,24 @@ HAL.ajar = (el) => {
   el.querySelector("[data-pdf]").onclick = () => simpanDok(dokPdfHtml("Jadwal Mengajar", "Divisi Pendidikan", ["Hari", "Jam", "Lembaga / kelas", "Materi", "Pengajar", "Catatan"], baris.map((r) => [HARI[(r.hari || 1) - 1], r.jam, r.lembaga, r.materi, r.pengajarNama, r.catatan])), "Jadwal_Mengajar.pdf");
 };
 
+/* ---------- Dokumen & PDF: satu tempat untuk templat surat, laporan, rekap, cadangan ---------- */
+JUDUL.dokumen = "Dokumen & PDF";
+HAL.dokumen = (el) => {
+  const t = saring.dok || "templat";
+  el.innerHTML = `<div class="chips" style="margin-bottom:14px"><button class="chip ${t === "templat" ? "on" : ""}" data-dk="templat">Templat Surat</button><button class="chip ${t === "laporan" ? "on" : ""}" data-dk="laporan">Laporan, Rekap & Cadangan</button></div><div id="dok-isi"></div>`;
+  el.querySelectorAll("[data-dk]").forEach((b) => b.onclick = () => { saring.dok = b.dataset.dk; gambar(); });
+  (t === "templat" ? HAL.templatIsi : HAL.laporanIsi)($("dok-isi"));
+};
+
 /* ====================== TAMBAHAN: profil, laporan, cadangan, peta, pengaturan, kendali, pengingat, pembaruan ====================== */
 const BOLEH_KENDALI = () => admin || (me && me.peran === "DEVELOPER");
 const lain = MENU.find((g) => g[0] === "Lainnya")[1];
 lain.unshift(["profil","👤","Profil Saya"]);
-lain.splice(1, 0, ["laporan","📄","Laporan & Cadangan"], ["peta","🗺️","Peta & Lokasi"]);
+lain.splice(1, 0, ["peta","🗺️","Peta & Lokasi"]);
 lain.push(["pengaturan","⚙️","Pengaturan"], ["kendali","🛡️","Pusat Kendali","","admin"]);
-lain.forEach((x) => JUDUL[x[0]] = x[2]);
+lain.push(["pantau","👁️","Pantauan Desa","","admin"]);
+MENU.find((g) => g[0] === "Media")[1].push(["jurnalpribadi","🔒","Jurnal Pribadi"]);
+[...lain, ["jurnalpribadi","","Jurnal Pribadi"]].forEach((x) => JUDUL[x[0]] = x[2]);
 
 const versiApp = () => (window.kkn && window.kkn.versi) ? window.kkn.versi() : Promise.resolve("");
 const bukaLuar = (u) => window.open(u, "_blank");
@@ -633,13 +683,13 @@ HAL.peta = (el) => {
 };
 
 /* ---------- Laporan & Cadangan ---------- */
-HAL.laporan = (el) => {
+HAL.laporanIsi = (el) => {
   el.innerHTML = `<h3 style="margin-top:0">Laporan PDF</h3><div class="cards">${[["register","Register Surat","Semua surat masuk dan keluar"],["hadir","Rekap Absensi","Kehadiran tiap anggota"],["inv","Daftar Inventaris","Barang posko dan kondisinya"],["nota","Daftar Nota & Kwitansi","Pengeluaran beserta total"],["rekon","Rekonsiliasi Anggaran","Anggaran, realisasi, dan nota per proker"],["lpj","LPJ Proker","Laporan pertanggungjawaban satu proker"]].map((x) => `<div class="card"><h3>${x[1]}</h3><p>${x[2]}</p><div class="aksi" style="justify-content:flex-start"><button class="kecil" data-l="${x[0]}">Buat PDF</button></div></div>`).join("")}</div>
   <h3>Cadangan & pemulihan</h3><div class="cards"><div class="card"><h3>Buat cadangan (ZIP)</h3><p>Seluruh data desa, dalam format yang sama dengan aplikasi HP, sehingga bisa dipulihkan di HP maupun PC.</p><div class="aksi" style="justify-content:flex-start"><button data-cad>Unduh cadangan</button></div></div>
   <div class="card"><h3>Pulihkan dari cadangan</h3><p>Pilih berkas ZIP cadangan. Kamu akan melihat ringkasannya dulu sebelum apa pun diubah.</p><input type="file" accept=".zip" id="zp"></div></div>`;
   const R = {
     register: () => ["Register Surat", [["Tanggal","Jenis","Nomor","Perihal","Tujuan / Pengirim"], urutBaru(aktif("surat")).map((s) => [tgl(s.tanggalMillis), s.jenis === "MASUK" ? "Masuk" : "Keluar", s.nomorSurat, s.perihal, s.tujuanAtauPengirim])]],
-    hadir: () => ["Rekap Absensi", [["Nama","Divisi","Hadir","Tidak hadir","%"], aktif("anggota").map((a) => { const l = aktif("absensi").filter((x) => x.anggotaId === a.id), h = l.filter((x) => x.hadir).length, t = l.length - h; return [a.nama, a.divisi, h, t, (l.length ? Math.round(h * 100 / l.length) : 0) + "%"]; })]],
+    hadir: () => ["Rekap Absensi", [["Nama","Divisi","Hadir","Izin","Sakit","Alpa","%"], rekapAbsensi(0).map((r) => [r.n, r.d, r.h, r.i, r.s, r.a, pct(r)])]],
     inv: () => ["Daftar Inventaris Posko", [["Barang","Jumlah","Kondisi","Keterangan"], aktif("inventaris").map((b) => [b.namaBarang, b.jumlah, b.kondisi, b.keterangan])]],
     nota: () => ["Daftar Nota dan Kwitansi", [["Tanggal","Jenis","Keterangan","Proker","Nominal"], urutBaru(aktif("nota")).map((n) => [tgl(n.tanggalMillis), n.jenis, n.keterangan, n.prokerTerkait, rp(n.nominal)]).concat([["","","","TOTAL", rp(aktif("nota").reduce((s, n) => s + (n.nominal || 0), 0))]])]],
     rekon: () => ["Rekonsiliasi Anggaran", [["Proker","Anggaran","Realisasi dilaporkan","Total nota","Selisih"], aktif("proker").filter((p) => p.status !== "BATAL").map((p) => { const t = aktif("nota").filter((n) => n.prokerTerkait === p.namaProker).reduce((s, n) => s + (n.nominal || 0), 0); return [p.namaProker, rp(p.anggaran), rp(p.realisasi), rp(t), (p.realisasi || 0) === t ? "Cocok" : rp((p.realisasi || 0) - t)]; })]],
@@ -697,6 +747,7 @@ const DARURAT = [["Polisi","110"],["Ambulans / gawat darurat","118 atau 119"],["
 HAL.pengaturan = (el) => {
   el.innerHTML = `<div class="cards"><div class="card"><h3>Tampilan</h3><div class="chips">${["auto","terang","gelap"].map((t, i) => `<button class="chip ${temaIdx === i ? "on" : ""}" data-th="${i}">${["Ikuti sistem","Terang","Gelap"][i]}</button>`).join("")}</div></div>
   <div class="card"><h3>Pengingat</h3><p>Notifikasi tugas, jadwal proker, absensi, dan pengumuman yang belum dibuka. Diulang tiap 15 menit sampai kamu membukanya.</p><label><input type="checkbox" id="pgOn" style="width:auto" ${pengingatAktif() ? "checked" : ""}> Aktif</label></div>
+  ${(window.kkn && window.kkn.mulaiOtomatis) ? `<div class="card"><h3>Aplikasi Windows</h3><p>Tombol X menyembunyikan aplikasi ke baki sistem (dekat jam) supaya pengingat tetap muncul. Untuk keluar total, klik kanan ikonnya lalu pilih Keluar.</p><label><input type="checkbox" id="oto" style="width:auto"> Jalankan otomatis saat Windows menyala</label></div>` : ""}
   <div class="card"><h3>Pembaruan</h3><p id="vtxt">Memeriksa…</p><div class="aksi" style="justify-content:flex-start"><button class="sek" data-cek>Cek sekarang</button></div></div>
   <div class="card"><h3>Panduan</h3><p>Lihat lagi pengantar singkat aplikasi.</p><button class="sek" data-pn>Buka panduan</button></div></div>
   <h3>Nomor darurat</h3>${tabel([["Layanan", (r) => `<b>${r[0]}</b>`], ["Nomor", (r) => r[1]]], DARURAT)}
@@ -704,6 +755,7 @@ HAL.pengaturan = (el) => {
   <h3>Tentang</h3><div class="card" style="max-width:640px"><p>Aplikasi KKN Al-Mushlih 2027 (versi PC) untuk administrasi internal kelompok KKN. Data memakai akun dan database yang sama dengan aplikasi HP.</p></div>`;
   el.querySelectorAll("[data-th]").forEach((b) => b.onclick = () => { temaIdx = +b.dataset.th; localStorage.setItem("kkn_tema", TEMA[temaIdx]); pasangTema(); gambar(); });
   $("pgOn").onchange = (e) => { localStorage.setItem("kkn_pengingat", e.target.checked ? "1" : "0"); if (e.target.checked && "Notification" in window) Notification.requestPermission(); };
+  if ($("oto")) { window.kkn.mulaiOtomatis().then((a) => $("oto").checked = !!a); $("oto").onchange = (e) => window.kkn.mulaiOtomatis(e.target.checked).then((a) => toast(a ? "Akan jalan otomatis saat Windows menyala" : "Tidak jalan otomatis")); }
   el.querySelector("[data-pn]").onclick = panduan;
   el.querySelector("[data-cek]").onclick = () => cekPembaruan(true);
   cekPembaruan(false);
@@ -722,6 +774,37 @@ HAL.kendali = (el) => {
     tabel(kol, u, (r) => r.id === me.uid ? "" : `<button class="sek kecil" data-b="${r.id}">${r.akunDiblokir ? "Buka blokir" : "Blokir"}</button>`) + `<h3>Saran masuk</h3>` + (sar.length ? `<div class="cards">${sar.map((x) => `<div class="card"><small style="color:var(--mut)">${tglJam(x.dikirimPadaMillis)} · ${esc((u.find((y) => y.id === x.uid) || {}).namaLengkap || x.uid)}</small><p style="white-space:pre-wrap">${esc(x.isi)}</p></div>`).join("")}</div>` : `<div class="kosong">Belum ada saran. (Hanya admin yang bisa membaca.)</div>`);
   ikatCsv(el, "akun", [["Nama", (r) => r.namaLengkap], ["NIM", (r) => r.nim], ["Email", (r) => r.email], ["Desa", (r) => r.desa], ["Divisi", (r) => r.divisi], ["Peran", (r) => r.peran], ["Diblokir", (r) => r.akunDiblokir ? "ya" : "tidak"]], u);
   el.querySelectorAll("[data-b]").forEach((b) => b.onclick = () => { const x = u.find((y) => y.id === b.dataset.b); konfirm(`${x.akunDiblokir ? "Buka blokir" : "Blokir"} ${x.namaLengkap}?`, () => coba(() => db.collection("users").doc(x.id).update({akunDiblokir: !x.akunDiblokir}), "Diperbarui")); });
+};
+
+/* ---------- Jurnal Pribadi (salinan dari HP, hanya pemilik yang bisa membaca) ---------- */
+HAL.jurnalpribadi = (el) => {
+  if (!HAL.jurnalpribadi.mulai) { HAL.jurnalpribadi.mulai = true;
+    db.collection("users").doc(me.uid).collection("jurnal_pribadi").onSnapshot((s) => { data.jp = s.docs.map((d) => ({id: d.id, ...d.data()})); data.jpGalat = ""; if (halaman === "jurnalpribadi") gambar(); }, (e) => { data.jp = []; data.jpGalat = e.code === "permission-denied" ? "Aturan Firestore terbaru belum dipublish." : e.message; if (halaman === "jurnalpribadi") gambar(); }); }
+  const b = urutBaru(data.jp || []);
+  el.innerHTML = `<div class="bar"><span class="tag">Hanya kamu yang bisa membaca ini. Di HP: Sekretaris > Dokumen & PDF > Laporan & Cadangan > Kirim Jurnal Pribadi ke PC</span></div>` + (data.jpGalat ? `<div class="kosong">${esc(data.jpGalat)}</div>` : b.length ? `<div class="cards">${b.map((j) => `<div class="card"><span class="tag">${j.jenis === "NOTULEN" ? "Notulen" : "Harian"}</span> <small style="color:var(--mut)">${tglJam(j.tanggalMillis)}</small><h3 style="margin-top:8px">${esc(j.judul)}</h3><p style="white-space:pre-wrap">${esc(j.isi)}</p>${j.pesertaRapat ? `<p style="font-size:12px;color:var(--mut)">Peserta: ${esc(j.pesertaRapat)}</p>` : ""}</div>`).join("")}</div>` : `<div class="kosong">Belum ada jurnal pribadi yang dikirim dari HP.</div>`);
+};
+
+/* ---------- Pantauan Desa (admin, baca saja, semua desa) ---------- */
+HAL.pantau = async (el) => {
+  if (!BOLEH_KENDALI()) { el.innerHTML = `<div class="kosong">Menu ini khusus admin/developer.</div>`; return; }
+  if (!data.pdUsers) { el.innerHTML = `<div class="kosong">Memuat daftar desa…</div>`;
+    try { data.pdUsers = (await db.collection("users").get()).docs.map((d) => ({id: d.id, ...d.data()})); } catch (e) { data.pdUsers = []; }
+    if (halaman === "pantau") gambar(); return; }
+  const ds = {}; data.pdUsers.forEach((u) => { if (u.desaId) ds[u.desaId] = u.desa || u.desaId; });
+  const ids = Object.keys(ds), pilih = saring.pd && ds[saring.pd] ? saring.pd : (ds[desaId] ? desaId : ids[0]);
+  const P = data.pdData && data.pdData.id === pilih ? data.pdData : null;
+  el.innerHTML = `<div class="bar"><select id="pdSel" style="max-width:260px">${ids.map((i) => `<option value="${esc(i)}" ${i === pilih ? "selected" : ""}>${esc(ds[i])}</option>`).join("")}</select><button class="sek" data-muat>${P ? "Muat ulang" : "Tampilkan"}</button><span class="tag">Baca saja · ${ids.length} desa</span></div>` + (P ? (() => {
+    const L = (n) => (P[n] || []).filter((x) => !x.dihapus), hari = new Date(); hari.setHours(0, 0, 0, 0);
+    const abs = L("absensi").filter((x) => x.tanggalMillis === hari.getTime()), nota = L("nota"), pr = L("proker");
+    return `<div class="grid"><div class="k"><b>${L("anggota").filter((a) => a.aktif !== false).length}</b><span>Anggota aktif</span></div><div class="k"><b>${abs.filter((x) => (x.status || (x.hadir ? "HADIR" : "ALPA")) === "HADIR").length}/${abs.length}</b><span>Hadir hari ini / tercatat</span></div><div class="k"><b>${L("surat").length}</b><span>Surat</span></div><div class="k"><b>${L("inventaris").length}</b><span>Barang inventaris</span></div><div class="k"><b>${rp(nota.reduce((s2, n) => s2 + (n.nominal || 0), 0))}</b><span>Total nota</span></div></div>
+    <h3>Program kerja</h3>` + tabel([["Proker", (r) => `<b>${esc(r.namaProker)}</b>`], ["Status", (r) => esc(String(r.status || "").replace(/_/g, " ").toLowerCase())], ["PIC", (r) => esc(r.picNama || "-")], ["Anggaran", (r) => rp(r.anggaran)], ["Realisasi", (r) => rp(r.realisasi)]], pr);
+  })() : `<div class="kosong">Pilih desa lalu tekan Tampilkan. Data dibaca langsung dari server (tidak mengubah apa pun).</div>`);
+  $("pdSel").onchange = (e) => { saring.pd = e.target.value; data.pdData = null; gambar(); };
+  el.querySelector("[data-muat]").onclick = () => coba(async () => {
+    const o = {id: $("pdSel").value}; saring.pd = o.id;
+    for (const n of ["anggota", "absensi", "proker", "surat", "inventaris", "nota"]) o[n] = (await db.collection("desa").doc(o.id).collection(n).get()).docs.map((d) => ({id: d.id, ...d.data()}));
+    data.pdData = o; gambar();
+  });
 };
 
 /* ---------- Pengingat (notifikasi desktop, diulang sampai dibuka) ---------- */
@@ -745,6 +828,18 @@ setInterval(() => {
 }, 60 * 1000);
 if ("Notification" in window && Notification.permission === "default" && pengingatAktif()) setTimeout(() => Notification.requestPermission(), 4000);
 
+/* ---------- Penanda offline ---------- */
+function penandaOffline() {
+  let b = document.getElementById("bannerOffline");
+  if (navigator.onLine) { if (b) b.remove(); return; }
+  if (b || !document.querySelector(".kanan")) return;
+  b = document.createElement("div"); b.id = "bannerOffline";
+  b.style.cssText = "background:var(--red);color:#fff;padding:6px 26px;font-weight:600";
+  b.textContent = "Tidak ada internet. Data terakhir tetap bisa dibuka; perubahan akan dikirim otomatis saat tersambung.";
+  document.querySelector(".kanan").prepend(b);
+}
+addEventListener("online", penandaOffline); addEventListener("offline", penandaOffline); setInterval(penandaOffline, 5000);
+
 /* ---------- Pembaruan aplikasi PC ---------- */
 async function cekPembaruan(manual) {
   const v = await versiApp(), t = $("vtxt");
@@ -756,8 +851,9 @@ async function cekPembaruan(manual) {
     if (rel && lebih(baru, v)) {
       const url = rel.assets.find((a) => /Setup.*\.exe$/i.test(a.name)).browser_download_url;
       if (t) t.innerHTML = `Versi terpasang ${esc(v)}. <b>Tersedia ${esc(baru)}.</b> <button class="kecil" data-u>Unduh</button>`;
-      if (t) t.querySelector("[data-u]").onclick = () => bukaLuar(url);
-      if (!$("bannerUpdate")) { const b = document.createElement("div"); b.id = "bannerUpdate"; b.style.cssText = "background:var(--gold);color:#000;padding:8px 26px;font-weight:600;display:flex;gap:12px;align-items:center"; b.innerHTML = `Pembaruan ${esc(baru)} tersedia <button class="kecil" style="background:#000">Unduh</button>`; b.querySelector("button").onclick = () => bukaLuar(url); document.querySelector(".kanan").prepend(b); }
+      const pasang = async (tombol) => { if (!(window.kkn && window.kkn.pasangPembaruan)) return bukaLuar(url); tombol.disabled = true; tombol.textContent = "Mengunduh…"; try { await window.kkn.pasangPembaruan(url); toast("Pemasang dibuka. Aplikasi akan tertutup."); } catch (e) { tombol.disabled = false; tombol.textContent = "Coba lagi"; toast("Gagal mengunduh: " + e.message); } };
+      if (t) { const tb = t.querySelector("[data-u]"); tb.textContent = "Pasang sekarang"; tb.onclick = () => pasang(tb); }
+      if (!$("bannerUpdate")) { const b = document.createElement("div"); b.id = "bannerUpdate"; b.style.cssText = "background:var(--gold);color:#000;padding:8px 26px;font-weight:600;display:flex;gap:12px;align-items:center"; b.innerHTML = `Pembaruan ${esc(baru)} tersedia <button class="kecil" style="background:#000">Unduh</button>`; b.querySelector("button").textContent = "Pasang sekarang"; b.querySelector("button").onclick = (ev) => pasang(ev.target); document.querySelector(".kanan").prepend(b); }
     } else if (t) t.textContent = `Versi terpasang ${v}. Sudah yang terbaru.`;
   } catch (e) { if (t) t.textContent = manual ? "Gagal memeriksa. Periksa internet." : `Versi terpasang ${v}.`; }
 }

@@ -61,6 +61,11 @@ fun LaporanScreen(vm: LaporanViewModel) {
             Text("Pilih berkas ZIP cadangan. Kamu akan melihat ringkasannya dulu sebelum apa pun diubah", fontSize = 12.sp, color = TeksRedup)
         }
 
+        KartuGelap(Modifier.fillMaxWidth().tekanPegas { if (!sedangProses) vm.kirimJurnalPribadi() }) {
+            Text("Kirim Jurnal Pribadi ke PC", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("Menyalin jurnal pribadi ke akunmu (hanya kamu yang bisa membaca) supaya bisa dibuka di aplikasi PC. Ketuk lagi setelah menulis jurnal baru", fontSize = 12.sp, color = TeksRedup)
+        }
+
         Text("Laporan", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
         JenisLaporan.entries.filter { it != JenisLaporan.BACKUP_ZIP }.forEach { jenis ->
             KartuGelap(Modifier.fillMaxWidth().tekanPegas {

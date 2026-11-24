@@ -164,3 +164,9 @@ Pengaturan satu kali: isi `web/firebase-config.js` dari Firebase Console (Web ap
 
 ## Tahap H: divisi Pendidikan
 Menu Jadwal Mengajar (hari, jam, lembaga/kelas, materi, pengajar, catatan) di Android dan PC, tersimpan di `desa/{desaId}/ajar`, ikut cadangan, pencarian, dan PDF di PC.
+
+## Tahap I
+- Menu **Dokumen & PDF** (Sekretaris): templat surat, laporan, rekap absensi bulanan, dan cadangan jadi satu tempat (Android dan PC).
+- Edit isi tugas, kas, pengumuman, polling; absensi Hadir/Izin/Sakit/Alpa (`status`, `hadir` tetap sinkron).
+- PC: ikon aplikasi, mode offline (cache Firestore + antrean tulis), pasang pembaruan otomatis dari GitHub, baki sistem (tombol X menyembunyikan), jalan otomatis saat Windows menyala.
+- Pantauan Desa (admin baca semua desa) dan Jurnal Pribadi di PC. **Wajib publish ulang `firestore.rules`** (aturan baca admin + `users/{uid}/jurnal_pribadi`).

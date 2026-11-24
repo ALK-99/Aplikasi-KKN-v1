@@ -91,6 +91,12 @@ service cloud.firestore {
         allow update: if pemilik(uid);
         allow delete: if false;
       }
+      // Salinan jurnal pribadi dari HP agar bisa dibuka di aplikasi PC. Hanya pemilik.
+      match /jurnal_pribadi/{docId} {
+        allow read: if pemilik(uid);
+        allow create, update: if pemilik(uid);
+        allow delete: if false;
+      }
       match /security_log/{docId} {
         allow read: if pemilik(uid);
         allow write: if false; // hanya ditulis lewat Cloud Functions/Console, bukan klien
@@ -145,7 +151,8 @@ service cloud.firestore {
     // sungguhan (pakai `dihapus` / `aktif`), dan setiap tulis harus atas nama
     // akun yang login sendiri (diubahOleh == uid), jadi jejak tidak bisa dipalsukan.
     match /desa/{desaId}/{koleksi}/{id} {
-      allow read: if anggotaDesa(desaId);
+      // Admin boleh MEMBACA semua desa (Pantauan Desa di aplikasi PC); menulis tetap hanya anggota desa.
+      allow read: if anggotaDesa(desaId) || adalahAdmin();
       allow create: if anggotaDesa(desaId)
         && koleksi != 'riwayat'
         && request.resource.data.diubahOleh == request.auth.uid;
@@ -158,7 +165,7 @@ service cloud.firestore {
 
     // Riwayat perubahan: hanya bisa ditambah, atas nama sendiri; tidak bisa diubah/dihapus.
     match /desa/{desaId}/riwayat/{id} {
-      allow read: if anggotaDesa(desaId);
+      allow read: if anggotaDesa(desaId) || adalahAdmin();
       allow create: if anggotaDesa(desaId) && request.resource.data.oleh == request.auth.uid;
       allow update, delete: if false;
     }
