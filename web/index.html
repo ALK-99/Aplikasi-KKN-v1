@@ -256,7 +256,7 @@ function gambar() {
   const ae = document.activeElement; if (ae && $("isi").contains(ae) && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && ae.type !== "checkbox" && !gambar.paksa) return;
   $("judul").textContent = JUDUL[halaman] || "";
   const f = HAL[halaman] || HAL.beranda;
-  const y = $("isi").scrollTop; $("isi").innerHTML = ""; f($("isi")); $("isi").scrollTop = y;
+  const y = $("isi").scrollTop; $("isi").innerHTML = ""; f($("isi")); try { perkayaTabel($("isi")); } catch (e) {} $("isi").scrollTop = y;
 }
 function tabel(kolom, baris, aksi) {
   if (!baris.length) return `<div class="kosong">Belum ada data.</div>`;
@@ -341,18 +341,18 @@ function rekapAbsensi(dariMs) {
 const pct = (r) => (r.tot ? Math.round(r.h * 100 / r.tot) : 0) + "%";
 const KOL_REKAP = [["Nama", (r) => esc(r.n)], ["Hadir", (r) => r.h], ["Izin", (r) => r.i], ["Sakit", (r) => r.s], ["Alpa", (r) => r.a], ["%", pct]];
 const KOL_REKAP_CSV = [["Nama", (r) => r.n], ["Hadir", (r) => r.h], ["Izin", (r) => r.i], ["Sakit", (r) => r.s], ["Alpa", (r) => r.a], ["Persen hadir", pct]];
-function pdfRekapBulan() {
+function pdfRekapBulan(fmt) {
   const d = new Date(), awal = new Date(d.getFullYear(), d.getMonth(), 1).getTime(), nm = d.toLocaleDateString("id-ID", {month: "long", year: "numeric"});
   const r = rekapAbsensi(awal);
   if (!r.length) { toast("Belum ada data absensi bulan ini"); return; }
-  simpanDok(dokPdfHtml("Rekap Absensi " + nm, "Desa " + me.desa, ["Nama", "Hadir", "Izin", "Sakit", "Alpa", "Persen hadir"], r.map((x) => [x.n, x.h, x.i, x.s, x.a, pct(x)])), `Rekap_Absensi_${nm.replace(/\W+/g, "_")}.pdf`);
+  simpanDok(dokPdfHtml("Rekap Absensi " + nm, "Desa " + me.desa, ["Nama", "Hadir", "Izin", "Sakit", "Alpa", "Persen hadir"], r.map((x) => [x.n, x.h, x.i, x.s, x.a, pct(x)])), `Rekap_Absensi_${nm.replace(/\W+/g, "_")}.pdf`, fmt);
 }
 HAL.absensi = (el) => {
   const tglPilih = saring.tgl || keInput(Date.now()), ms = kePengguna(tglPilih);
   const ang = aktif("anggota").filter((a) => a.aktif !== false).sort((a, b) => a.nama.localeCompare(b.nama));
   const ada = {}; aktif("absensi").filter((a) => a.tanggalMillis === ms).forEach((a) => ada[a.anggotaId] = a);
   const stA = (x) => x ? (x.status || (x.hadir ? "HADIR" : "ALPA")) : "", hadir = Object.values(ada).filter((a) => stA(a) === "HADIR").length;
-  el.innerHTML = `<div class="bar"><input type="date" id="tg" value="${tglPilih}" style="max-width:190px"><span class="tag ok">${hadir} hadir</span><span class="tag">${ang.length - Object.keys(ada).length} belum dicatat</span><span class="sp"></span><button class="sek" data-semua>Hadirkan semua yang belum dicatat</button><button class="sek" data-rekap>Rekap</button><button class="sek" data-pdfbln>Rekap bulan ini (PDF)</button></div>` +
+  el.innerHTML = `<div class="bar"><input type="date" id="tg" value="${tglPilih}" style="max-width:190px"><span class="tag ok">${hadir} hadir</span><span class="tag">${ang.length - Object.keys(ada).length} belum dicatat</span><span class="sp"></span><button class="sek" data-semua>Hadirkan semua yang belum dicatat</button><button class="sek" data-rekap>Rekap</button><button class="sek" data-pdfbln>Rekap bulan ini (PDF)</button><button class="sek" data-wdbln>Rekap bulan ini (Word)</button></div>` +
     (ang.length ? `<div class="wrap"><table><thead><tr><th>Nama</th><th>Status</th><th>Keterangan</th><th></th></tr></thead><tbody>${ang.map((a) => { const x = ada[a.id]; return `<tr><td><b>${esc(a.nama)}</b><br><small style="color:var(--mut)">${esc(a.divisi)}</small></td>
       <td><div class="chips">${[["HADIR","Hadir"],["IZIN","Izin"],["SAKIT","Sakit"],["ALPA","Alpa"]].map((c) => `<button class="chip ${stA(x) === c[0] ? "on" : ""}" data-h="${a.id}" data-v="${c[0]}">${c[1]}</button>`).join("")}</div></td>
       <td><input data-ket="${a.id}" value="${esc(x ? x.keterangan : "")}" placeholder="catatan (opsional)" style="min-width:160px"></td><td></td></tr>`; }).join("")}</tbody></table></div>` : `<div class="kosong">Tambahkan anggota dulu di menu Anggota.</div>`);
@@ -362,7 +362,8 @@ HAL.absensi = (el) => {
   el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => coba(() => simpan(ang.find((a) => a.id === b.dataset.h), b.dataset.v), "Tersimpan"));
   el.querySelectorAll("[data-ket]").forEach((i) => i.onchange = () => { const a = ang.find((x) => x.id === i.dataset.ket); if (ada[a.id]) coba(() => simpan(a, stA(ada[a.id])), "Keterangan tersimpan"); else toast("Pilih statusnya dulu"); });
   el.querySelector("[data-semua]").onclick = () => coba(async () => { for (const a of ang.filter((x) => !ada[x.id])) await simpan(a, "HADIR"); }, "Semua ditandai hadir");
-  el.querySelector("[data-pdfbln]").onclick = () => pdfRekapBulan();
+  el.querySelector("[data-pdfbln]").onclick = () => pdfRekapBulan("pdf");
+  el.querySelector("[data-wdbln]").onclick = () => pdfRekapBulan("word");
   el.querySelector("[data-rekap]").onclick = () => {
     const rek = rekapAbsensi(0);
     modal(`<h2>Rekap kehadiran (semua waktu)</h2>${tabel(KOL_REKAP, rek)}<div class="aksi"><button class="sek" data-x>Tutup</button><button data-c>Ekspor CSV</button></div>`, (m, t) => { m.querySelector("[data-x]").onclick = t; m.querySelector("[data-c]").onclick = () => csv("rekap-absensi", KOL_REKAP_CSV, rek); });
@@ -396,12 +397,17 @@ HAL.templatIsi = (el) => {
     ${T !== "TERIMA_KASIH" ? fld("hari", "Hari / tanggal") : ""}${T === "UNDANGAN" ? fld("waktu", "Waktu") : ""}${T !== "TERIMA_KASIH" ? fld("lokasi", "Tempat") : ""}
     <div class="row2">${fld("ketua", "Nama Ketua")}${fld("sekretaris", "Nama Sekretaris")}</div>
     <label><input type="checkbox" data-f="catat" ${F.catat !== false ? "checked" : ""} style="width:auto"> Catat juga sebagai surat keluar</label>
-    <div class="aksi"><button data-pdf>Simpan sebagai PDF</button></div></div><div id="pv"></div></div>`;
+    <div class="aksi"><button class="sek" data-word>Simpan sebagai Word</button><button data-pdf>Simpan sebagai PDF</button></div></div><div id="pv"></div></div>`;
   F.tempat = F.tempat ?? ("Yogyakarta, " + new Date().toLocaleDateString("id-ID", {day: "numeric", month: "long", year: "numeric"})); F.lampiran = F.lampiran ?? "-";
   const pv = () => $("pv").innerHTML = suratHtml(T, F, NAMA[T]);
   el.querySelectorAll("[data-t]").forEach((b) => b.onclick = () => { saring.tp = b.dataset.t; gambar(); });
   el.querySelectorAll("[data-f]").forEach((i) => { if (!i.value && F[i.dataset.f]) i.value = F[i.dataset.f]; i.oninput = () => { F[i.dataset.f] = i.type === "checkbox" ? i.checked : i.value; saring.tf = F; pv(); }; });
   pv();
+  el.querySelector("[data-word]").onclick = () => {
+    if (!(F.tujuan || "").trim()) { toast("Isi bagian Kepada Yth."); return; }
+    simpanWord(suratHtml(T, F, NAMA[T], true), `Surat_${NAMA[T].replace(/ /g, "")}_${keInput(Date.now())}`);
+    if (F.catat !== false) coba(() => tulis("surat", "tambah", `KELUAR · ${F.perihal || NAMA[T]}`, dk("surat").doc(), {tanggalMillis: Date.now(), jenis: "KELUAR", nomorSurat: (F.nomor || "").trim(), perihal: (F.perihal || NAMA[T]).trim(), tujuanAtauPengirim: (F.tujuan || "").split("\n")[0].trim(), dihapus: false}, true));
+  };
   el.querySelector("[data-pdf]").onclick = async () => {
     if (!(F.tujuan || "").trim()) { toast("Isi bagian Kepada Yth."); return; }
     const html = suratHtml(T, F, NAMA[T], true), nama = `Surat_${NAMA[T].replace(/ /g, "")}_${keInput(Date.now())}.pdf`;
@@ -614,22 +620,24 @@ HAL.ajar = (el) => {
   const HARI = ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"];
   const baris = aktif("ajar").sort((a, b) => (a.hari - b.hari) || String(a.jam || "").localeCompare(String(b.jam || "")));
   const kol = [["Hari", (r) => `<b>${HARI[(r.hari || 1) - 1] || r.hari}</b>`], ["Jam", (r) => esc(r.jam)], ["Lembaga / kelas", (r) => esc(r.lembaga)], ["Materi", (r) => `<b>${esc(r.materi)}</b>`], ["Pengajar", (r) => esc(r.pengajarNama)], ["Catatan", (r) => esc(r.catatan)]];
-  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah jadwal</button><span class="sp"></span>${tombolCsv()}<button class="sek" data-pdf>PDF</button></div>` + tabel(kol, baris, (r) => `<button class="sek kecil" data-u="${r.id}">Ubah</button> <button class="bahaya" data-h="${r.id}">Hapus</button>`);
+  el.innerHTML = `<div class="bar"><button data-tambah>+ Tambah jadwal</button><span class="sp"></span>${tombolCsv()}<button class="sek" data-pdf>PDF</button><button class="sek" data-wd>Word</button></div>` + tabel(kol, baris, (r) => `<button class="sek kecil" data-u="${r.id}">Ubah</button> <button class="bahaya" data-h="${r.id}">Hapus</button>`);
   const isi = (x = {}) => `<label>Hari</label><select name="h">${HARI.map((h, i) => `<option value="${i + 1}" ${(x.hari || 1) === i + 1 ? "selected" : ""}>${h}</option>`).join("")}</select><label>Jam</label><input name="j" value="${esc(x.jam || "")}" placeholder="16.00-17.30"><label>Lembaga / kelas</label><input name="l" value="${esc(x.lembaga || "")}"><label>Materi</label><input name="m" value="${esc(x.materi || "")}"><label>Pengajar</label><input name="p" value="${esc(x.pengajarNama || "")}"><label>Catatan</label><input name="c" value="${esc(x.catatan || "")}">`;
   const ambil = (m) => ({hari: +v(m, "h"), jam: v(m, "j").trim(), lembaga: v(m, "l").trim(), materi: v(m, "m").trim(), pengajarNama: v(m, "p").trim(), catatan: v(m, "c").trim()});
   el.querySelector("[data-tambah]").onclick = () => formModal("Tambah jadwal mengajar", isi(), (m) => { const d = ambil(m); if (!d.materi && !d.lembaga) { toast("Isi lembaga atau materi"); return false; } coba(() => tulis("ajar", "tambah", `${d.materi || d.lembaga} (hari ${d.hari})`, dk("ajar").doc(), {...d, dihapus: false}, true), "Jadwal ditambahkan"); });
   el.querySelectorAll("[data-u]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.u); formModal("Ubah jadwal", isi(x), (m) => { const d = ambil(m); if (!d.materi && !d.lembaga) { toast("Isi lembaga atau materi"); return false; } coba(() => tulis("ajar", "ubah", d.materi || d.lembaga, dk("ajar").doc(x.id), d, false), "Jadwal diperbarui"); }); });
   el.querySelectorAll("[data-h]").forEach((b) => b.onclick = () => { const x = baris.find((y) => y.id === b.dataset.h); konfirm(`Hapus jadwal "${x.materi || x.lembaga}"?`, () => coba(() => tulis("ajar", "hapus", x.materi || x.lembaga, dk("ajar").doc(x.id), {dihapus: true}, false), "Dihapus")); });
   ikatCsv(el, "jadwal-mengajar", [["Hari", (r) => HARI[(r.hari || 1) - 1]], ["Jam", (r) => r.jam], ["Lembaga", (r) => r.lembaga], ["Materi", (r) => r.materi], ["Pengajar", (r) => r.pengajarNama], ["Catatan", (r) => r.catatan]], baris);
-  el.querySelector("[data-pdf]").onclick = () => simpanDok(dokPdfHtml("Jadwal Mengajar", "Divisi Pendidikan", ["Hari", "Jam", "Lembaga / kelas", "Materi", "Pengajar", "Catatan"], baris.map((r) => [HARI[(r.hari || 1) - 1], r.jam, r.lembaga, r.materi, r.pengajarNama, r.catatan])), "Jadwal_Mengajar.pdf");
+  el.querySelector("[data-pdf]").onclick = () => simpanDok(dokPdfHtml("Jadwal Mengajar", "Divisi Pendidikan", ["Hari", "Jam", "Lembaga / kelas", "Materi", "Pengajar", "Catatan"], baris.map((r) => [HARI[(r.hari || 1) - 1], r.jam, r.lembaga, r.materi, r.pengajarNama, r.catatan])), "Jadwal_Mengajar.pdf", "pdf");
+  el.querySelector("[data-wd]").onclick = () => simpanDok(dokPdfHtml("Jadwal Mengajar", "Divisi Pendidikan", ["Hari", "Jam", "Lembaga / kelas", "Materi", "Pengajar", "Catatan"], baris.map((r) => [HARI[(r.hari || 1) - 1], r.jam, r.lembaga, r.materi, r.pengajarNama, r.catatan])), "Jadwal_Mengajar.pdf", "word");
 };
 
 /* ---------- Dokumen & PDF: satu tempat untuk templat surat, laporan, rekap, cadangan ---------- */
 JUDUL.dokumen = "Dokumen & PDF";
 HAL.dokumen = (el) => {
   const t = saring.dok || "templat";
-  el.innerHTML = `<div class="chips" style="margin-bottom:14px"><button class="chip ${t === "templat" ? "on" : ""}" data-dk="templat">Templat Surat</button><button class="chip ${t === "laporan" ? "on" : ""}" data-dk="laporan">Laporan, Rekap & Cadangan</button></div><div id="dok-isi"></div>`;
+  el.innerHTML = `<div class="chips" style="margin-bottom:14px"><button class="chip ${t === "templat" ? "on" : ""}" data-dk="templat">Templat Surat</button><button class="chip ${t === "laporan" ? "on" : ""}" data-dk="laporan">Laporan, Rekap & Cadangan</button></div><div class="chips" style="margin:-4px 0 14px"><span class="tag">Format laporan teks</span><button class="chip ${formatDok() === "pdf" ? "on" : ""}" data-fm="pdf">PDF</button><button class="chip ${formatDok() === "word" ? "on" : ""}" data-fm="word">Word (bisa disunting)</button></div><div id="dok-isi"></div>`;
   el.querySelectorAll("[data-dk]").forEach((b) => b.onclick = () => { saring.dok = b.dataset.dk; gambar(); });
+  el.querySelectorAll("[data-fm]").forEach((b) => b.onclick = () => { localStorage.setItem("kkn_fmt", b.dataset.fm); gambar(); });
   (t === "templat" ? HAL.templatIsi : HAL.laporanIsi)($("dok-isi"));
 };
 
@@ -655,7 +663,56 @@ function dokPdfHtml(judul, sub, kepala, baris, tambahan = "") {
   <table><thead><tr>${kepala.map((k) => `<th>${e(k)}</th>`).join("")}</tr></thead><tbody>${baris.map((r) => `<tr>${r.map((c) => `<td>${e(c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${kepala.length}">Tidak ada data.</td></tr>`}</tbody></table>
   <div class="ttd">${e(me.desa)}, ${hariIniStr()}<br>Sekretaris<br><br><br><br>${e(me.nama)}</div>`;
 }
-async function simpanDok(html, nama) {
+/* ---------- Word (.docx) tanpa library: zip "stored" + CRC32 ---------- */
+const CRC_T = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (u) => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC_T[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zipSimpan(berkas) {
+  const te = new TextEncoder(), bagian = [], pusat = []; let off = 0;
+  const u16 = (n) => [n & 255, (n >> 8) & 255], u32 = (n) => [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255];
+  berkas.forEach(([nama, isi]) => {
+    const nb = te.encode(nama), d = te.encode(isi), c = crc32(d);
+    const lh = new Uint8Array([0x50, 0x4b, 3, 4, ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(c), ...u32(d.length), ...u32(d.length), ...u16(nb.length), ...u16(0)]);
+    bagian.push(lh, nb, d);
+    pusat.push(new Uint8Array([0x50, 0x4b, 1, 2, ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(c), ...u32(d.length), ...u32(d.length), ...u16(nb.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nb);
+    off += lh.length + nb.length + d.length;
+  });
+  const ukuranPusat = pusat.reduce((s, x) => s + x.length, 0);
+  const akhir = new Uint8Array([0x50, 0x4b, 5, 6, ...u16(0), ...u16(0), ...u16(berkas.length), ...u16(berkas.length), ...u32(ukuranPusat), ...u32(off), ...u16(0)]);
+  return new Blob([...bagian, ...pusat, akhir], {type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+}
+const xe = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+function docxBlok(html) {
+  const d = new DOMParser().parseFromString(html.replace("</b>Desa", "</b><br>Desa"), "text/html"), out = [];
+  const rata = (el) => { const st = (el.getAttribute && el.getAttribute("style")) || "", cl = (el.className || "") + ""; if (/kop/.test(cl) || /text-align:\s*center/.test(st)) return "center"; if (/ttd/.test(cl) || /text-align:\s*right/.test(st)) return "right"; return "left"; };
+  const baris = (n, tebal) => { const L = [[]]; const jalan = (x, b) => { x.childNodes.forEach((c) => { if (c.nodeType === 3) { const t = c.textContent.replace(/\s+/g, " "); if (t.trim() || t === " ") L[L.length - 1].push([t, b]); } else if (c.nodeType === 1) { if (c.tagName === "BR") L.push([]); else if (!/STYLE|SCRIPT/.test(c.tagName)) jalan(c, b || /^(B|STRONG|H\d)$/.test(c.tagName)); } }); }; jalan(n, tebal); return L.filter((l) => l.some((r) => r[0].trim())); };
+  const blok = (n, r, ukuran) => { n.childNodes.forEach((c) => {
+    if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) out.push({p: [[[t, false]]], r, uk: ukuran}); return; }
+    if (c.nodeType !== 1 || /STYLE|SCRIPT|META|TITLE/.test(c.tagName)) return;
+    if (c.tagName === "TABLE") { out.push({tb: [...c.rows].map((rw) => [...rw.cells].map((x) => x.textContent.replace(/\s+/g, " ").trim())), kepala: !!c.tHead}); return; }
+    const anak = c.querySelector && c.querySelector("table, div, p, h1, h2, h3, ul, ol"), rr = rata(c) !== "left" ? rata(c) : r, h = /^H\d$/.test(c.tagName);
+    if (anak) blok(c, rr, ukuran); else { const b = baris(c, h || /kop/.test(c.className + "")); if (b.length) out.push({p: b, r: rr, uk: h ? 28 : /kop/.test(c.className + "") ? 28 : ukuran}); }
+  }); };
+  blok(d.body, "left", 22); return out;
+}
+function buatDocx(html) {
+  const run = (t, b, uk) => `<w:r><w:rPr>${b ? "<w:b/>" : ""}<w:sz w:val="${uk}"/></w:rPr><w:t xml:space="preserve">${xe(t)}</w:t></w:r>`;
+  const para = (runs, r, uk) => `<w:p><w:pPr><w:spacing w:after="100"/><w:jc w:val="${r}"/></w:pPr>${runs.map((x) => run(x[0], x[1], uk)).join("")}</w:p>`;
+  const garis = `w:val="single" w:sz="4" w:color="444444"`, bd = ["top", "left", "bottom", "right", "insideH", "insideV"].map((k) => `<w:${k} ${garis}/>`).join("");
+  const body = docxBlok(html).map((b) => {
+    if (b.tb) return `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>${bd}</w:tblBorders></w:tblPr>${b.tb.map((r, i) => `<w:tr>${r.map((c) => `<w:tc><w:tcPr>${b.kepala && i === 0 ? '<w:shd w:val="clear" w:color="auto" w:fill="E9E9F2"/>' : ""}</w:tcPr>${para([[c, b.kepala && i === 0]], "left", 20)}</w:tc>`).join("")}</w:tr>`).join("")}</w:tbl><w:p/>`;
+    return b.p.map((l) => para(l, b.r, b.uk)).join("");
+  }).join("");
+  const mendatar = /landscape/.test(html), pg = mendatar ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>' : '<w:pgSz w:w="11906" w:h="16838"/>';
+  const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr>${pg}<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  return zipSimpan([["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`], ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`], ["word/document.xml", doc]]);
+}
+function simpanWord(html, nama) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(buatDocx(html)); a.download = nama.replace(/\.pdf$/i, "") + ".docx"; a.click();
+  toast("Berkas Word dibuat (cek folder Unduhan). Buka di Word untuk menyunting.");
+}
+const formatDok = () => localStorage.getItem("kkn_fmt") === "word" ? "word" : "pdf";
+async function simpanDok(html, nama, paksa) {
+  if ((paksa || formatDok()) === "word") return simpanWord(html, nama);
   if (window.kkn && window.kkn.simpanPdf) { const r = await window.kkn.simpanPdf(html, nama, true); if (r) toast("PDF disimpan"); }
   else { const w = window.open("", "_blank"); w.document.write(html); w.document.close(); w.print(); }
 }
@@ -850,6 +907,42 @@ function cekIngatSholat() {
 }
 setInterval(() => { cekIngatSholat(); if ((halaman === "sholat" || halaman === "beranda") && me) gambar(); }, 30000);
 setTimeout(cekIngatSholat, 5000);
+
+/* ---------- Filter & urutkan otomatis untuk tabel yang datanya banyak ---------- */
+const BLN = {jan:0,feb:1,mar:2,apr:3,mei:4,jun:5,jul:6,agu:7,sep:8,okt:9,nov:10,des:11};
+function kunciUrut(t) {
+  t = String(t).trim(); const m = t.match(/^(\d{1,2})\s+([A-Za-z]{3})\.?\s*(\d{4})?/);
+  if (m && BLN[m[2].toLowerCase()] !== undefined) return new Date(m[3] || new Date().getFullYear(), BLN[m[2].toLowerCase()], +m[1]).getTime();
+  const n = t.replace(/^Rp\s*/i, "").replace(/\./g, "").replace(",", ".").replace(/%$/, "");
+  if (n !== "" && !isNaN(n)) return +n;
+  return t.toLowerCase();
+}
+function perkayaTabel(root) {
+  root.querySelectorAll(".wrap").forEach((w, ix) => {
+    const tb = w.querySelector("table"); if (!tb || w.dataset.tb || w.closest(".modal")) return;
+    const baris = [...tb.tBodies[0].rows]; if (baris.length < 6) return;
+    w.dataset.tb = "1";
+    const kep = [...tb.tHead.rows[0].cells].map((c) => c.textContent.trim()), kunci = halaman + ix, S = (saring.tb = saring.tb || {}), st = (S[kunci] = S[kunci] || {q: "", u: "", arah: 1, fk: "", fv: ""});
+    const idx = kep.map((k, i) => i).filter((i) => kep[i]);
+    const bar = document.createElement("div"); bar.className = "bar"; bar.style.marginBottom = "8px";
+    bar.innerHTML = `<input class="tq" placeholder="Saring: ketik kata…" value="${esc(st.q)}"><select class="tu"><option value="">Urutkan berdasarkan…</option>${idx.map((i) => `<option value="${i}" ${String(st.u) === String(i) ? "selected" : ""}>${esc(kep[i])}</option>`).join("")}</select><button class="sek kecil ta" title="Balik urutan">${st.arah > 0 ? "A→Z ↑" : "Z→A ↓"}</button><select class="tf"><option value="">Filter berdasarkan…</option>${idx.map((i) => `<option value="${i}" ${String(st.fk) === String(i) ? "selected" : ""}>${esc(kep[i])}</option>`).join("")}</select><select class="tv" ${st.fk === "" ? "hidden" : ""}></select><span class="tag tc"></span>`;
+    w.before(bar);
+    const isiNilai = () => { const sel = bar.querySelector(".tv"); if (st.fk === "") { sel.hidden = true; return; } const nilai = [...new Set(baris.map((r) => r.cells[+st.fk].textContent.trim()))].filter(Boolean).sort(); sel.hidden = false; sel.innerHTML = `<option value="">Semua nilai</option>` + nilai.slice(0, 80).map((n) => `<option ${n === st.fv ? "selected" : ""}>${esc(n)}</option>`).join(""); };
+    const terap = () => {
+      const q = st.q.toLowerCase(); let tampil = 0;
+      baris.forEach((r) => { const ok = (!q || r.textContent.toLowerCase().includes(q)) && (st.fk === "" || !st.fv || r.cells[+st.fk].textContent.trim() === st.fv); r.hidden = !ok; if (ok) tampil++; });
+      if (st.u !== "") { const u = +st.u, d = [...baris].sort((a, b) => { const x = kunciUrut(a.cells[u].textContent), y = kunciUrut(b.cells[u].textContent); return (x < y ? -1 : x > y ? 1 : 0) * st.arah; }); d.forEach((r) => tb.tBodies[0].appendChild(r)); }
+      bar.querySelector(".tc").textContent = tampil + " dari " + baris.length + " data";
+      bar.querySelector(".ta").textContent = st.arah > 0 ? "A→Z ↑" : "Z→A ↓";
+    };
+    bar.querySelector(".tq").oninput = (e) => { st.q = e.target.value; terap(); };
+    bar.querySelector(".tu").onchange = (e) => { st.u = e.target.value; terap(); };
+    bar.querySelector(".ta").onclick = () => { st.arah *= -1; terap(); };
+    bar.querySelector(".tf").onchange = (e) => { st.fk = e.target.value; st.fv = ""; isiNilai(); terap(); };
+    bar.querySelector(".tv").onchange = (e) => { st.fv = e.target.value; terap(); };
+    isiNilai(); terap();
+  });
+}
 
 /* ---------- Penanda offline ---------- */
 function penandaOffline() {
