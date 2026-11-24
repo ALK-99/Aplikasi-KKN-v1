@@ -51,10 +51,20 @@ fun PengumumanScreen(vm: KoordinasiViewModel) {
     val daftar by vm.pengumuman.collectAsState()
     val admin by vm.admin.collectAsState()
     var dialog by remember { mutableStateOf(false) }
+    val pny = rememberPenyaring()
+    val tampilP = pny.terapkan(
+        daftar, { "${it.judul} ${it.isi} ${it.penulisNama}" },
+        listOf<Pair<String, Comparator<Pengumuman>>>(
+            "Tanggal" to compareBy { it.tanggalMillis },
+            "Judul" to compareBy { it.judul.lowercase() },
+        ),
+        { it.penulisNama.ifBlank { "-" } }
+    )
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             if (!admin) CatatanAdmin("Pengumuman dibuat oleh admin. Pengumuman yang tampil di layar otomatis ditandai sudah dibaca.")
+            BarPenyaring(pny, listOf("Tanggal", "Judul"), "penulis", daftar.map { it.penulisNama.ifBlank { "-" } }.distinct().sorted().take(30), tampilP.size, daftar.size)
             if (daftar.isEmpty()) {
                 KosongState("Belum ada pengumuman.")
             } else {
@@ -62,7 +72,7 @@ fun PengumumanScreen(vm: KoordinasiViewModel) {
                     contentPadding = PaddingValues(18.dp, 8.dp, 18.dp, 110.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    itemsIndexed(daftar) { i, p ->
+                    itemsIndexed(tampilP) { i, p ->
                         KartuPengumuman(p, vm, admin, Modifier.munculBertahap(i))
                     }
                 }
@@ -240,10 +250,17 @@ fun TugasScreen(vm: KoordinasiViewModel) {
     var dialog by remember { mutableStateOf(false) }
     var filter by remember { mutableStateOf(0) } // 0 belum, 1 selesai, 2 semua
 
-    val tampil = remember(daftar, filter) {
-        daftar.filter { filter == 2 || (filter == 0 && !it.selesai) || (filter == 1 && it.selesai) }
-            .sortedBy { it.deadlineMillis }
-    }
+    val pny = rememberPenyaring()
+    val awal = daftar.filter { filter == 2 || (filter == 0 && !it.selesai) || (filter == 1 && it.selesai) }.sortedBy { it.deadlineMillis }
+    val tampil = pny.terapkan(
+        awal, { "${it.judul} ${it.deskripsi} ${it.untukNama}" },
+        listOf<Pair<String, Comparator<Tugas>>>(
+            "Tenggat" to compareBy { it.deadlineMillis },
+            "Judul" to compareBy { it.judul.lowercase() },
+            "Penerima" to compareBy { it.untukNama.lowercase() },
+        ),
+        { it.untukNama.ifBlank { "-" } }
+    )
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -253,6 +270,8 @@ fun TugasScreen(vm: KoordinasiViewModel) {
                 PilChip("Semua", filter == 2, { filter = 2 })
             }
             if (!admin) CatatanAdmin("Tugas diberikan oleh admin. Centang tugas milikmu setelah selesai.")
+            BarPenyaring(pny, listOf("Tenggat", "Judul", "Penerima"), "penerima",
+                awal.map { it.untukNama.ifBlank { "-" } }.distinct().sorted().take(30), tampil.size, awal.size)
             if (tampil.isEmpty()) {
                 KosongState("Tidak ada tugas di daftar ini.")
             } else {
@@ -382,6 +401,16 @@ fun KasScreen(vm: KoordinasiViewModel) {
 
     val masuk = daftar.filter { it.masuk }.sumOf { it.jumlah }
     val keluar = daftar.filter { !it.masuk }.sumOf { it.jumlah }
+    val pny = rememberPenyaring()
+    val tampilKas = pny.terapkan(
+        daftar, { "${it.kategori} ${it.keterangan} ${it.penulisNama}" },
+        listOf<Pair<String, Comparator<Kas>>>(
+            "Tanggal" to compareBy { it.tanggalMillis },
+            "Jumlah" to compareBy { it.jumlah },
+            "Kategori" to compareBy { it.kategori.lowercase() },
+        ),
+        { if (it.masuk) "Pemasukan" else "Pengeluaran" }
+    )
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -406,8 +435,9 @@ fun KasScreen(vm: KoordinasiViewModel) {
                 }
             }
             if (!admin) item { CatatanAdmin("Kas dicatat oleh admin (bendahara). Semua anggota bisa melihat agar transparan.") }
+            item { BarPenyaring(pny, listOf("Tanggal", "Jumlah", "Kategori"), "jenis", listOf("Pemasukan", "Pengeluaran"), tampilKas.size, daftar.size) }
             if (daftar.isEmpty()) item { KosongState("Belum ada catatan kas.") }
-            itemsIndexed(daftar) { i, k ->
+            itemsIndexed(tampilKas) { i, k ->
                 KartuGelap(Modifier.fillMaxWidth().munculBertahap(i)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
