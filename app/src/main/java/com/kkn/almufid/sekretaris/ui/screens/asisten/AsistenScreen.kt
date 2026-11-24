@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -163,6 +164,7 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
     var bagian by remember { mutableIntStateOf(0) } // 0 tutup, 1 ingatan, 2 pengaturan
     var kunci by remember { mutableStateOf(AsistenStore.kunci(context)) }
     var model by remember { mutableStateOf(AsistenStore.model(context)) }
+    var kunciOr by remember { mutableStateOf(AsistenStore.kunciOr(context)) }
     var ingatan by remember { mutableStateOf(AsistenStore.ingatan(context)) }
     var fileUri by remember { mutableStateOf<Uri?>(null) }
     var fileNama by remember { mutableStateOf("") }
@@ -201,15 +203,15 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
                     }
                     if (bytes.size > 12_000_000) throw IllegalStateException("File terlalu besar (maks 12 MB)")
                     if (nama.lowercase().endsWith(".pdf")) {
-                        if (kunci.isBlank()) throw IllegalStateException("Membaca PDF butuh Mode pintar. Aktifkan lewat tombol pengaturan.")
+                        if (kunci.isBlank()) throw IllegalStateException("Membaca PDF butuh kunci Gemini. Aktifkan lewat tombol pengaturan.")
                         lamp = Lampiran(nama, null, Base64.encodeToString(bytes, Base64.NO_WRAP))
                     } else {
-                        if (kunci.isBlank()) throw IllegalStateException("Membaca file butuh Mode pintar. Aktifkan lewat tombol pengaturan.")
+                        if (kunci.isBlank() && kunciOr.isBlank()) throw IllegalStateException("Membaca file butuh Mode pintar. Aktifkan lewat tombol pengaturan.")
                         lamp = Lampiran(nama, withContext(Dispatchers.Default) { BacaFile.teks(nama, bytes) }, null)
                     }
                 }
-                if (kunci.isNotBlank()) {
-                    try { withContext(Dispatchers.IO) { AsistenParser.tanyaGemini(q, kunci, model, k, riw, lamp) } }
+                if (kunci.isNotBlank() || kunciOr.isNotBlank()) {
+                    try { withContext(Dispatchers.IO) { AsistenParser.tanyaAI(q, kunci, model, kunciOr, k, riw, lamp) } }
                     catch (e: Exception) {
                         if (lamp != null) throw e
                         val h = AsistenParser.pahami(q, k)
@@ -269,14 +271,20 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
             }
         }
         if (bagian == 2) {
-            KartuGelap(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Tanpa ini asisten hanya paham perintah umum. Mode pintar memakai Google Gemini dengan kunci API gratis milikmu: buka aistudio.google.com/apikey, masuk akun Google, ketuk Create API key, salin, lalu tempel di bawah. Kunci hanya disimpan di HP ini. Pertanyaan, file, dan ringkasan data desa dikirim ke Google. Model gratis punya batas harian; langganan Gemini Pro di aplikasi Gemini tidak berlaku untuk kunci API.",
-                    fontSize = 12.sp, color = TeksRedup
-                )
+            KartuGelap(Modifier.fillMaxWidth().padding(bottom = 8.dp).heightIn(max = 380.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Tanpa kunci asisten hanya paham perintah umum. Kunci hanya disimpan di HP ini; pertanyaan, file, dan ringkasan data desa dikirim ke penyedia AI.", fontSize = 12.sp, color = TeksRedup)
+                Text("1. Google Gemini", fontWeight = FontWeight.Bold)
+                Text("Kunci dari aistudio.google.com/apikey. Kunci gratis memakai model Flash. Untuk model Pro: pakai kunci berbayar (klaim kredit Google AI Pro) lalu ketuk Premium.", fontSize = 12.sp, color = TeksRedup)
                 OutlinedTextField(kunci, { kunci = it.trim() }, label = { Text("Kunci API Gemini") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(model, { model = it }, label = { Text("Model (dicoba berurutan bila sibuk)") }, modifier = Modifier.fillMaxWidth(), maxLines = 3)
-                Button(onClick = { AsistenStore.simpanPengaturan(context, kunci, model); model = AsistenStore.model(context); bagian = 0 }) { Text("Simpan") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { model = MODEL_BAWAAN }) { Text("Hemat (Flash)") }
+                    OutlinedButton(onClick = { model = MODEL_PREMIUM }) { Text("Premium (Pro)") }
+                }
+                Text("2. Cadangan gratis: OpenRouter (opsional)", fontWeight = FontWeight.Bold)
+                Text("Dipakai bila Gemini gagal atau sibuk. Kunci gratis tanpa kartu dari openrouter.ai/keys. Hanya teks, tidak bisa membaca PDF.", fontSize = 12.sp, color = TeksRedup)
+                OutlinedTextField(kunciOr, { kunciOr = it.trim() }, label = { Text("Kunci OpenRouter") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                Button(onClick = { AsistenStore.simpanPengaturan(context, kunci, model, kunciOr); model = AsistenStore.model(context); bagian = 0 }) { Text("Simpan") }
             }
         }
         LazyColumn(Modifier.weight(1f), state = daftar, verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 8.dp)) {

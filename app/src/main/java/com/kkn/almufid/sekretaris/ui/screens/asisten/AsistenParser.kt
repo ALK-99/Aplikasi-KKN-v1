@@ -34,6 +34,7 @@ data class HasilAsisten(val balasan: String, val aksi: List<AksiAsisten> = empty
 class Lampiran(val nama: String, val teks: String?, val pdfBase64: String?)
 class RiwayatItem(val saya: Boolean, val teks: String)
 
+const val MODEL_PREMIUM = "gemini-pro-latest, gemini-2.5-pro, gemini-flash-latest, gemini-2.5-flash, gemini-flash-lite-latest"
 const val MODEL_BAWAAN = "gemini-flash-latest, gemini-2.5-flash, gemini-flash-lite-latest, gemini-2.5-flash-lite"
 
 /** Potret data desa yang dipakai untuk menjawab pertanyaan. */
@@ -245,11 +246,8 @@ object AsistenParser {
      * Dipanggil dari thread IO. Mencoba tiap model dalam [modelCsv] berurutan; saat sibuk (503/429) diulang sekali
      * lalu pindah ke model berikutnya. Melempar exception berpesan ramah bila semua gagal.
      */
-    fun tanyaGemini(
-        teks: String, kunci: String, modelCsv: String, k: KonteksAsisten,
-        riwayat: List<RiwayatItem>, lampiran: Lampiran?,
-    ): HasilAsisten {
-        val sistem = "Kamu \"Asisten KKN\", asisten pribadi yang cerdas, hangat, dan teliti untuk sekretaris dan bendahara KKN. Jawab dalam bahasa Indonesia yang jelas dan ringkas. Kamu boleh ngobrol, menjawab pertanyaan umum, menjelaskan, memberi saran, dan membantu mengelola data desa.\n" +
+    fun sistemTeks(k: KonteksAsisten): String =
+"Kamu \"Asisten KKN\", asisten pribadi yang cerdas, hangat, dan teliti untuk sekretaris dan bendahara KKN. Jawab dalam bahasa Indonesia yang jelas dan ringkas. Kamu boleh ngobrol, menjawab pertanyaan umum, menjelaskan, memberi saran, dan membantu mengelola data desa.\n" +
             "Balas HANYA JSON: {\"balasan\": string, \"aksi\": [objek...], \"ingat\": [string...]}.\n" +
             "\"aksi\" boleh kosong atau berisi banyak entri (maksimal 25) yang diusulkan untuk disimpan. Pengguna selalu mengonfirmasi, jadi usulkan bila data jelas. Jenis:\n" +
             "{\"jenis\":\"kas\",\"masuk\":bool,\"jumlah\":angka rupiah,\"kategori\":string,\"keterangan\":string}\n" +
@@ -262,6 +260,12 @@ object AsistenParser {
             "Jawab pertanyaan data hanya dari DATA; jangan mengarang angka yang tidak ada. Bila ragu atau data kurang, tanyakan di \"balasan\".\n" +
             "INGATAN TENTANG PENGGUNA:\n" + (if (k.ingatan.isEmpty()) "(belum ada)" else k.ingatan.joinToString("\n") { "- $it" }) +
             "\nDATA DESA:\n" + konteksTeks(k)
+
+    fun tanyaGemini(
+        teks: String, kunci: String, modelCsv: String, k: KonteksAsisten,
+        riwayat: List<RiwayatItem>, lampiran: Lampiran?,
+    ): HasilAsisten {
+        val sistem = sistemTeks(k)
         val isiTeks = teks + (lampiran?.teks?.let { "\n\n[ISI FILE ${lampiran.nama}]\n$it" } ?: "")
         val bagian = org.json.JSONArray().put(JSONObject().put("text", isiTeks))
         lampiran?.pdfBase64?.let { bagian.put(JSONObject().put("inlineData", JSONObject().put("mimeType", "application/pdf").put("data", it))) }
@@ -312,6 +316,72 @@ object AsistenParser {
             }
         }
         throw IllegalStateException("Semua model sedang sibuk atau tidak tersedia ($galat)")
+    }
+
+    private fun hasilDariJson(o: JSONObject): HasilAsisten {
+        val larik = o.optJSONArray("aksi")
+        val daftar = mutableListOf<AksiAsisten>()
+        if (larik != null) for (i in 0 until minOf(larik.length(), 25)) larik.optJSONObject(i)?.let { aksiDariJson(it) }?.let { daftar.add(it) }
+        else o.optJSONObject("aksi")?.let { aksiDariJson(it) }?.let { daftar.add(it) }
+        val ing = mutableListOf<String>(); o.optJSONArray("ingat")?.let { for (i in 0 until it.length()) ing.add(it.optString(i)) }
+        return HasilAsisten(o.optString("balasan", "Selesai."), daftar, ing)
+    }
+
+    private fun jsonDariTeks(t: String): JSONObject {
+        val m = t.trim().removePrefix("```json").removeSuffix("```").trim()
+        return try { JSONObject(m) } catch (e: Exception) {
+            val i = m.indexOf('{'); val j = m.lastIndexOf('}')
+            try { if (i >= 0 && j > i) JSONObject(m.substring(i, j + 1)) else JSONObject().put("balasan", m) } catch (e2: Exception) { JSONObject().put("balasan", m) }
+        }
+    }
+
+    /** Cadangan gratis lewat OpenRouter (teks saja). */
+    fun tanyaOpenRouter(teks: String, kunci: String, k: KonteksAsisten, riwayat: List<RiwayatItem>, lampiran: Lampiran?): HasilAsisten {
+        val pesan = org.json.JSONArray().put(JSONObject().put("role", "system").put("content", sistemTeks(k)))
+        riwayat.takeLast(12).forEach { pesan.put(JSONObject().put("role", if (it.saya) "user" else "assistant").put("content", it.teks)) }
+        pesan.put(JSONObject().put("role", "user").put("content", teks + (lampiran?.teks?.let { "\n\n[ISI FILE ${lampiran.nama}]\n$it" } ?: "")))
+        var galat = ""
+        for (model in listOf("openai/gpt-oss-120b:free", "meta-llama/llama-3.3-70b-instruct:free")) {
+            for (percobaan in 0..1) {
+                val badan = JSONObject().put("model", model).put("temperature", 0.4).put("messages", pesan).toString().toByteArray(Charsets.UTF_8)
+                val c = URL("https://openrouter.ai/api/v1/chat/completions").openConnection() as HttpURLConnection
+                try {
+                    c.requestMethod = "POST"; c.connectTimeout = 15000; c.readTimeout = 60000; c.doOutput = true
+                    c.setRequestProperty("Content-Type", "application/json"); c.setRequestProperty("Authorization", "Bearer $kunci")
+                    c.outputStream.use { it.write(badan) }
+                    val kode = c.responseCode
+                    val isi = (if (kode in 200..299) c.inputStream else c.errorStream)?.bufferedReader()?.use { it.readText() } ?: ""
+                    if (kode in 200..299) {
+                        val t = JSONObject(isi).optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.optString("content") ?: ""
+                        if (t.isBlank()) { galat = "$model: kosong"; break }
+                        return hasilDariJson(jsonDariTeks(t))
+                    }
+                    galat = "$model: $kode"
+                    when {
+                        kode in listOf(429, 500, 502, 503, 504) -> { if (percobaan == 0) Thread.sleep(1500); continue }
+                        kode == 401 || kode == 403 -> throw IllegalStateException("Kunci OpenRouter ditolak ($kode)")
+                        else -> break
+                    }
+                } catch (e: java.io.IOException) {
+                    throw IllegalStateException("Tidak ada koneksi internet")
+                } finally { c.disconnect() }
+            }
+        }
+        throw IllegalStateException("Model gratis OpenRouter sibuk ($galat)")
+    }
+
+    /** Gemini dulu; bila gagal atau sibuk, jatuh ke OpenRouter bila ada kuncinya. */
+    fun tanyaAI(teks: String, kunciG: String, modelCsv: String, kunciOr: String, k: KonteksAsisten, riwayat: List<RiwayatItem>, lampiran: Lampiran?): HasilAsisten {
+        var galat = ""
+        if (kunciG.isNotBlank()) {
+            try { return tanyaGemini(teks, kunciG, modelCsv, k, riwayat, lampiran) }
+            catch (e: Exception) { galat = "Gemini: ${e.message}"; if (kunciOr.isBlank() || lampiran?.pdfBase64 != null) throw e }
+        }
+        if (kunciOr.isNotBlank()) {
+            try { return tanyaOpenRouter(teks, kunciOr, k, riwayat, lampiran) }
+            catch (e: Exception) { galat += (if (galat.isEmpty()) "" else " | ") + (e.message ?: "") }
+        }
+        throw IllegalStateException(galat.ifEmpty { "Belum ada kunci AI" })
     }
 
     private fun tenggatIso(s: String): Long = try {
@@ -383,8 +453,9 @@ object AsistenStore {
         val m = p(c).getString("model", "") ?: ""
         return if (m.isBlank() || m == "gemini-flash-latest") MODEL_BAWAAN else m
     }
-    fun simpanPengaturan(c: android.content.Context, kunci: String, model: String) =
-        p(c).edit().putString("gemini", kunci.trim()).putString("model", model.trim().ifBlank { MODEL_BAWAAN }).apply()
+    fun kunciOr(c: android.content.Context) = p(c).getString("openrouter", "") ?: ""
+    fun simpanPengaturan(c: android.content.Context, kunci: String, model: String, kunciOr: String) =
+        p(c).edit().putString("gemini", kunci.trim()).putString("model", model.trim().ifBlank { MODEL_BAWAAN }).putString("openrouter", kunciOr.trim()).apply()
 
     private fun daftar(c: android.content.Context, k: String): List<String> {
         val a = try { org.json.JSONArray(p(c).getString(k, "[]")) } catch (e: Exception) { org.json.JSONArray() }
