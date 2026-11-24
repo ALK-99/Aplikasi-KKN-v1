@@ -160,6 +160,10 @@ fun AppNav(onLogout: () -> Unit = {}, onPanduan: () -> Unit = {}) {
                     val vm: RiwayatViewModel = viewModel(factory = GenericViewModelFactory { RiwayatViewModel(desaRepo) })
                     RiwayatScreen(vm)
                 }
+                composable(Tujuan.ASISTEN.rute) {
+                    val vm: KoordinasiViewModel = viewModel(factory = GenericViewModelFactory { KoordinasiViewModel(KoordinasiRepository(), AuthRepository()) })
+                    com.kkn.almufid.sekretaris.ui.screens.asisten.AsistenScreen(vm, desaRepo)
+                }
                 composable(Tujuan.IBADAH.rute) { IbadahScreen() }
                 composable(Tujuan.PETA.rute) { PetaScreen() }
                 composable(Tujuan.DOKUMEN.rute) {
