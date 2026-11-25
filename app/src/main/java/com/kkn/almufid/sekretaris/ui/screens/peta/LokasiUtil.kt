@@ -12,6 +12,7 @@ import android.os.Looper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import kotlin.math.*
@@ -125,46 +126,93 @@ object LokasiUtil {
         "Minimarket" to listOf("[\"shop\"~\"^(convenience|supermarket)\$\"]"),
     )
 
-    private fun kirimOverpass(kueri: String): String? {
-        for (server in listOf("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter")) {
-            try {
-                val c = java.net.URL(server).openConnection() as java.net.HttpURLConnection
-                try {
-                    c.requestMethod = "POST"; c.connectTimeout = 12000; c.readTimeout = 30000; c.doOutput = true
-                    c.setRequestProperty("User-Agent", "KKN-Al-Mushlih-Sekretaris/1.0")
-                    c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-                    c.outputStream.use { it.write(("data=" + java.net.URLEncoder.encode(kueri, "UTF-8")).toByteArray()) }
-                    if (c.responseCode in 200..299) return c.inputStream.bufferedReader().use { it.readText() }
-                } finally { c.disconnect() }
-            } catch (e: Exception) { /* coba server berikutnya */ }
-        }
-        return null
+    private val SERVER_OVERPASS = listOf(
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter",
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    )
+
+    private fun kirimSatu(server: String, kueri: String): String? = try {
+        val c = java.net.URL(server).openConnection() as java.net.HttpURLConnection
+        try {
+            c.requestMethod = "POST"; c.connectTimeout = 7000; c.readTimeout = 16000; c.doOutput = true
+            c.setRequestProperty("User-Agent", "KKN-Al-Mushlih-Sekretaris/1.0")
+            c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            c.outputStream.use { it.write(("data=" + java.net.URLEncoder.encode(kueri, "UTF-8")).toByteArray()) }
+            if (c.responseCode in 200..299) c.inputStream.bufferedReader().use { it.readText() } else null
+        } finally { c.disconnect() }
+    } catch (e: Exception) { null }
+
+    /** Kirim ke semua server cermin SEKALIGUS; yang tercepat menang. Tidak pernah menunggu lebih dari ~23 detik. */
+    private suspend fun kirimOverpass(kueri: String): String? {
+        val hasil = kotlinx.coroutines.CompletableDeferred<String?>()
+        val lingkup = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+        val tugas = SERVER_OVERPASS.map { s -> lingkup.launch { kirimSatu(s, kueri)?.let { hasil.complete(it) } } }
+        lingkup.launch { tugas.forEach { it.join() }; hasil.complete(null) }
+        return try { hasil.await() } finally { lingkup.coroutineContext[kotlinx.coroutines.Job]?.cancel() }
     }
+
+    private val KATA_NOMINATIM = mapOf(
+        "Masjid" to "masjid", "Puskesmas" to "puskesmas", "Rumah sakit" to "rumah sakit", "Apotek" to "apotek",
+        "SPBU" to "SPBU", "ATM" to "ATM", "Warung makan" to "warung makan", "Minimarket" to "minimarket",
+    )
+
+    /** Cadangan bila Overpass tidak bisa dijangkau: pencarian Nominatim (OpenStreetMap) dalam kotak sekitar titik. */
+    private fun cariNominatim(kategori: String, lat: Double, lng: Double): List<Tempat>? = try {
+        val d = 0.18 // sekitar 20 km
+        val kotak = String.format(Locale.US, "%.5f,%.5f,%.5f,%.5f", lng - d, lat + d, lng + d, lat - d)
+        val url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=40&bounded=1&viewbox=$kotak&q=" + java.net.URLEncoder.encode(KATA_NOMINATIM[kategori] ?: kategori, "UTF-8")
+        val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+        try {
+            c.connectTimeout = 8000; c.readTimeout = 15000
+            c.setRequestProperty("User-Agent", "KKN-Al-Mushlih-Sekretaris/1.0")
+            if (c.responseCode !in 200..299) null else {
+                val arr = org.json.JSONArray(c.inputStream.bufferedReader().use { it.readText() })
+                val daftar = (0 until arr.length()).map { i ->
+                    val o = arr.getJSONObject(i)
+                    val la = o.getString("lat").toDouble(); val lo = o.getString("lon").toDouble()
+                    val nama = o.optString("name").ifBlank { o.optString("display_name").substringBefore(",") }.ifBlank { "$kategori (tanpa nama)" }
+                    Tempat(nama, la, lo, jarakMeter(lat, lng, la, lo), arah(lat, lng, la, lo))
+                }
+                daftar.sortedBy { it.jarak }.take(12)
+            }
+        } finally { c.disconnect() }
+    } catch (e: Exception) { null }
 
     /**
      * Tempat terdekat dari titik pusat, DIURUTKAN menurut jarak sebenarnya (data OpenStreetMap, gratis).
-     * Radius diperlebar bertahap (2, 5, 12, 30 km) sampai ketemu sedikitnya 3 tempat.
+     * Radius diperlebar bertahap (3, 12, 30 km) sampai ketemu sedikitnya 3 tempat; seluruh proses dibatasi 45 detik.
      * Hasil null = tidak ada koneksi / server sibuk; daftar kosong = tidak ada tempat dalam 30 km.
      */
     suspend fun cariTerdekat(kategori: String, lat: Double, lng: Double): List<Tempat>? = withContext(Dispatchers.IO) {
         val filter = KATEGORI_OSM[kategori] ?: return@withContext emptyList<Tempat>()
-        var terakhir: List<Tempat> = emptyList()
-        for (r in listOf(2000, 5000, 12000, 30000)) {
-            val kueri = "[out:json][timeout:25];(" + filter.joinToString("") { "nwr(around:$r,${String.format(Locale.US, "%.6f", lat)},${String.format(Locale.US, "%.6f", lng)})$it;" } + ");out center 120;"
-            val teks = kirimOverpass(kueri) ?: return@withContext null
-            val el = try { org.json.JSONObject(teks).optJSONArray("elements") } catch (e: Exception) { null } ?: return@withContext null
-            val daftar = mutableListOf<Tempat>()
-            for (i in 0 until el.length()) {
-                val o = el.getJSONObject(i)
-                val la = if (o.has("lat")) o.getDouble("lat") else o.optJSONObject("center")?.optDouble("lat") ?: continue
-                val lo = if (o.has("lon")) o.getDouble("lon") else o.optJSONObject("center")?.optDouble("lon") ?: continue
-                val nama = o.optJSONObject("tags")?.optString("name").orEmpty().ifBlank { "$kategori (tanpa nama)" }
-                daftar.add(Tempat(nama, la, lo, jarakMeter(lat, lng, la, lo), arah(lat, lng, la, lo)))
+        val dariOverpass = withTimeoutOrNull(32000) {
+            var terakhir: List<Tempat>? = null
+            for (r in listOf(3000, 12000, 30000)) {
+                val kueri = "[out:json][timeout:15];(" + filter.joinToString("") { "nwr(around:$r,${String.format(Locale.US, "%.6f", lat)},${String.format(Locale.US, "%.6f", lng)})$it;" } + ");out center 100;"
+                val teks = kirimOverpass(kueri) ?: return@withTimeoutOrNull terakhir
+                val el = try { org.json.JSONObject(teks).optJSONArray("elements") } catch (e: Exception) { null } ?: return@withTimeoutOrNull terakhir
+                val daftar = mutableListOf<Tempat>()
+                for (i in 0 until el.length()) {
+                    val o = el.getJSONObject(i)
+                    val la = if (o.has("lat")) o.getDouble("lat") else o.optJSONObject("center")?.optDouble("lat") ?: continue
+                    val lo = if (o.has("lon")) o.getDouble("lon") else o.optJSONObject("center")?.optDouble("lon") ?: continue
+                    val nama = o.optJSONObject("tags")?.optString("name").orEmpty().ifBlank { "$kategori (tanpa nama)" }
+                    daftar.add(Tempat(nama, la, lo, jarakMeter(lat, lng, la, lo), arah(lat, lng, la, lo)))
+                }
+                terakhir = daftar.sortedBy { it.jarak }.take(12)
+                if (terakhir.size >= 3) break
             }
-            terakhir = daftar.sortedBy { it.jarak }.take(12)
-            if (terakhir.size >= 3) break
+            terakhir
         }
-        terakhir
+        if (dariOverpass != null && dariOverpass.isNotEmpty()) return@withContext dariOverpass
+        val cadangan = withTimeoutOrNull(20000) { cariNominatim(kategori, lat, lng) }
+        when {
+            cadangan != null && cadangan.isNotEmpty() -> cadangan
+            dariOverpass != null -> dariOverpass // Overpass menjawab tapi memang kosong
+            cadangan != null -> cadangan
+            else -> null
+        }
     }
 
     fun jarakMeter(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {

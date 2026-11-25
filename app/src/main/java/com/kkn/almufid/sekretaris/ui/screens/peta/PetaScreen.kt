@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -126,10 +127,11 @@ fun PetaScreen() {
     var judulHasil by remember { mutableStateOf("") }
     var infoHasil by remember { mutableStateOf("") }
     var memuat by remember { mutableStateOf(false) }
+    var kategoriTerakhir by remember { mutableStateOf("") }
 
     fun cariDekat(kategori: String, pakaiGps: Boolean) {
         scope.launch {
-            memuat = true; hasil = emptyList(); judulHasil = ""; infoHasil = "Mencari $kategori terdekat…"
+            memuat = true; kategoriTerakhir = kategori; hasil = emptyList(); judulHasil = ""; infoHasil = "Mencari $kategori terdekat… (maksimal sekitar 45 detik)"
             var la: Double? = null; var lo: Double? = null; var asal = ""
             if (pakaiGps) {
                 val l = LokasiUtil.posisiSekarang(context)
@@ -149,7 +151,7 @@ fun PetaScreen() {
             val d = LokasiUtil.cariTerdekat(kategori, la, lo)
             memuat = false
             when {
-                d == null -> infoHasil = "Tidak bisa mengambil data. Periksa internet lalu coba lagi."
+                d == null -> infoHasil = "Server data peta sedang sibuk atau internet lemah. Coba lagi sebentar, atau pakai tombol Google Maps di bawah."
                 d.isEmpty() -> infoHasil = "Tidak ada $kategori dalam 30 km dari $asal."
                 else -> { hasil = d; judulHasil = "$kategori terdekat dari $asal"; infoHasil = "" }
             }
@@ -336,6 +338,10 @@ fun PetaScreen() {
                         Text("${i + 1}. ${t.nama}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Text("${LokasiUtil.teksJarak(t.jarak)} ke arah ${t.arah} · ketuk untuk navigasi", fontSize = 11.sp, color = TeksRedup)
                     }
+                }
+                if (!memuat && hasil.isEmpty() && infoHasil.isNotBlank() && kategoriTerakhir.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = { bukaSekitar(context, kategoriTerakhir, posko, posko?.lat, posko?.lng) }) { Text("Cari $kategoriTerakhir lewat Google Maps") }
                 }
                 if (hasil.isNotEmpty()) Text("Data: OpenStreetMap. Tempat yang belum dipetakan di sana tidak akan muncul.", fontSize = 10.sp, color = TeksRedup, modifier = Modifier.padding(top = 10.dp))
             }
