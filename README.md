@@ -192,3 +192,8 @@ Menu Jadwal Mengajar (hari, jam, lembaga/kelas, materi, pengajar, catatan) di An
 - Kunci AI bersama disimpan di config/ai_premium (hanya terbaca akun premium, jam server). Pakai kunci GRATIS tanpa akun penagihan supaya tidak ada tagihan.
 - Asisten AI (obrolan, baca file) dikunci premium; mode perintah dasar tetap gratis dan offline.
 - WAJIB publish ulang firestore.rules.
+
+## Tahap M: Perbaikan peta, AI di PC, dan AI pembuat dokumen
+- Peta (Android): pencarian tempat terdekat kini menembak 3 server OpenStreetMap sekaligus (tercepat menang), punya cadangan Nominatim, batas total sekitar 45 detik, dan tombol "Cari lewat Google Maps" bila gagal.
+- AI di PC: panggilan ke Gemini/OpenRouter lewat jalur Electron (main.js, daftar host diizinkan), batas 50 detik per model dan 2 menit total, jadi tidak menggantung.
+- AI membuat dokumen (Android dan PC): minta "buatkan surat undangan rapat ..." atau "rekap kas jadi Excel". AI menyusun surat mengikuti struktur Template Surat (kop otomatis, nomor/lampiran/perihal, salam, isi, penutup, Ketua dan Sekretaris), lalu muncul tombol Unduh Word / PDF / Excel. Android: masuk folder Unduhan (Android 10+) dan bisa dibagikan; PC: diunduh/ disimpan lewat dialog. Tetap gratis, tanpa layanan tambahan.
