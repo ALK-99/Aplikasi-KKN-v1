@@ -52,6 +52,7 @@ private enum class HalamanDev(val judul: String) {
     MODERASI("Moderasi Jurnal"),
     KOTAK("Kotak Masuk"),
     EKSPOR("Ekspor Data"),
+    PREMIUM("Premium dan Kode"),
     PROFIL("Profil Saya"),
 }
 
@@ -97,6 +98,7 @@ fun DeveloperApp(authRepo: AuthRepository, onLogout: () -> Unit, onBukaPeserta: 
                 HalamanDev.MODERASI -> ModerasiScreen(devVm, data, status.admin)
                 HalamanDev.KOTAK -> KotakMasukScreen(data)
                 HalamanDev.EKSPOR -> EksporScreen(devVm)
+                HalamanDev.PREMIUM -> PremiumDevScreen()
                 HalamanDev.PROFIL -> ProfilScreen(profilVm, onLogout = onLogout)
             }
         }
@@ -140,6 +142,7 @@ private val MENU_KELOLA = listOf(
     MenuDev(HalamanDev.AKUN, Icons.Default.Group, Color(0xFF3B5BDB), Color(0xFF8FA8FF), "Blokir dan reset sandi"),
     MenuDev(HalamanDev.MODERASI, Icons.Default.Gavel, Color(0xFFC9780A), Color(0xFFFFB84D), "Sembunyikan jurnal"),
     MenuDev(HalamanDev.KOTAK, Icons.Default.Inbox, Color(0xFF0E8CA0), Color(0xFF5CE1E6), "Saran dari peserta"),
+    MenuDev(HalamanDev.PREMIUM, Icons.Default.Star, Color(0xFFB8860B), Color(0xFFFFD166), "Kode akses dan kunci AI"),
     MenuDev(HalamanDev.EKSPOR, Icons.Default.Download, Color(0xFF5A6072), Color(0xFF9AA0BF), "CSV, PDF, dan JSON"),
 )
 

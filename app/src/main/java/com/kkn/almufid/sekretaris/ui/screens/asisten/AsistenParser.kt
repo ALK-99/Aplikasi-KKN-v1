@@ -130,8 +130,8 @@ object AsistenParser {
     private fun sosial(q: String, teks: String, k: KonteksAsisten): HasilAsisten? {
         val nama = k.namaSaya.split(" ").firstOrNull().orEmpty()
         if (Regex("^(halo|hai|hi|hey|assalamu|salam|selamat (pagi|siang|sore|malam))").containsMatchIn(q)) return HasilAsisten("Halo $nama. Ada yang mau dicatat atau ditanyakan hari ini?")
-        if (Regex("siapa (kamu|anda)|kamu siapa|nama (kamu|mu)").containsMatchIn(q)) return HasilAsisten("Saya asisten KKN Al-Mushlih. Saya bantu sekretaris dan bendahara mencatat kas, tugas, pengumuman, inventaris, dan surat, serta menjawab soal data desa. Aktifkan Mode pintar untuk ngobrol bebas dan membaca file.")
-        if (Regex("bisa apa|bantuan|cara pakai|fitur").containsMatchIn(q)) return HasilAsisten("Saya bisa: catat kas masuk/keluar, buat tugas, pengumuman, inventaris, surat; jawab saldo, tugas, proker, absensi. Dengan Mode pintar saya juga bisa ngobrol, membaca PDF/Word/Excel, dan mengingat kesulitanmu.")
+        if (Regex("siapa (kamu|anda)|kamu siapa|nama (kamu|mu)").containsMatchIn(q)) return HasilAsisten("Saya asisten KKN Al-Mushlih. Saya bantu sekretaris dan bendahara mencatat kas, tugas, pengumuman, inventaris, dan surat, serta menjawab soal data desa. Aktifkan Premium (tukar kode di pengaturan) untuk ngobrol bebas dan membaca file.")
+        if (Regex("bisa apa|bantuan|cara pakai|fitur").containsMatchIn(q)) return HasilAsisten("Saya bisa: catat kas masuk/keluar, buat tugas, pengumuman, inventaris, surat; jawab saldo, tugas, proker, absensi. Dengan Premium saya juga bisa ngobrol, membaca PDF/Word/Excel, dan mengingat kesulitanmu.")
         if (Regex("terima kasih|makasih|thanks").containsMatchIn(q)) return HasilAsisten("Sama-sama. Panggil saya kapan saja.")
         Regex("""^ingat(?:kan)?(?: bahwa| ya)?[\s:,]+(.+)""").find(q)?.let { return HasilAsisten("Siap, saya ingat: ${it.groupValues[1]}", emptyList(), listOf(it.groupValues[1])) }
         if (Regex("apa (yang )?(kamu )?ingat|ingatanmu").containsMatchIn(q)) return HasilAsisten(
@@ -218,7 +218,7 @@ object AsistenParser {
             val perihal = kapital(bersih(teks, listOf(Regex("catat|tambah|input|bikin", I), Regex("surat (masuk|keluar)", I), Regex("""nomor\s*[:\-]?\s*[\w/.\-]+""", I), Regex("perihal|tentang", I))))
             if (perihal.isNotEmpty()) return HasilAsisten("Surat siap dicatat di register.", AksiAsisten.CatatSurat(masuk, no, perihal))
         }
-        return HasilAsisten("Saya belum paham perintah itu dalam mode biasa. Contoh: \"Catat kas masuk 50 ribu iuran\", \"Tugas buat laporan untuk Fahmi besok\", \"Tambah inventaris spidol 5 buah\", \"Berapa saldo kas?\". Untuk ngobrol bebas dan membaca file, aktifkan Mode pintar (gratis) lewat tombol pengaturan.")
+        return HasilAsisten("Saya belum paham perintah itu dalam mode biasa. Contoh: \"Catat kas masuk 50 ribu iuran\", \"Tugas buat laporan untuk Fahmi besok\", \"Tambah inventaris spidol 5 buah\", \"Berapa saldo kas?\". Untuk ngobrol bebas dan membaca file, fitur AI butuh Premium: tukar kode lewat tombol pengaturan.")
     }
 
     // ---------- Mode pintar: Google Gemini lewat kunci API gratis milik pengguna ----------

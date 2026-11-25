@@ -85,6 +85,7 @@ fun ProfilScreen(vm: ProfilViewModel, onLogout: () -> Unit) {
             Spacer(Modifier.height(22.dp))
             Text("Keamanan", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
             Spacer(Modifier.height(10.dp))
+            com.kkn.almufid.sekretaris.ui.screens.premium.KartuPremium()
             KartuGelap(Modifier.fillMaxWidth().tekanPegas { if (!sedangProses) vm.kirimGantiSandi() }) {
                 Text("Ganti sandi", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(Modifier.height(2.dp))

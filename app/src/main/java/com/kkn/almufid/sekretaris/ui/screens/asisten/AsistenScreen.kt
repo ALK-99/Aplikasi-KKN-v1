@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kkn.almufid.sekretaris.data.auth.ProfilPengguna
 import com.kkn.almufid.sekretaris.data.cloud.DesaRepository
+import com.kkn.almufid.sekretaris.data.cloud.PremiumRepository
+import com.kkn.almufid.sekretaris.data.cloud.StatusPremium
+import com.kkn.almufid.sekretaris.ui.screens.premium.KartuPremium
 import com.kkn.almufid.sekretaris.data.entity.JenisSurat
 import com.kkn.almufid.sekretaris.ui.auth.DialogInfo
 import com.kkn.almufid.sekretaris.ui.components.KartuGelap
@@ -162,9 +165,17 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
     var teks by remember { mutableStateOf("") }
     var sibuk by remember { mutableStateOf(false) }
     var bagian by remember { mutableIntStateOf(0) } // 0 tutup, 1 ingatan, 2 pengaturan
-    var kunci by remember { mutableStateOf(AsistenStore.kunci(context)) }
-    var model by remember { mutableStateOf(AsistenStore.model(context)) }
-    var kunciOr by remember { mutableStateOf(AsistenStore.kunciOr(context)) }
+    var kunci by remember { mutableStateOf("") }
+    var model by remember { mutableStateOf(MODEL_BAWAAN) }
+    var kunciOr by remember { mutableStateOf("") }
+    var premium by remember { mutableStateOf<StatusPremium?>(null) }
+    var muatUlang by remember { mutableIntStateOf(0) }
+    LaunchedEffect(muatUlang) {
+        val repoP = PremiumRepository()
+        val st = repoP.status(); premium = st
+        if (st.aktif) repoP.ambilKunci()?.let { kunci = it.gemini; kunciOr = it.openrouter; if (it.model.isNotBlank()) model = it.model }
+        else { kunci = ""; kunciOr = "" }
+    }
     var ingatan by remember { mutableStateOf(AsistenStore.ingatan(context)) }
     var fileUri by remember { mutableStateOf<Uri?>(null) }
     var fileNama by remember { mutableStateOf("") }
@@ -203,10 +214,10 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
                     }
                     if (bytes.size > 12_000_000) throw IllegalStateException("File terlalu besar (maks 12 MB)")
                     if (nama.lowercase().endsWith(".pdf")) {
-                        if (kunci.isBlank()) throw IllegalStateException("Membaca PDF butuh kunci Gemini. Aktifkan lewat tombol pengaturan.")
+                        if (kunci.isBlank()) throw IllegalStateException("Membaca PDF butuh Premium. Tukar kode lewat tombol pengaturan.")
                         lamp = Lampiran(nama, null, Base64.encodeToString(bytes, Base64.NO_WRAP))
                     } else {
-                        if (kunci.isBlank() && kunciOr.isBlank()) throw IllegalStateException("Membaca file butuh Mode pintar. Aktifkan lewat tombol pengaturan.")
+                        if (kunci.isBlank() && kunciOr.isBlank()) throw IllegalStateException("Membaca file butuh Premium. Tukar kode lewat tombol pengaturan.")
                         lamp = Lampiran(nama, withContext(Dispatchers.Default) { BacaFile.teks(nama, bytes) }, null)
                     }
                 }
@@ -271,21 +282,7 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
             }
         }
         if (bagian == 2) {
-            KartuGelap(Modifier.fillMaxWidth().padding(bottom = 8.dp).heightIn(max = 380.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Tanpa kunci asisten hanya paham perintah umum. Kunci hanya disimpan di HP ini; pertanyaan, file, dan ringkasan data desa dikirim ke penyedia AI.", fontSize = 12.sp, color = TeksRedup)
-                Text("1. Google Gemini", fontWeight = FontWeight.Bold)
-                Text("Kunci dari aistudio.google.com/apikey. Kunci gratis memakai model Flash. Untuk model Pro: pakai kunci berbayar (klaim kredit Google AI Pro) lalu ketuk Premium.", fontSize = 12.sp, color = TeksRedup)
-                OutlinedTextField(kunci, { kunci = it.trim() }, label = { Text("Kunci API Gemini") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(model, { model = it }, label = { Text("Model (dicoba berurutan bila sibuk)") }, modifier = Modifier.fillMaxWidth(), maxLines = 3)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { model = MODEL_BAWAAN }) { Text("Hemat (Flash)") }
-                    OutlinedButton(onClick = { model = MODEL_PREMIUM }) { Text("Premium (Pro)") }
-                }
-                Text("2. Cadangan gratis: OpenRouter (opsional)", fontWeight = FontWeight.Bold)
-                Text("Dipakai bila Gemini gagal atau sibuk. Kunci gratis tanpa kartu dari openrouter.ai/keys. Hanya teks, tidak bisa membaca PDF.", fontSize = 12.sp, color = TeksRedup)
-                OutlinedTextField(kunciOr, { kunciOr = it.trim() }, label = { Text("Kunci OpenRouter") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-                Button(onClick = { AsistenStore.simpanPengaturan(context, kunci, model, kunciOr); model = AsistenStore.model(context); bagian = 0 }) { Text("Simpan") }
-            }
+            KartuPremium(Modifier.padding(bottom = 8.dp), onBerubah = { muatUlang++ })
         }
         LazyColumn(Modifier.weight(1f), state = daftar, verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 8.dp)) {
             items(chat) { c ->

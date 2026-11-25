@@ -14,6 +14,8 @@ rules_version = '2';
 //   jurnal_bersama/{id}          jurnal yang dibagikan ke semua pengguna (ubah hanya oleh penulis)
 //   pengumuman, polling, tugas, kas   koordinasi kelompok (dibuat admin, dibaca semua)
 //   feedback/{id}                saran dari peserta (tulis: semua, baca: admin)
+//   premium_kode/{kode}          kode akses premium dari developer (sekali pakai, ada masa aktif)
+//   config/ai_premium            kunci AI bersama, hanya terbaca oleh akun premium
 //   admins/{uid}                 penanda admin, dibuat manual di Console (boleh blokir akun)
 //   users/{uid}                  profil akun (lihat ProfilPengguna.kt)
 //   users/{uid}/uploads/{id}     metadata file yang diunggah pengguna (poin B.5)
@@ -35,6 +37,27 @@ service cloud.firestore {
       return sudahLogin() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Premium aktif = admin, atau users/{uid}.premiumSampai masih di masa depan (jam server).
+    function premiumAktif() {
+      return sudahLogin() && (adalahAdmin() || (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('premiumSampai', null) != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.premiumSampai > request.time));
+    }
+
+    // Penukaran kode premium: kode ada, belum dipakai, tidak dicabut, ditandai dipakai oleh akun ini
+    // (dalam batch yang sama), dan tanggal berakhir tidak melebihi masa aktif kode.
+    function tukarKodeValid(uid) {
+      let k = /databases/$(database)/documents/premium_kode/$(request.resource.data.premiumKode);
+      return exists(k)
+        && get(k).data.dipakaiOleh == ''
+        && get(k).data.get('dicabut', false) == false
+        && getAfter(k).data.dipakaiOleh == uid
+        && request.resource.data.premiumSampai > request.time
+        && request.resource.data.premiumSampai <= (
+            (resource.data.get('premiumSampai', request.time) > request.time ? resource.data.get('premiumSampai', request.time) : request.time)
+            + duration.value(int(get(k).data.hari) + 1, 'd'));
+    }
+
     // Desa akun yang sedang login (kosong kalau profil belum punya desaId).
     function desaSaya() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('desaId', '');
@@ -53,7 +76,8 @@ service cloud.firestore {
       allow read: if sudahLogin();
       allow create: if pemilik(uid)
         && request.resource.data.akunDiblokir == false
-        && request.resource.data.uid == uid;
+        && request.resource.data.uid == uid
+        && !('premiumSampai' in request.resource.data);
       allow update: if (
           pemilik(uid)
           && request.resource.data.akunDiblokir == resource.data.akunDiblokir
@@ -63,14 +87,22 @@ service cloud.firestore {
           && request.resource.data.get('nim', '') == resource.data.get('nim', '')
           && request.resource.data.get('email', '') == resource.data.get('email', '')
           && request.resource.data.get('desa', '') == resource.data.get('desa', '')
+          // Premium hanya berubah lewat penukaran kode (cabang di bawah) atau admin.
+          && request.resource.data.get('premiumSampai', null) == resource.data.get('premiumSampai', null)
           // desaId hanya boleh diisi sekali (akun lama yang belum punya).
           && (resource.data.get('desaId', '') == ''
               || request.resource.data.get('desaId', '') == resource.data.get('desaId', ''))
         )
-        // Admin hanya boleh mengubah status blokir, dan memindahkan desa peserta.
+        // Pemilik menukar kode premium (valid hanya bila kode cocok, lihat tukarKodeValid).
+        || (
+          pemilik(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['premiumSampai', 'premiumKode'])
+          && tukarKodeValid(uid)
+        )
+        // Admin hanya boleh mengubah status blokir, memindahkan desa peserta, dan mengatur premium.
         || (
           adalahAdmin()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['akunDiblokir', 'desa', 'desaId'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['akunDiblokir', 'desa', 'desaId', 'premiumSampai', 'premiumKode'])
         );
       allow delete: if false; // penghapusan akun hanya lewat Firebase Console oleh developer
 
@@ -101,6 +133,27 @@ service cloud.firestore {
         allow read: if pemilik(uid);
         allow write: if false; // hanya ditulis lewat Cloud Functions/Console, bukan klien
       }
+    }
+
+    // Kode premium (ID dokumen = kode). Developer membuat/mencabut; peserta hanya bisa membaca satu kode
+    // yang ia ketik dan menandainya dipakai oleh dirinya sendiri (sekali saja).
+    match /premium_kode/{kode} {
+      allow get: if sudahLogin();
+      allow list: if adalahAdmin();
+      allow create, delete: if adalahAdmin();
+      allow update: if adalahAdmin() || (
+        sudahLogin()
+        && resource.data.dipakaiOleh == ''
+        && resource.data.get('dicabut', false) == false
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dipakaiOleh', 'dipakaiNama', 'dipakaiMillis'])
+        && request.resource.data.dipakaiOleh == request.auth.uid
+      );
+    }
+
+    // Pengaturan bersama (kunci AI). Hanya akun premium yang boleh membaca; hanya admin yang menulis.
+    match /config/{dok} {
+      allow read: if premiumAktif();
+      allow write: if adalahAdmin();
     }
 
     // Daftar admin: pemilik hanya boleh membaca dokumennya sendiri (untuk
