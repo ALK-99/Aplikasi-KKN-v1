@@ -38,6 +38,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" desktop/dist/*.exe --title "Aplikasi PC ${GITHUB_REF_NAME}" --notes "Aplikasi PC KKN Al-Mushlih 2027 untuk Windows." --prerelease || gh release upload "${GITHUB_REF_NAME}" desktop/dist/*.exe --clobber
+          gh release create "${GITHUB_REF_NAME}" desktop/dist/*.exe desktop/Hapus-KKN-PC.bat --title "Aplikasi PC ${GITHUB_REF_NAME}" --notes "Aplikasi PC KKN Al-Mushlih 2027 untuk Windows." --prerelease || gh release upload "${GITHUB_REF_NAME}" desktop/dist/*.exe desktop/Hapus-KKN-PC.bat --clobber
           # Rilis PC ditandai pre-release agar pembaruan aplikasi Android (yang membaca rilis terbaru) tidak terganggu.
           gh release edit "${GITHUB_REF_NAME}" --prerelease --latest=false

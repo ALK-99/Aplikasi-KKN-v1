@@ -41,7 +41,10 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "KKN-Al-Mushlih-PC-Setup-${version}.${ext}"
+      "artifactName": "KKN-Al-Mushlih-PC-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": true,
+      "createStartMenuShortcut": true,
+      "uninstallDisplayName": "KKN Al-Mushlih 2027"
     },
     "portable": {
       "artifactName": "KKN-Al-Mushlih-PC-Portable-${version}.${ext}"

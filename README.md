@@ -202,3 +202,10 @@ Menu Jadwal Mengajar (hari, jam, lembaga/kelas, materi, pengajar, catatan) di An
 - Scan nota dan surat dengan AI: lampirkan foto (jpg/png/webp) di asisten; AI membaca nota (toko, rincian, total) lalu mengusulkan kas keluar dan inventaris, atau membaca surat lalu mengusulkan catatan register surat. Tetap perlu konfirmasi Simpan.
 - LPJ dan laporan akhir otomatis: ketuk chip "Buatkan LPJ..." atau minta sendiri; AI menyusun dokumen Word (kop, pendahuluan, proker, tabel anggaran, nota, rekap kas, penutup) dari data desa.
 - Bagikan ke WhatsApp dan Telegram: tombol di bawah balasan asisten (tautan bagikan resmi, tanpa bot dan tanpa biaya). Dokumen dibagikan lewat tombol Bagikan.
+
+## Cara copot aplikasi PC dan hapus datanya
+Tiga jalan, pilih yang paling mudah:
+1. **Dari dalam aplikasi:** Pengaturan, kartu "Hapus data dan copot aplikasi". Tombol "Hapus data lokal saja" mengosongkan login, cache, dan ingatan asisten lalu memulai ulang aplikasi. Tombol "Hapus data dan copot aplikasi" juga menjalankan pencopot Windows.
+2. **Lewat Windows:** Settings, Apps, Installed apps, cari "KKN Al-Mushlih 2027", Uninstall. Pencopot otomatis menghapus folder data (deleteAppDataOnUninstall).
+3. **Alat khusus `Hapus-KKN-PC.bat`** (terlampir di setiap rilis PC): klik dua kali, ketik Y. Menutup aplikasi, mencopot, menghapus data, dan melepas jalan otomatis saat Windows menyala. Cocok untuk versi Portable yang tidak punya pencopot.
+Data desa di server (Firebase) tidak ikut terhapus; hapus akun lewat admin bila perlu.

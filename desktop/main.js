@@ -61,6 +61,25 @@ ipcMain.handle("http-kirim", (e, url, header, badan, batasMs) => new Promise((se
   req.on("error", (x) => selesai({galat: x.message}));
   req.end(badan || "");
 }));
+// Hapus data lokal (login, cache, ingatan asisten, konfigurasi) dan, bila diminta, copot aplikasi.
+ipcMain.handle("hapus-data", async (e, copot) => {
+  try { app.setLoginItemSettings({ openAtLogin: false }); } catch (x) {}
+  const data = app.getPath("userData");
+  const ses = jendela ? jendela.webContents.session : null;
+  if (ses) { try { await ses.clearStorageData(); await ses.clearCache(); } catch (x) {} }
+  const bersihkan = () => { // setelah aplikasi tertutup, hapus sisa folder data
+    try { spawn("cmd.exe", ["/c", `ping -n 4 127.0.0.1 >nul & rmdir /s /q "${data}"`], { detached: true, stdio: "ignore", windowsHide: true }).unref(); } catch (x) {}
+  };
+  benarKeluar = true;
+  if (!copot) { bersihkan(); app.relaunch(); app.exit(0); return "ok"; }
+  const pencopot = path.join(path.dirname(process.execPath), `Uninstall ${app.getName()}.exe`);
+  const alternatif = fs.existsSync(path.dirname(process.execPath)) ? fs.readdirSync(path.dirname(process.execPath)).find((f) => /^Uninstall.*\.exe$/i.test(f)) : null;
+  const berkas = fs.existsSync(pencopot) ? pencopot : alternatif ? path.join(path.dirname(process.execPath), alternatif) : null;
+  if (berkas && !process.env.PORTABLE_EXECUTABLE_FILE) {
+    spawn(berkas, [], { detached: true, stdio: "ignore" }).unref(); bersihkan(); app.exit(0); return "dicopot";
+  }
+  bersihkan(); setTimeout(() => app.exit(0), 300); return "manual"; // versi portabel: hapus berkas .exe sendiri
+});
 ipcMain.handle("versi", () => app.getVersion());
 
 // Mulai otomatis bersama Windows (tersembunyi di baki sistem).
