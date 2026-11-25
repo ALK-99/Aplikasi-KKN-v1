@@ -32,7 +32,7 @@ data class HasilAsisten(val balasan: String, val aksi: List<AksiAsisten> = empty
     constructor(balasan: String, satu: AksiAsisten) : this(balasan, listOf(satu))
 }
 
-class Lampiran(val nama: String, val teks: String?, val pdfBase64: String?)
+class Lampiran(val nama: String, val teks: String?, val pdfBase64: String?, val gambarBase64: String? = null)
 class RiwayatItem(val saya: Boolean, val teks: String)
 
 const val MODEL_PREMIUM = "gemini-pro-latest, gemini-2.5-pro, gemini-flash-latest, gemini-2.5-flash, gemini-flash-lite-latest"
@@ -228,11 +228,12 @@ object AsistenParser {
     private fun konteksTeks(k: KonteksAsisten): String {
         val (m, o, s) = saldo(k.kas)
         val t = k.tugas.filter { !it.selesai }.take(15).joinToString("; ") { "${it.judul} (${it.untukNama.ifBlank { "-" }}, tenggat ${if (it.deadlineMillis > 0) tgl(it.deadlineMillis) else "-"})" }
-        val p = k.proker.take(15).joinToString("; ") { "${it.namaProker} [${it.status}]" }
+        val p = k.proker.take(15).joinToString("; ") { "${it.namaProker} [${it.status}] anggaran ${it.anggaran}, realisasi ${it.realisasi}" }
+        val nt = k.nota.sortedByDescending { it.tanggalMillis }.take(40).joinToString("; ") { "${tgl(it.tanggalMillis)} ${it.keterangan} ${it.nominal}${if (it.prokerTerkait.isNotBlank()) " (proker ${it.prokerTerkait})" else ""}" }
         val kt = k.kas.take(12).joinToString("; ") { "${if (it.masuk) "+" else "-"}${it.jumlah} ${it.keterangan.ifBlank { it.kategori }}" }
         return "Tanggal hari ini: ${SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())}. Pengguna: ${k.namaSaya}.\n" +
             "Anggota: ${k.namaAkun.joinToString(", ")}.\nSaldo kas: $s (masuk $m, keluar $o). Total nota: ${k.nota.sumOf { it.nominal }}.\n" +
-            "Tugas belum selesai: ${t.ifBlank { "tidak ada" }}.\nProker: ${p.ifBlank { "belum ada" }}.\nCatatan kas terbaru: ${kt.ifBlank { "kosong" }}."
+            "Nota: ${nt.ifBlank { "kosong" }}.\nTugas belum selesai: ${t.ifBlank { "tidak ada" }}.\nProker: ${p.ifBlank { "belum ada" }}.\nCatatan kas terbaru: ${kt.ifBlank { "kosong" }}."
     }
 
     private fun aksiDariJson(it: JSONObject): AksiAsisten? = when (it.optString("jenis")) {
@@ -261,6 +262,8 @@ object AsistenParser {
             "{\"jenis\":\"dokumen\",\"format\":\"docx\" atau \"pdf\" atau \"xlsx\",\"nama\":\"nama-berkas-tanpa-ekstensi\",\"kop\":true bila surat resmi,\"blok\":[{\"t\":\"p\",\"teks\":string,\"tebal\":bool,\"rata\":\"left|center|right\"},{\"t\":\"tabel\",\"baris\":[[sel,...],...],\"kepala\":true}],\"lembar\":[{\"nama\":string,\"baris\":[[sel,...],...]}]}\n" +
             "Aksi \"dokumen\" dipakai bila pengguna minta dibuatkan surat/laporan/daftar/rekap sebagai file. docx/pdf memakai \"blok\"; xlsx memakai \"lembar\" (baris pertama = judul kolom, angka ditulis sebagai angka). Setelah aksi dokumen, pengguna menekan Unduh (Word, PDF, atau Excel), jadi di \"balasan\" cukup jelaskan singkat apa yang dibuat dan minta periksa.\n" +
             "Untuk SURAT resmi (kop=true; kop \"KELOMPOK KKN AL-MUSHLIH 2027 / Desa ...\" ditambahkan otomatis, jangan membuatnya) ikuti urutan template menu Template Surat: (1) paragraf rata kanan \"Desa, tanggal\"; (2) \"Nomor : ...\", \"Lampiran : ...\", \"Perihal : ...\"; (3) \"Kepada Yth.\" lalu nama/jabatan tujuan dan \"di tempat\"; (4) salam pembuka \"Assalamu'alaikum Warahmatullahi Wabarakatuh\"; (5) isi 1-3 paragraf sopan, untuk undangan sertakan \"Hari/tanggal\", \"Waktu\", \"Tempat\"; (6) penutup dan \"Wassalamu'alaikum Warahmatullahi Wabarakatuh\"; (7) \"Hormat kami,\" lalu Ketua dan Sekretaris dengan nama dari DATA bila ada (sisakan baris kosong untuk tanda tangan). Jenis surat: undangan, permohonan, pemberitahuan, ucapan terima kasih. Tanyakan dulu hal penting yang belum jelas (tujuan, tanggal, acara); jangan mengarang nama atau tanggal.\n" +
+            "FOTO: bila pengguna mengirim foto NOTA/KWITANSI, baca toko, tanggal, rincian, dan total; usulkan aksi kas (masuk=false, jumlah=total, kategori sesuai, keterangan memuat nama toko dan barang) dan inventaris bila ada barang yang dibeli; sebutkan bagian yang tidak terbaca dan jangan menebak angka. Bila foto SURAT, baca nomor, perihal, dan pengirim/tujuan lalu usulkan aksi surat (MASUK bila dikirim ke kita, KELUAR bila dari kita).\n" +
+            "LPJ / LAPORAN AKHIR: bila diminta, buat aksi dokumen (format docx, kop=true) dengan bagian: Pendahuluan (latar belakang, tujuan), Rincian Kegiatan/Proker (nama, status), Rincian Anggaran dan Realisasi (tabel: Proker | Anggaran | Realisasi | Selisih), Rincian Pengeluaran dari NOTA (tabel: Tanggal | Keterangan | Nominal), Rekapitulasi Kas (masuk, keluar, saldo), Penutup, dan tanda tangan Ketua dan Bendahara/Sekretaris. Pakai angka hanya dari DATA dan hitung selisih dengan benar; beri tanda \"(isi manual)\" untuk hal yang tidak ada di data.\n" +
             "Jika ada file: ringkas isinya, lakukan screening (cek duplikat, angka janggal, total tidak cocok, tanggal aneh, data kurang), lalu usulkan entri bila relevan.\n" +
             "\"ingat\": catatan singkat yang layak diingat jangka panjang tentang pengguna (kesulitan yang ia alami, kebiasaan, preferensi, konteks kegiatan). Kosongkan bila tidak ada hal baru.\n" +
             "Jawab pertanyaan data hanya dari DATA; jangan mengarang angka yang tidak ada. Bila ragu atau data kurang, tanyakan di \"balasan\".\n" +
@@ -274,6 +277,7 @@ object AsistenParser {
         val sistem = sistemTeks(k)
         val isiTeks = teks + (lampiran?.teks?.let { "\n\n[ISI FILE ${lampiran.nama}]\n$it" } ?: "")
         val bagian = org.json.JSONArray().put(JSONObject().put("text", isiTeks))
+        lampiran?.gambarBase64?.let { bagian.put(JSONObject().put("inlineData", JSONObject().put("mimeType", "image/jpeg").put("data", it))) }
         lampiran?.pdfBase64?.let { bagian.put(JSONObject().put("inlineData", JSONObject().put("mimeType", "application/pdf").put("data", it))) }
         val konten = org.json.JSONArray()
         riwayat.takeLast(12).forEach { konten.put(JSONObject().put("role", if (it.saya) "user" else "model").put("parts", org.json.JSONArray().put(JSONObject().put("text", it.teks)))) }
@@ -381,7 +385,7 @@ object AsistenParser {
         var galat = ""
         if (kunciG.isNotBlank()) {
             try { return tanyaGemini(teks, kunciG, modelCsv, k, riwayat, lampiran) }
-            catch (e: Exception) { galat = "Gemini: ${e.message}"; if (kunciOr.isBlank() || lampiran?.pdfBase64 != null) throw e }
+            catch (e: Exception) { galat = "Gemini: ${e.message}"; if (kunciOr.isBlank() || lampiran?.pdfBase64 != null || lampiran?.gambarBase64 != null) throw e }
         }
         if (kunciOr.isNotBlank()) {
             try { return tanyaOpenRouter(teks, kunciOr, k, riwayat, lampiran) }

@@ -62,7 +62,27 @@ private class ChatItem(val saya: Boolean, val teks: String, val aksi: List<AksiA
     val status = mutableStateListOf<Int>().apply { aksi.forEach { add(if (it is AksiAsisten.BuatDokumen) 1 else 0) } }
 }
 
+private fun gambarKeBase64(bytes: ByteArray): String? {
+    val opsi = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opsi)
+    var skala = 1; while (maxOf(opsi.outWidth, opsi.outHeight) / skala > 2400) skala *= 2
+    val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = skala }) ?: return null
+    val sisi = maxOf(bmp.width, bmp.height)
+    val akhir = if (sisi > 1600) android.graphics.Bitmap.createScaledBitmap(bmp, bmp.width * 1600 / sisi, bmp.height * 1600 / sisi, true) else bmp
+    val out = java.io.ByteArrayOutputStream()
+    akhir.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, out)
+    return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+}
+
+private fun bagikanTeks(context: android.content.Context, teks: String, paket: String) {
+    val i = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, teks)
+        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    try { context.startActivity(android.content.Intent(i).setPackage(paket)) }
+    catch (e: Exception) { context.startActivity(android.content.Intent.createChooser(i, "Bagikan").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
 private val CONTOH = listOf(
+    "Buatkan LPJ dan laporan akhir (Word) dari data proker, kas, dan nota",
     "Catat kas masuk 50 ribu iuran anggota", "Tugas buat poster untuk Fahmi besok",
     "Berapa saldo kas?", "Tugas apa yang belum selesai?", "Ringkasan hari ini"
 )
@@ -71,6 +91,7 @@ private val TIPE_FILE = arrayOf(
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "image/jpeg", "image/png", "image/webp",
     "text/csv", "text/plain", "application/octet-stream"
 )
 
@@ -215,7 +236,11 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
                         context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw IllegalStateException("File tidak bisa dibaca")
                     }
                     if (bytes.size > 12_000_000) throw IllegalStateException("File terlalu besar (maks 12 MB)")
-                    if (nama.lowercase().endsWith(".pdf")) {
+                    if (Regex("""\.(jpe?g|png|webp)$""").containsMatchIn(nama.lowercase())) {
+                        if (kunci.isBlank()) throw IllegalStateException("Scan foto nota atau surat butuh Premium. Tukar kode lewat tombol pengaturan.")
+                        val b64 = withContext(Dispatchers.Default) { gambarKeBase64(bytes) } ?: throw IllegalStateException("Foto tidak bisa dibaca")
+                        lamp = Lampiran(nama, null, null, b64)
+                    } else if (nama.lowercase().endsWith(".pdf")) {
                         if (kunci.isBlank()) throw IllegalStateException("Membaca PDF butuh Premium. Tukar kode lewat tombol pengaturan.")
                         lamp = Lampiran(nama, null, Base64.encodeToString(bytes, Base64.NO_WRAP))
                     } else {
@@ -295,6 +320,10 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
                             .background(if (c.saya) Violet else Surface1).padding(12.dp)
                     ) {
                         Text(c.teks, color = if (c.saya) Color.White else TeksUtama, fontSize = 14.sp)
+                        if (!c.saya && c.teks.length > 40) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TextButton(onClick = { bagikanTeks(context, c.teks, "com.whatsapp") }) { Text("WhatsApp", fontSize = 12.sp) }
+                            TextButton(onClick = { bagikanTeks(context, c.teks, "org.telegram.messenger") }) { Text("Telegram", fontSize = 12.sp) }
+                        }
                         c.aksi.forEachIndexed { i, a ->
                             Spacer(Modifier.height(8.dp))
                             if (a is AksiAsisten.BuatDokumen) { KartuDokumen(a, namaDesa); return@forEachIndexed }
@@ -322,7 +351,7 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
         }
         if (fileNama.isNotEmpty()) Text("📎 $fileNama (ketuk kirim)", fontSize = 12.sp, color = TeksRedup, modifier = Modifier.padding(bottom = 4.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(bottom = 10.dp)) {
-            IconButton(onClick = { pilihFile.launch(TIPE_FILE) }) { Icon(Icons.Default.AttachFile, "Unggah PDF, Word, Excel") }
+            IconButton(onClick = { pilihFile.launch(TIPE_FILE) }) { Icon(Icons.Default.AttachFile, "Unggah PDF, Word, Excel, atau foto nota/surat") }
             OutlinedTextField(teks, { teks = it }, placeholder = { Text("Tulis atau tanya apa saja…") }, modifier = Modifier.weight(1f), maxLines = 3)
             FilledIconButton(onClick = { kirim(teks) }, enabled = !sibuk) { Icon(Icons.AutoMirrored.Filled.Send, "Kirim") }
         }
