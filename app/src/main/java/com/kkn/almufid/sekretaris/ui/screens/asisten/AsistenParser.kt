@@ -25,6 +25,7 @@ sealed class AksiAsisten {
     data class BuatPengumuman(val judul: String, val isi: String) : AksiAsisten()
     data class TambahBarang(val nama: String, val jumlah: Int, val kondisi: String) : AksiAsisten()
     data class CatatSurat(val masuk: Boolean, val nomor: String, val perihal: String) : AksiAsisten()
+    data class BuatDokumen(val data: DataDokumen) : AksiAsisten()
 }
 
 data class HasilAsisten(val balasan: String, val aksi: List<AksiAsisten> = emptyList(), val ingat: List<String> = emptyList()) {
@@ -116,6 +117,7 @@ object AsistenParser {
         is AksiAsisten.BuatTugas -> "Tugas \"${a.judul}\"" + (if (a.untuk.isNotBlank()) " untuk ${a.untuk}" else "") + ", tenggat ${tgl(if (a.tenggat > 0) a.tenggat else tenggatDari("besok"))}"
         is AksiAsisten.BuatPengumuman -> "Pengumuman \"${a.judul}\""
         is AksiAsisten.TambahBarang -> "Inventaris: ${a.nama} × ${a.jumlah} (${a.kondisi})"
+        is AksiAsisten.BuatDokumen -> "Dokumen ${a.data.format.uppercase()}: ${a.data.nama}"
         is AksiAsisten.CatatSurat -> "Surat ${if (a.masuk) "masuk" else "keluar"}: ${a.perihal}" + (if (a.nomor.isNotBlank()) " (${a.nomor})" else "")
     }
 
@@ -239,6 +241,7 @@ object AsistenParser {
         "pengumuman" -> AksiAsisten.BuatPengumuman(it.optString("judul"), it.optString("isi"))
         "inventaris" -> AksiAsisten.TambahBarang(it.optString("nama"), it.optInt("jumlah", 1).coerceAtLeast(1), it.optString("kondisi").ifBlank { "Baik" })
         "surat" -> AksiAsisten.CatatSurat(it.optString("jenisSurat") == "MASUK", it.optString("nomor"), it.optString("perihal"))
+        "dokumen" -> AksiAsisten.BuatDokumen(DokumenAi.dariJson(it))
         else -> null
     }
 
@@ -255,6 +258,9 @@ object AsistenParser {
             "{\"jenis\":\"pengumuman\",\"judul\":string,\"isi\":string}\n" +
             "{\"jenis\":\"inventaris\",\"nama\":string,\"jumlah\":angka,\"kondisi\":string}\n" +
             "{\"jenis\":\"surat\",\"jenisSurat\":\"MASUK\" atau \"KELUAR\",\"nomor\":string,\"perihal\":string}\n" +
+            "{\"jenis\":\"dokumen\",\"format\":\"docx\" atau \"pdf\" atau \"xlsx\",\"nama\":\"nama-berkas-tanpa-ekstensi\",\"kop\":true bila surat resmi,\"blok\":[{\"t\":\"p\",\"teks\":string,\"tebal\":bool,\"rata\":\"left|center|right\"},{\"t\":\"tabel\",\"baris\":[[sel,...],...],\"kepala\":true}],\"lembar\":[{\"nama\":string,\"baris\":[[sel,...],...]}]}\n" +
+            "Aksi \"dokumen\" dipakai bila pengguna minta dibuatkan surat/laporan/daftar/rekap sebagai file. docx/pdf memakai \"blok\"; xlsx memakai \"lembar\" (baris pertama = judul kolom, angka ditulis sebagai angka). Setelah aksi dokumen, pengguna menekan Unduh (Word, PDF, atau Excel), jadi di \"balasan\" cukup jelaskan singkat apa yang dibuat dan minta periksa.\n" +
+            "Untuk SURAT resmi (kop=true; kop \"KELOMPOK KKN AL-MUSHLIH 2027 / Desa ...\" ditambahkan otomatis, jangan membuatnya) ikuti urutan template menu Template Surat: (1) paragraf rata kanan \"Desa, tanggal\"; (2) \"Nomor : ...\", \"Lampiran : ...\", \"Perihal : ...\"; (3) \"Kepada Yth.\" lalu nama/jabatan tujuan dan \"di tempat\"; (4) salam pembuka \"Assalamu'alaikum Warahmatullahi Wabarakatuh\"; (5) isi 1-3 paragraf sopan, untuk undangan sertakan \"Hari/tanggal\", \"Waktu\", \"Tempat\"; (6) penutup dan \"Wassalamu'alaikum Warahmatullahi Wabarakatuh\"; (7) \"Hormat kami,\" lalu Ketua dan Sekretaris dengan nama dari DATA bila ada (sisakan baris kosong untuk tanda tangan). Jenis surat: undangan, permohonan, pemberitahuan, ucapan terima kasih. Tanyakan dulu hal penting yang belum jelas (tujuan, tanggal, acara); jangan mengarang nama atau tanggal.\n" +
             "Jika ada file: ringkas isinya, lakukan screening (cek duplikat, angka janggal, total tidak cocok, tanggal aneh, data kurang), lalu usulkan entri bila relevan.\n" +
             "\"ingat\": catatan singkat yang layak diingat jangka panjang tentang pengguna (kesulitan yang ia alami, kebiasaan, preferensi, konteks kegiatan). Kosongkan bila tidak ada hal baru.\n" +
             "Jawab pertanyaan data hanya dari DATA; jangan mengarang angka yang tidak ada. Bila ragu atau data kurang, tanyakan di \"balasan\".\n" +

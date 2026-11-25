@@ -59,7 +59,7 @@ import kotlin.math.roundToInt
 
 private class ChatItem(val saya: Boolean, val teks: String, val aksi: List<AksiAsisten> = emptyList()) {
     /** Per aksi: 0 = menunggu konfirmasi, 1 = tersimpan, 2 = dibatalkan */
-    val status = mutableStateListOf<Int>().apply { repeat(aksi.size) { add(0) } }
+    val status = mutableStateListOf<Int>().apply { aksi.forEach { add(if (it is AksiAsisten.BuatDokumen) 1 else 0) } }
 }
 
 private val CONTOH = listOf(
@@ -156,6 +156,8 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
     val absensi by remember { desa.alirAbsensi() }.collectAsState(emptyList())
     val anggota by remember { desa.alirAnggota() }.collectAsState(emptyList())
 
+    val namaDesa = akun.firstOrNull { it.uid == vm.uidSaya }?.desa ?: akun.firstOrNull()?.desa ?: ""
+
     val chat = remember {
         mutableStateListOf<ChatItem>().apply {
             add(ChatItem(false, "Halo, saya asisten KKN. Saya bisa mencatat data, menjawab soal data desa, membaca PDF/Word/Excel, dan mengingat kesulitanmu. Setiap perubahan minta konfirmasi dulu."))
@@ -241,6 +243,7 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
 
     fun jalankan(a: AksiAsisten): Boolean {
         when (a) {
+            is AksiAsisten.BuatDokumen -> {}
             is AksiAsisten.CatatKas -> vm.tambahKas(a.masuk, a.jumlah.toString(), a.kategori, a.keterangan)
             is AksiAsisten.BuatTugas -> {
                 val cocok = akun.firstOrNull { a.untuk.isNotBlank() && it.namaLengkap.lowercase().contains(a.untuk.lowercase().split(" ")[0]) }
@@ -294,6 +297,7 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
                         Text(c.teks, color = if (c.saya) Color.White else TeksUtama, fontSize = 14.sp)
                         c.aksi.forEachIndexed { i, a ->
                             Spacer(Modifier.height(8.dp))
+                            if (a is AksiAsisten.BuatDokumen) { KartuDokumen(a, namaDesa); return@forEachIndexed }
                             Text(AsistenParser.ringkas(a), fontWeight = FontWeight.Bold, color = TeksUtama, fontSize = 14.sp)
                             when (c.status[i]) {
                                 1 -> Text("Tersimpan.", color = TeksRedup, fontSize = 13.sp)
