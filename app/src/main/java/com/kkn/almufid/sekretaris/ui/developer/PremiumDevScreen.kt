@@ -103,7 +103,7 @@ fun PremiumDevScreen() {
                     },
                     fontSize = 11.sp, color = TeksRedup
                 )
-                if (!k.dicabut && k.dipakaiOleh.isEmpty()) OutlinedButton(onClick = { scope.launch { repo.cabut(k.kode); muat() } }) { Text("Cabut") }
+                if (!k.dicabut && k.dipakaiOleh.isEmpty()) OutlinedButton(onClick = { scope.launch { info = if (repo.cabut(k.kode)) "Kode ${k.kode} dicabut." else "Gagal mencabut kode. Pastikan aturan Firestore terbaru sudah dipublikasikan."; muat() } }) { Text("Cabut") }
             }
         }
     }

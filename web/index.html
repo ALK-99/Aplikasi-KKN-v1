@@ -683,12 +683,13 @@ function zipSimpan(berkas, mime) {
 const xe = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
 function docxBlok(html) {
   const d = new DOMParser().parseFromString(html.replace("</b>Desa", "</b><br>Desa"), "text/html"), out = [];
-  const rata = (el) => { const st = (el.getAttribute && el.getAttribute("style")) || "", cl = (el.className || "") + ""; if (/kop/.test(cl) || /text-align:\s*center/.test(st)) return "center"; if (/ttd/.test(cl) || /text-align:\s*right/.test(st)) return "right"; return "left"; };
+  const rata = (el) => { const st = (el.getAttribute && el.getAttribute("style")) || "", cl = (el.className || "") + ""; if (/kop/.test(cl) || /text-align:\s*center/.test(st)) return "center"; if (/ttd/.test(cl) || /text-align:\s*right/.test(st)) return "right"; if (/text-align:\s*justify/.test(st)) return "both"; return "left"; };
   const baris = (n, tebal) => { const L = [[]]; const jalan = (x, b) => { x.childNodes.forEach((c) => { if (c.nodeType === 3) { const t = c.textContent.replace(/\s+/g, " "); if (t.trim() || t === " ") L[L.length - 1].push([t, b]); } else if (c.nodeType === 1) { if (c.tagName === "BR") L.push([]); else if (!/STYLE|SCRIPT/.test(c.tagName)) jalan(c, b || /^(B|STRONG|H\d)$/.test(c.tagName)); } }); }; jalan(n, tebal); return L.filter((l) => l.some((r) => r[0].trim())); };
   const blok = (n, r, ukuran) => { n.childNodes.forEach((c) => {
     if (c.nodeType === 3) { const t = c.textContent.trim(); if (t) out.push({p: [[[t, false]]], r, uk: ukuran}); return; }
     if (c.nodeType !== 1 || /STYLE|SCRIPT|META|TITLE/.test(c.tagName)) return;
     if (c.tagName === "TABLE") { out.push({tb: [...c.rows].map((rw) => [...rw.cells].map((x) => x.textContent.replace(/\s+/g, " ").trim())), kepala: !!c.tHead}); return; }
+    if (c.tagName === "P" && /kosong/.test(c.className + "")) { out.push({p: [[["", false]]], r, uk: ukuran}); return; }
     const anak = c.querySelector && c.querySelector("table, div, p, h1, h2, h3, ul, ol"), rr = rata(c) !== "left" ? rata(c) : r, h = /^H\d$/.test(c.tagName);
     if (anak) blok(c, rr, ukuran); else { const b = baris(c, h || /kop/.test(c.className + "")); if (b.length) out.push({p: b, r: rr, uk: h ? 28 : /kop/.test(c.className + "") ? 28 : ukuran}); }
   }); };
@@ -1114,16 +1115,24 @@ function ringkasAksi(a) {
   if (a.jenis === "surat") return `Surat ${a.jenisSurat === "MASUK" ? "masuk" : "keluar"}: ${a.perihal}${a.nomor ? " (" + a.nomor + ")" : ""}`;
   return "";
 }
+function dokBaris(b) { return (Array.isArray(b) ? b : []).map((r) => Array.isArray(r) ? r : [r]); }
+function dokNormal(a) { // samakan isi dengan format: xlsx butuh lembar, docx/pdf butuh blok
+  const fm = String(a.format || "docx").toLowerCase(), bl = Array.isArray(a.blok) ? a.blok : [], ls = Array.isArray(a.lembar) ? a.lembar : [];
+  if (fm === "xlsx" && !ls.length && bl.some((b) => b.t === "tabel")) a.lembar = bl.filter((b) => b.t === "tabel").map((b, i) => ({nama: "Tabel " + (i + 1), baris: b.baris}));
+  if (fm !== "xlsx" && !bl.length && ls.length) a.blok = ls.map((l) => ({t: "tabel", baris: l.baris, kepala: true}));
+  return a;
+}
 function dokHtml(a) {
-  const bl = Array.isArray(a.blok) ? a.blok : [], e = (s) => esc(String(s == null ? "" : s));
-  const isi = bl.map((b) => b.t === "tabel" ? `<table>${(b.baris || []).map((r, i) => `<tr>${r.map((c) => (b.kepala !== false && i === 0 ? "<th>" : "<td>") + e(c) + (b.kepala !== false && i === 0 ? "</th>" : "</td>")).join("")}</tr>`).join("")}</table>`.replace("<tr>", b.kepala !== false ? "<thead><tr>" : "<tr>").replace("</tr>", b.kepala !== false ? "</tr></thead>" : "</tr>") : `<p style="text-align:${["center", "right"].includes(b.rata) ? b.rata : b.rata === "justify" ? "justify" : "left"}">${b.tebal ? "<b>" + e(b.teks) + "</b>" : e(b.teks)}</p>`).join("");
+  dokNormal(a); const bl = Array.isArray(a.blok) ? a.blok : [], e = (s) => esc(String(s == null ? "" : s));
+  const isi = bl.map((b) => b.t === "tabel" ? `<table>${dokBaris(b.baris).map((r, i) => `<tr>${r.map((c) => (b.kepala !== false && i === 0 ? "<th>" : "<td>") + e(c) + (b.kepala !== false && i === 0 ? "</th>" : "</td>")).join("")}</tr>`).join("")}</table>`.replace("<tr>", b.kepala !== false ? "<thead><tr>" : "<tr>").replace("</tr>", b.kepala !== false ? "</tr></thead>" : "</tr>") : (String(b.teks == null ? "" : b.teks).trim() === "" ? `<p class="kosong">&nbsp;</p>` : `<p style="text-align:${["center", "right"].includes(b.rata) ? b.rata : b.rata === "justify" ? "justify" : "left"}">${b.tebal ? "<b>" + e(b.teks) + "</b>" : e(b.teks)}</p>`)).join("");
   const kop = a.kop ? `<div class="kop"><b>KELOMPOK KKN AL-MUSHLIH 2027</b>Desa ${e(me.desa)}</div>` : "";
   return `<!doctype html><meta charset="utf-8"><style>@page{size:A4;margin:20mm}body{font:12pt/1.5 "Times New Roman",serif;color:#000}.kop{text-align:center;border-bottom:3px double #000;padding-bottom:6px;margin-bottom:14px}.kop b{font-size:16pt;display:block}p{margin:0 0 8px}table{width:100%;border-collapse:collapse;margin:8px 0}th,td{border:1px solid #444;padding:4px 6px;text-align:left}th{background:#e9e9f2}</style>${kop}${isi}`;
 }
 function dokXlsx(a) {
+  dokNormal(a);
   const kol = (i) => { let s = ""; for (i++; i > 0; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + (i - 1) % 26) + s; return s; };
   const ls = (Array.isArray(a.lembar) && a.lembar.length ? a.lembar : [{nama: "Data", baris: []}]).slice(0, 8);
-  const sheetXml = (l) => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${(l.baris || []).map((r, ri) => `<row r="${ri + 1}">${r.map((c, ci) => { const ref = kol(ci) + (ri + 1); return typeof c === "number" && isFinite(c) ? `<c r="${ref}"><v>${c}</v></c>` : `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xe(c == null ? "" : c)}</t></is></c>`; }).join("")}</row>`).join("")}</sheetData></worksheet>`;
+  const sheetXml = (l) => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${dokBaris(l.baris).map((r, ri) => `<row r="${ri + 1}">${r.map((c, ci) => { const ref = kol(ci) + (ri + 1); return typeof c === "number" && isFinite(c) ? `<c r="${ref}"><v>${c}</v></c>` : `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xe(c == null ? "" : c)}</t></is></c>`; }).join("")}</row>`).join("")}</sheetData></worksheet>`;
   const nm = (l, i) => xe(String(l.nama || "Lembar" + (i + 1)).replace(/[\\\/?*\[\]:]/g, " ").slice(0, 31));
   const H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
   return zipSimpan([
@@ -1201,7 +1210,7 @@ async function jalankanAksi(a) {
       const r = document.createElement("div"); r.style.cssText = "margin-top:8px;padding:7px 8px;border-radius:10px;background:rgba(0,0,0,.16)"; r.innerHTML = `<b>${esc(ringkasAksi(a))}</b><div class="aksi" style="justify-content:flex-start;margin-top:6px"><button class="kecil" data-ok>Simpan</button><button class="sek kecil" data-no>Batal</button></div>`;
         const simpan = async () => { if (r.dataset.selesai) return; r.dataset.selesai = "1"; r.querySelectorAll("button").forEach((b) => b.disabled = true); try { await Promise.race([jalankanAksi(a), tunggu(6000)]); r.innerHTML = `<b>Tersimpan:</b> ${esc(ringkasAksi(a))}`; } catch (e) { r.innerHTML = `Gagal: ${esc(e.message)}`; } };
         r.querySelector("[data-ok]").onclick = simpan; r.querySelector("[data-no]").onclick = () => { r.dataset.selesai = "1"; r.innerHTML = "Dibatalkan."; }; r._simpan = simpan; sel.push(r); d.appendChild(r); });
-      if (tombolSemua) { tombolSemua.textContent = `Simpan semua (${aksi.length})`; tombolSemua.style.marginTop = "8px"; tombolSemua.onclick = async () => { tombolSemua.disabled = true; for (const r of sel) await r._simpan(); }; d.appendChild(tombolSemua); }
+      if (tombolSemua && sel.length > 1) { tombolSemua.textContent = `Simpan semua (${sel.length})`; tombolSemua.style.marginTop = "8px"; tombolSemua.onclick = async () => { tombolSemua.disabled = true; for (const r of sel) await r._simpan(); }; d.appendChild(tombolSemua); }
     }
     chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d;
   }
@@ -1245,7 +1254,7 @@ async function jalankanAksi(a) {
       const fmtT = (ms) => new Date(ms).toLocaleDateString("id-ID", {day: "2-digit", month: "short", year: "numeric"});
       const tampilStatus = (st) => { $a("as-pst").textContent = !st ? "Status tidak terbaca." : st.admin ? "Developer: premium aktif tanpa batas." : st.aktif ? `Aktif sampai ${fmtT(st.sampai)} (sisa ${Math.max(0, Math.ceil((st.sampai - Date.now()) / 864e5))} hari).` : st.sampai ? `Masa aktif berakhir ${fmtT(st.sampai)}. Tukar kode baru.` : "Belum aktif. Minta kode ke developer."; };
       muatPremium().then(tampilStatus);
-      $a("as-tukar").onclick = async () => { const b = $a("as-tukar"); b.disabled = true; $a("as-pinfo").textContent = "Menukar kode…"; try { const t = await tukarKode($a("as-kode").value); $a("as-pinfo").textContent = "Berhasil. Premium aktif sampai " + fmtT(t) + "."; $a("as-kode").value = ""; tampilStatus(premiumSt); } catch (e) { $a("as-pinfo").textContent = e.message + (/permission|insufficient/i.test(e.message) ? " (periksa aturan Firestore terbaru)" : ""); } b.disabled = false; };
+      $a("as-tukar").onclick = async () => { const b = $a("as-tukar"); b.disabled = true; $a("as-pinfo").textContent = "Menukar kode…"; try { const t = await tukarKode($a("as-kode").value); $a("as-pinfo").textContent = "Berhasil. Premium aktif sampai " + fmtT(t) + "."; $a("as-kode").value = ""; tampilStatus(premiumSt); } catch (e) { $a("as-pinfo").textContent = e.message + (/permission|insufficient/i.test(e.message) ? " (periksa aturan Firestore terbaru, dan pastikan jam komputer sudah benar)" : ""); } b.disabled = false; };
       if (admin) {
         const muatDaftar = async () => { try { const q = await db.collection("premium_kode").orderBy("dibuatMillis", "desc").limit(60).get(); $a("as-daftar").innerHTML = q.docs.map((d) => { const x = d.data(); const st = x.dicabut ? "Dicabut" : x.dipakaiOleh ? "Dipakai " + esc(x.dipakaiNama || "pengguna") + " · " + fmtT(x.dipakaiMillis) : "Belum dipakai"; return `<div style="margin:4px 0;color:var(--tx)"><b style="user-select:all">${esc(d.id)}</b> · ${x.hari} hari${x.catatan ? " · " + esc(x.catatan) : ""}<br><span style="color:var(--mut)">${st}</span>${!x.dicabut && !x.dipakaiOleh ? ` <button class="bahaya kecil" data-cabut="${esc(d.id)}">Cabut</button>` : ""}</div>`; }).join("") || "<p>Belum ada kode.</p>"; $a("as-daftar").querySelectorAll("[data-cabut]").forEach((b) => b.onclick = async () => { await db.collection("premium_kode").doc(b.dataset.cabut).update({dicabut: true}); muatDaftar(); }); } catch (e) { $a("as-daftar").textContent = "Gagal memuat kode: " + e.message; } };
         muatDaftar();

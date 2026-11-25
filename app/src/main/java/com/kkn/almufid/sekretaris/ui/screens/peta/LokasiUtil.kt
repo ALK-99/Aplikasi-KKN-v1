@@ -147,7 +147,7 @@ object LokasiUtil {
     private suspend fun kirimOverpass(kueri: String): String? {
         val hasil = kotlinx.coroutines.CompletableDeferred<String?>()
         val lingkup = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
-        val tugas = SERVER_OVERPASS.map { s -> lingkup.launch { kirimSatu(s, kueri)?.let { hasil.complete(it) } } }
+        val tugas = SERVER_OVERPASS.map { s -> lingkup.launch { kirimSatu(s, kueri)?.takeIf { b -> try { org.json.JSONObject(b).has("elements") } catch (e: Exception) { false } }?.let { hasil.complete(it) } } }
         lingkup.launch { tugas.forEach { it.join() }; hasil.complete(null) }
         return try { hasil.await() } finally { lingkup.coroutineContext[kotlinx.coroutines.Job]?.cancel() }
     }

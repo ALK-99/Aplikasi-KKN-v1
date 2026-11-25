@@ -71,7 +71,7 @@ ipcMain.handle("hapus-data", async (e, copot) => {
     try { spawn("cmd.exe", ["/c", `ping -n 4 127.0.0.1 >nul & rmdir /s /q "${data}"`], { detached: true, stdio: "ignore", windowsHide: true }).unref(); } catch (x) {}
   };
   benarKeluar = true;
-  if (!copot) { bersihkan(); app.relaunch(); app.exit(0); return "ok"; }
+  if (!copot) { app.relaunch(); app.exit(0); return "ok"; } // storage sudah dikosongkan di atas; tanpa rmdir agar tidak berbalapan dengan instance baru
   const pencopot = path.join(path.dirname(process.execPath), `Uninstall ${app.getName()}.exe`);
   const alternatif = fs.existsSync(path.dirname(process.execPath)) ? fs.readdirSync(path.dirname(process.execPath)).find((f) => /^Uninstall.*\.exe$/i.test(f)) : null;
   const berkas = fs.existsSync(pencopot) ? pencopot : alternatif ? path.join(path.dirname(process.execPath), alternatif) : null;

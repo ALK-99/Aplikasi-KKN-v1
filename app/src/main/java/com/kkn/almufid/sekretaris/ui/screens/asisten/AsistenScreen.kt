@@ -67,8 +67,17 @@ private fun gambarKeBase64(bytes: ByteArray): String? {
     android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opsi)
     var skala = 1; while (maxOf(opsi.outWidth, opsi.outHeight) / skala > 2400) skala *= 2
     val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = skala }) ?: return null
-    val sisi = maxOf(bmp.width, bmp.height)
-    val akhir = if (sisi > 1600) android.graphics.Bitmap.createScaledBitmap(bmp, bmp.width * 1600 / sisi, bmp.height * 1600 / sisi, true) else bmp
+    val derajat = try {
+        when (android.media.ExifInterface(java.io.ByteArrayInputStream(bytes)).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, android.media.ExifInterface.ORIENTATION_NORMAL)) {
+            android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+            android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+            android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+            else -> 0f
+        }
+    } catch (e: Exception) { 0f }
+    val tegak = if (derajat == 0f) bmp else android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, android.graphics.Matrix().apply { postRotate(derajat) }, true)
+    val sisi = maxOf(tegak.width, tegak.height)
+    val akhir = if (sisi > 1600) android.graphics.Bitmap.createScaledBitmap(tegak, tegak.width * 1600 / sisi, tegak.height * 1600 / sisi, true) else tegak
     val out = java.io.ByteArrayOutputStream()
     akhir.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, out)
     return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
@@ -151,21 +160,29 @@ fun AsistenOverlay(vm: KoordinasiViewModel, desa: DesaRepository) {
         }
     }
 
+    val chatTahan = remember {
+        mutableStateListOf<ChatItem>().apply {
+            add(ChatItem(false, "Halo, saya asisten KKN. Saya bisa mencatat data, menjawab soal data desa, membaca PDF/Word/Excel, dan mengingat kesulitanmu. Setiap perubahan minta konfirmasi dulu."))
+            AsistenStore.riwayat(context).forEach { add(ChatItem(it.saya, it.teks)) }
+        }
+    }
+    val sibukTahan = remember { mutableStateOf(false) }
+    val lingkupAsisten = rememberCoroutineScope()
+
     if (buka) {
         ModalBottomSheet(
             onDismissRequest = { buka = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = Ground
         ) {
-            AsistenPanel(vm, desa, onKecil = { mini = true; AsistenStore.simpanMini(context, true); buka = false })
+            AsistenPanel(vm, desa, chatTahan, sibukTahan, lingkupAsisten, onKecil = { mini = true; AsistenStore.simpanMini(context, true); buka = false })
         }
     }
 }
 
 @Composable
-private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil: () -> Unit) {
+private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, chat: androidx.compose.runtime.snapshots.SnapshotStateList<ChatItem>, sibukTahan: MutableState<Boolean>, scope: kotlinx.coroutines.CoroutineScope, onKecil: () -> Unit) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val kas by vm.kas.collectAsState()
     val tugas by vm.tugas.collectAsState()
     val admin by vm.admin.collectAsState()
@@ -179,34 +196,34 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
 
     val namaDesa = akun.firstOrNull { it.uid == vm.uidSaya }?.desa ?: akun.firstOrNull()?.desa ?: ""
 
-    val chat = remember {
-        mutableStateListOf<ChatItem>().apply {
-            add(ChatItem(false, "Halo, saya asisten KKN. Saya bisa mencatat data, menjawab soal data desa, membaca PDF/Word/Excel, dan mengingat kesulitanmu. Setiap perubahan minta konfirmasi dulu."))
-            AsistenStore.riwayat(context).forEach { add(ChatItem(it.saya, it.teks)) }
-        }
-    }
     var teks by remember { mutableStateOf("") }
-    var sibuk by remember { mutableStateOf(false) }
+    var sibuk by sibukTahan
     var bagian by remember { mutableIntStateOf(0) } // 0 tutup, 1 ingatan, 2 pengaturan
     var kunci by remember { mutableStateOf("") }
     var model by remember { mutableStateOf(MODEL_BAWAAN) }
     var kunciOr by remember { mutableStateOf("") }
     var premium by remember { mutableStateOf<StatusPremium?>(null) }
+    var kunciKosong by remember { mutableStateOf(false) }
     var muatUlang by remember { mutableIntStateOf(0) }
     LaunchedEffect(muatUlang) {
         val repoP = PremiumRepository()
         val st = repoP.status(); premium = st
-        if (st.aktif) repoP.ambilKunci()?.let { kunci = it.gemini; kunciOr = it.openrouter; if (it.model.isNotBlank()) model = it.model }
-        else { kunci = ""; kunciOr = "" }
+        if (st.aktif) {
+            val kk = repoP.ambilKunci()
+            kunciKosong = kk == null || (kk.gemini.isBlank() && kk.openrouter.isBlank())
+            kk?.let { kunci = it.gemini; kunciOr = it.openrouter; if (it.model.isNotBlank()) model = it.model }
+        } else { kunci = ""; kunciOr = ""; kunciKosong = false }
     }
     var ingatan by remember { mutableStateOf(AsistenStore.ingatan(context)) }
     var fileUri by remember { mutableStateOf<Uri?>(null) }
     var fileNama by remember { mutableStateOf("") }
+    var fileGambar by remember { mutableStateOf(false) }
     val daftar = rememberLazyListState()
 
     val pilihFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             fileUri = uri
+            fileGambar = context.contentResolver.getType(uri)?.startsWith("image/") == true
             fileNama = context.contentResolver.query(uri, null, null, null, null)?.use { c ->
                 val i = c.getColumnIndex(OpenableColumns.DISPLAY_NAME); if (c.moveToFirst() && i >= 0) c.getString(i) else null
             } ?: "file"
@@ -218,12 +235,17 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
 
     fun konteks() = KonteksAsisten(kas, tugas, proker, nota, surat, absensi, anggota, akun.map { it.namaLengkap }, "", AsistenStore.ingatan(context))
 
+    fun butuhKunci(apa: String): Nothing = throw IllegalStateException(
+        if (kunciKosong) "$apa butuh kunci AI, tetapi kunci belum tersedia. Minta developer mengisinya di menu Developer, Premium, dan memastikan aturan Firestore terbaru sudah dipublikasikan."
+        else "$apa butuh Premium. Tukar kode lewat tombol pengaturan.")
+
     fun kirim(t0: String) {
         val uri = fileUri
         if ((t0.isBlank() && uri == null) || sibuk) return
         val q = t0.trim().ifEmpty { "Screening file ini: ringkas isinya, tandai kejanggalan, dan usulkan data yang bisa dimasukkan." }
         val nama = fileNama
-        teks = ""; fileUri = null; fileNama = ""
+        val gambar = fileGambar || Regex("""\.(jpe?g|png|webp)$""").containsMatchIn(nama.lowercase())
+        teks = ""; fileUri = null; fileNama = ""; fileGambar = false
         val tampil = (if (uri != null) "📎 $nama\n" else "") + q
         chat.add(ChatItem(true, tampil)); AsistenStore.tambahRiwayat(context, true, tampil); sibuk = true
         scope.launch {
@@ -236,15 +258,15 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, onKecil:
                         context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw IllegalStateException("File tidak bisa dibaca")
                     }
                     if (bytes.size > 12_000_000) throw IllegalStateException("File terlalu besar (maks 12 MB)")
-                    if (Regex("""\.(jpe?g|png|webp)$""").containsMatchIn(nama.lowercase())) {
-                        if (kunci.isBlank()) throw IllegalStateException("Scan foto nota atau surat butuh Premium. Tukar kode lewat tombol pengaturan.")
+                    if (gambar) {
+                        if (kunci.isBlank()) butuhKunci("Scan foto nota atau surat")
                         val b64 = withContext(Dispatchers.Default) { gambarKeBase64(bytes) } ?: throw IllegalStateException("Foto tidak bisa dibaca")
                         lamp = Lampiran(nama, null, null, b64)
                     } else if (nama.lowercase().endsWith(".pdf")) {
-                        if (kunci.isBlank()) throw IllegalStateException("Membaca PDF butuh Premium. Tukar kode lewat tombol pengaturan.")
+                        if (kunci.isBlank()) butuhKunci("Membaca PDF")
                         lamp = Lampiran(nama, null, Base64.encodeToString(bytes, Base64.NO_WRAP))
                     } else {
-                        if (kunci.isBlank() && kunciOr.isBlank()) throw IllegalStateException("Membaca file butuh Premium. Tukar kode lewat tombol pengaturan.")
+                        if (kunci.isBlank() && kunciOr.isBlank()) butuhKunci("Membaca file")
                         lamp = Lampiran(nama, withContext(Dispatchers.Default) { BacaFile.teks(nama, bytes) }, null)
                     }
                 }
