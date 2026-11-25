@@ -49,6 +49,18 @@ ipcMain.handle("simpan-pdf", async (event, html, nama) => {
   } finally { tersembunyi.destroy(); }
 });
 
+const HOST_AI = ["generativelanguage.googleapis.com", "openrouter.ai"];
+ipcMain.handle("http-kirim", (e, url, header, badan, batasMs) => new Promise((selesai) => {
+  let u; try { u = new URL(url); } catch (x) { return selesai({galat: "URL tidak valid"}); }
+  if (u.protocol !== "https:" || !HOST_AI.includes(u.hostname)) return selesai({galat: "Alamat tidak diizinkan"});
+  const req = https.request({hostname: u.hostname, path: u.pathname + u.search, method: "POST", headers: Object.assign({}, header, {"Content-Length": Buffer.byteLength(badan || "")}), timeout: Math.min(+batasMs || 60000, 120000)}, (r) => {
+    const bag = []; r.on("data", (c) => bag.push(c)); r.on("end", () => selesai({status: r.statusCode, teks: Buffer.concat(bag).toString("utf8")}));
+    r.on("error", (x) => selesai({galat: x.message}));
+  });
+  req.on("timeout", () => { req.destroy(); selesai({galat: "Waktu habis"}); });
+  req.on("error", (x) => selesai({galat: x.message}));
+  req.end(badan || "");
+}));
 ipcMain.handle("versi", () => app.getVersion());
 
 // Mulai otomatis bersama Windows (tersembunyi di baki sistem).

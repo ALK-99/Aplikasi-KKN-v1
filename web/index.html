@@ -666,7 +666,7 @@ function dokPdfHtml(judul, sub, kepala, baris, tambahan = "") {
 /* ---------- Word (.docx) tanpa library: zip "stored" + CRC32 ---------- */
 const CRC_T = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 const crc32 = (u) => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC_T[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
-function zipSimpan(berkas) {
+function zipSimpan(berkas, mime) {
   const te = new TextEncoder(), bagian = [], pusat = []; let off = 0;
   const u16 = (n) => [n & 255, (n >> 8) & 255], u32 = (n) => [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255];
   berkas.forEach(([nama, isi]) => {
@@ -678,7 +678,7 @@ function zipSimpan(berkas) {
   });
   const ukuranPusat = pusat.reduce((s, x) => s + x.length, 0);
   const akhir = new Uint8Array([0x50, 0x4b, 5, 6, ...u16(0), ...u16(0), ...u16(berkas.length), ...u16(berkas.length), ...u32(ukuranPusat), ...u32(off), ...u16(0)]);
-  return new Blob([...bagian, ...pusat, akhir], {type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+  return new Blob([...bagian, ...pusat, akhir], {type: mime || "application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
 }
 const xe = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
 function docxBlok(html) {
@@ -1006,6 +1006,18 @@ async function tukarKode(mentah) {
   b.update(db.collection("users").doc(me.uid), {premiumSampai: firebase.firestore.Timestamp.fromMillis(sampai), premiumKode: kode});
   await b.commit(); await muatPremium(); return sampai;
 }
+async function ambil(url, header, badan, ms) {
+  ms = ms || 45000;
+  if (window.kkn && window.kkn.httpKirim) {
+    const r = await window.kkn.httpKirim(url, header, badan, ms);
+    if (r.galat) throw new Error(r.galat);
+    return {ok: r.status >= 200 && r.status < 300, status: r.status, tx: r.teks};
+  }
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
+  try { const r = await fetch(url, {method: "POST", headers: header, body: badan, signal: ac.signal}); return {ok: r.ok, status: r.status, tx: await r.text()}; }
+  catch (e) { throw new Error(e.name === "AbortError" ? "Waktu habis" : "Tidak ada koneksi internet"); }
+  finally { clearTimeout(t); }
+}
 const tunggu = (ms) => new Promise((r) => setTimeout(r, ms));
 function bangunSistem() {
   const ing = ingatan();
@@ -1017,6 +1029,9 @@ Balas HANYA JSON: {"balasan": string, "aksi": [objek...], "ingat": [string...]}.
 {"jenis":"pengumuman","judul":string,"isi":string}
 {"jenis":"inventaris","nama":string,"jumlah":angka,"kondisi":string,"keterangan":string}
 {"jenis":"surat","jenisSurat":"MASUK" atau "KELUAR","nomor":string,"perihal":string,"pihak":string}
+{"jenis":"dokumen","format":"docx" atau "pdf" atau "xlsx","nama":"nama-berkas-tanpa-ekstensi","kop":true bila ini surat resmi,"blok":[{"t":"p","teks":string,"tebal":bool,"rata":"left|center|right"},{"t":"tabel","baris":[[sel,...],...],"kepala":true}],"lembar":[{"nama":string,"baris":[[sel,...],...]}]}
+Aksi "dokumen" dipakai bila pengguna minta dibuatkan surat/laporan/daftar/rekap sebagai file. docx/pdf memakai "blok"; xlsx memakai "lembar" (baris pertama = judul kolom, angka ditulis sebagai angka). Setelah aksi dokumen, pengguna menekan Unduh, jadi di "balasan" cukup jelaskan singkat apa yang dibuat dan minta periksa.
+Untuk SURAT resmi (kop=true, kop "KELOMPOK KKN AL-MUSHLIH 2027 / Desa ..." ditambahkan otomatis, jangan membuatnya) ikuti urutan template menu Template Surat: (1) paragraf rata kanan "Desa, tanggal"; (2) "Nomor : ...", "Lampiran : ...", "Perihal : ..." (3) "Kepada Yth." lalu nama/jabatan tujuan dan "di tempat"; (4) salam pembuka "Assalamu'alaikum Warahmatullahi Wabarakatuh"; (5) isi 1-3 paragraf sopan; untuk undangan sertakan "Hari/tanggal", "Waktu", "Tempat"; (6) penutup + "Wassalamu'alaikum Warahmatullahi Wabarakatuh"; (7) "Hormat kami," lalu Ketua dan Sekretaris dengan nama dari DATA bila ada (kosongkan baris untuk tanda tangan). Jenis surat: undangan, permohonan, pemberitahuan, ucapan terima kasih. Tanyakan dulu hal penting yang belum jelas (tujuan, tanggal, acara); jangan mengarang nama atau tanggal.
 Jika ada file: ringkas isinya, lakukan screening (cek duplikat, angka janggal, total tidak cocok, tanggal aneh, data kurang), lalu usulkan entri bila relevan.
 "ingat": catatan singkat yang layak diingat jangka panjang tentang pengguna (kesulitan yang ia alami, kebiasaan, preferensi, konteks kegiatan). Kosongkan bila tidak ada hal baru.
 Jawab pertanyaan data hanya dari DATA; jangan mengarang angka yang tidak ada. Bila ragu atau data kurang, tanyakan di "balasan".
@@ -1038,13 +1053,13 @@ async function pahamiGemini(teks, kunci, lampiran) {
   const badan = JSON.stringify({systemInstruction: {parts: [{text: sistem}]}, contents: [...riw, {role: "user", parts: bagian}], generationConfig: {responseMimeType: "application/json", temperature: 0.4}});
   let galat = "";
   for (const m of modelRantai()) for (let i = 0; i < 2; i++) {
-    let r; try { r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {method: "POST", headers: {"Content-Type": "application/json", "x-goog-api-key": kunci}, body: badan}); } catch (e) { throw new Error("Tidak ada koneksi internet"); }
+    let r; try { r = await ambil(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {"Content-Type": "application/json", "x-goog-api-key": kunci}, badan, 50000); } catch (e) { galat = m + ": " + e.message; if (i === 0) continue; break; }
     if (r.ok) {
-      const j = await r.json(), t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts.map((x) => x.text).join("");
+      const j = JSON.parse(r.tx), t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts.map((x) => x.text).join("");
       if (!t) { galat = m + ": jawaban kosong"; break; }
       return rapikanHasil(jsonDariTeks(t));
     }
-    const tx = await r.text(); let pesan = tx; try { pesan = JSON.parse(tx).error.message; } catch (e) {}
+    const tx = r.tx; let pesan = tx; try { pesan = JSON.parse(tx).error.message; } catch (e) {}
     galat = `${m}: ${r.status}`;
     if ([429, 500, 502, 503, 504].includes(r.status)) { if (i === 0) await tunggu(1500); continue; }
     if (r.status === 404) break;
@@ -1061,8 +1076,8 @@ async function pahamiOR(teks, kunci, lampiran) {
   const daftar = lsGet("kkn_or_model", "openai/gpt-oss-120b:free, meta-llama/llama-3.3-70b-instruct:free").split(",").map((x) => x.trim()).filter(Boolean);
   let galat = "";
   for (const m of daftar) for (let i = 0; i < 2; i++) {
-    let r; try { r = await fetch("https://openrouter.ai/api/v1/chat/completions", {method: "POST", headers: {"Content-Type": "application/json", Authorization: "Bearer " + kunci}, body: JSON.stringify({model: m, temperature: 0.4, messages: [{role: "system", content: bangunSistem()}, ...riw, {role: "user", content: isi}]})}); } catch (e) { throw new Error("Tidak ada koneksi internet"); }
-    if (r.ok) { const j = await r.json(), t = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content; if (!t) { galat = m + ": kosong"; break; } return rapikanHasil(jsonDariTeks(t)); }
+    let r; try { r = await ambil("https://openrouter.ai/api/v1/chat/completions", {"Content-Type": "application/json", Authorization: "Bearer " + kunci}, JSON.stringify({model: m, temperature: 0.4, messages: [{role: "system", content: bangunSistem()}, ...riw, {role: "user", content: isi}]}), 50000); } catch (e) { galat = m + ": " + e.message; if (i === 0) continue; break; }
+    if (r.ok) { const j = JSON.parse(r.tx), t = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content; if (!t) { galat = m + ": kosong"; break; } return rapikanHasil(jsonDariTeks(t)); }
     galat = `${m}: ${r.status}`;
     if ([429, 500, 502, 503, 504].includes(r.status)) { if (i === 0) await tunggu(1500); continue; }
     if (r.status === 401 || r.status === 403) throw new Error("Kunci OpenRouter ditolak (" + r.status + ")");
@@ -1082,10 +1097,40 @@ function ringkasAksi(a) {
   if (a.jenis === "tugas") return `Tugas "${a.judul}"${a.untuk ? " untuk " + a.untuk : ""}${a.tenggat ? ", tenggat " + tgl(a.tenggat) : ""}`;
   if (a.jenis === "pengumuman") return `Pengumuman "${a.judul}"`;
   if (a.jenis === "inventaris") return `Inventaris: ${a.nama} × ${a.jumlah} (${a.kondisi})`;
+  if (a.jenis === "dokumen") return `Dokumen ${String(a.format || "docx").toUpperCase()}: ${a.nama || "dokumen"}`;
   if (a.jenis === "surat") return `Surat ${a.jenisSurat === "MASUK" ? "masuk" : "keluar"}: ${a.perihal}${a.nomor ? " (" + a.nomor + ")" : ""}`;
   return "";
 }
+function dokHtml(a) {
+  const bl = Array.isArray(a.blok) ? a.blok : [], e = (s) => esc(String(s == null ? "" : s));
+  const isi = bl.map((b) => b.t === "tabel" ? `<table>${(b.baris || []).map((r, i) => `<tr>${r.map((c) => (b.kepala !== false && i === 0 ? "<th>" : "<td>") + e(c) + (b.kepala !== false && i === 0 ? "</th>" : "</td>")).join("")}</tr>`).join("")}</table>`.replace("<tr>", b.kepala !== false ? "<thead><tr>" : "<tr>").replace("</tr>", b.kepala !== false ? "</tr></thead>" : "</tr>") : `<p style="text-align:${["center", "right"].includes(b.rata) ? b.rata : b.rata === "justify" ? "justify" : "left"}">${b.tebal ? "<b>" + e(b.teks) + "</b>" : e(b.teks)}</p>`).join("");
+  const kop = a.kop ? `<div class="kop"><b>KELOMPOK KKN AL-MUSHLIH 2027</b>Desa ${e(me.desa)}</div>` : "";
+  return `<!doctype html><meta charset="utf-8"><style>@page{size:A4;margin:20mm}body{font:12pt/1.5 "Times New Roman",serif;color:#000}.kop{text-align:center;border-bottom:3px double #000;padding-bottom:6px;margin-bottom:14px}.kop b{font-size:16pt;display:block}p{margin:0 0 8px}table{width:100%;border-collapse:collapse;margin:8px 0}th,td{border:1px solid #444;padding:4px 6px;text-align:left}th{background:#e9e9f2}</style>${kop}${isi}`;
+}
+function dokXlsx(a) {
+  const kol = (i) => { let s = ""; for (i++; i > 0; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + (i - 1) % 26) + s; return s; };
+  const ls = (Array.isArray(a.lembar) && a.lembar.length ? a.lembar : [{nama: "Data", baris: []}]).slice(0, 8);
+  const sheetXml = (l) => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${(l.baris || []).map((r, ri) => `<row r="${ri + 1}">${r.map((c, ci) => { const ref = kol(ci) + (ri + 1); return typeof c === "number" && isFinite(c) ? `<c r="${ref}"><v>${c}</v></c>` : `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xe(c == null ? "" : c)}</t></is></c>`; }).join("")}</row>`).join("")}</sheetData></worksheet>`;
+  const nm = (l, i) => xe(String(l.nama || "Lembar" + (i + 1)).replace(/[\\\/?*\[\]:]/g, " ").slice(0, 31));
+  const H = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  return zipSimpan([
+    ["[Content_Types].xml", `${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${ls.map((l, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`],
+    ["_rels/.rels", `${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml", `${H}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${ls.map((l, i) => `<sheet name="${nm(l, i)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>`],
+    ["xl/_rels/workbook.xml.rels", `${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${ls.map((l, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}</Relationships>`],
+    ...ls.map((l, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(l)]),
+  ], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+}
+function namaBerkas(a) { return String(a.nama || "dokumen").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "dokumen"; }
+async function unduhDokumen(a, fmt) {
+  fmt = fmt || String(a.format || "docx").toLowerCase(); const nama = namaBerkas(a);
+  if (fmt === "xlsx") { const x = document.createElement("a"); x.href = URL.createObjectURL(dokXlsx(a)); x.download = nama + ".xlsx"; x.click(); return "Excel"; }
+  const html = dokHtml(a);
+  if (fmt === "pdf") { await simpanDok(html, nama + ".pdf", "pdf"); return "PDF"; }
+  simpanWord(html, nama); return "Word";
+}
 async function jalankanAksi(a) {
+  if (a.jenis === "dokumen") return unduhDokumen(a);
   if (a.jenis === "kas") return db.collection("kas").add({masuk: !!a.masuk, jumlah: Math.round(+a.jumlah || 0), kategori: a.kategori || "", keterangan: a.keterangan || "", penulisNama: me.nama, tanggalMillis: Date.now(), dihapus: false});
   if (a.jenis === "tugas") { const u = (data.users || []).find((x) => a.untuk && x.namaLengkap.toLowerCase().includes(String(a.untuk).toLowerCase().split(" ")[0])); return db.collection("tugas").add({judul: a.judul, deskripsi: a.deskripsi || "", untukUid: u ? u.id : "", untukNama: u ? u.namaLengkap : (a.untuk || ""), deadlineMillis: a.tenggat || 0, selesai: false, tanggalMillis: Date.now(), dihapus: false}); }
   if (a.jenis === "pengumuman") { if (!admin) throw new Error("Pengumuman hanya bisa dibuat admin"); return db.collection("pengumuman").add({judul: a.judul, isi: a.isi, penulisNama: me.nama, tanggalMillis: Date.now(), dibacaOleh: [], dihapus: false}); }
@@ -1138,7 +1183,8 @@ async function jalankanAksi(a) {
     d.textContent = teks;
     if (aksi && aksi.length) {
       const sel = []; const tombolSemua = aksi.length > 1 ? document.createElement("button") : null;
-      aksi.forEach((a, i) => { const r = document.createElement("div"); r.style.cssText = "margin-top:8px;padding:7px 8px;border-radius:10px;background:rgba(0,0,0,.16)"; r.innerHTML = `<b>${esc(ringkasAksi(a))}</b><div class="aksi" style="justify-content:flex-start;margin-top:6px"><button class="kecil" data-ok>Simpan</button><button class="sek kecil" data-no>Batal</button></div>`;
+      aksi.forEach((a, i) => { if (a.jenis === "dokumen") { const r = document.createElement("div"); r.style.cssText = "margin-top:8px;padding:7px 8px;border-radius:10px;background:rgba(0,0,0,.16)"; const fm = String(a.format || "docx").toLowerCase(); r.innerHTML = `<b>📄 ${esc(ringkasAksi(a))}</b><div class="aksi" style="justify-content:flex-start;margin-top:6px"></div>`; const w = r.lastChild; (fm === "xlsx" ? [["xlsx", "Unduh Excel"]] : [["docx", "Unduh Word"], ["pdf", "Unduh PDF"]]).forEach(([f, tx]) => { const b = document.createElement("button"); b.className = "kecil"; b.textContent = tx; b.onclick = async () => { b.disabled = true; try { await unduhDokumen(a, f); } catch (e) { toast("Gagal: " + e.message); } b.disabled = false; }; w.appendChild(b); }); d.appendChild(r); return; }
+      const r = document.createElement("div"); r.style.cssText = "margin-top:8px;padding:7px 8px;border-radius:10px;background:rgba(0,0,0,.16)"; r.innerHTML = `<b>${esc(ringkasAksi(a))}</b><div class="aksi" style="justify-content:flex-start;margin-top:6px"><button class="kecil" data-ok>Simpan</button><button class="sek kecil" data-no>Batal</button></div>`;
         const simpan = async () => { if (r.dataset.selesai) return; r.dataset.selesai = "1"; r.querySelectorAll("button").forEach((b) => b.disabled = true); try { await Promise.race([jalankanAksi(a), tunggu(6000)]); r.innerHTML = `<b>Tersimpan:</b> ${esc(ringkasAksi(a))}`; } catch (e) { r.innerHTML = `Gagal: ${esc(e.message)}`; } };
         r.querySelector("[data-ok]").onclick = simpan; r.querySelector("[data-no]").onclick = () => { r.dataset.selesai = "1"; r.innerHTML = "Dibatalkan."; }; r._simpan = simpan; sel.push(r); d.appendChild(r); });
       if (tombolSemua) { tombolSemua.textContent = `Simpan semua (${aksi.length})`; tombolSemua.style.marginTop = "8px"; tombolSemua.onclick = async () => { tombolSemua.disabled = true; for (const r of sel) await r._simpan(); }; d.appendChild(tombolSemua); }
@@ -1159,7 +1205,7 @@ async function jalankanAksi(a) {
     const tk = gelembung("b", "Berpikir…"); let h; const k = kunciAi.gemini || kunciAi.or;
     try {
       let lamp = null; if (f) { if (/\.pdf$/i.test(f.name)) { if (f.size > 12e6) throw new Error("PDF terlalu besar (maks 12 MB)"); if (!kunciAi.gemini) throw new Error("Membaca PDF butuh Premium. Tukar kode lewat tombol ⚙."); lamp = {pdf: keBase64(await f.arrayBuffer()), nama: f.name}; } else lamp = {teks: await teksDariFile(f), nama: f.name}; }
-      if (k) { try { h = await pahamiAI(t, lamp); } catch (e) { if (lamp) throw e; h = pahamiLokal(t); h.balasan = "(Mode pintar gagal: " + e.message + ". Saya jawab dengan cara biasa.)\n" + h.balasan; } }
+      if (k) { try { h = await Promise.race([pahamiAI(t, lamp), new Promise((_, no) => setTimeout(() => no(new Error("Terlalu lama menunggu AI (lebih dari 2 menit)")), 120000))]); } catch (e) { if (lamp) throw e; h = pahamiLokal(t); h.balasan = "(Mode pintar gagal: " + e.message + ". Saya jawab dengan cara biasa.)\n" + h.balasan; } }
       else { if (lamp) throw new Error("Membaca file butuh Premium. Tukar kode lewat tombol ⚙."); h = pahamiLokal(t); }
       if (h.ingat && h.ingat.length) tambahIngatan(h.ingat);
     } catch (e) { h = {balasan: "Maaf, " + e.message, aksi: []}; }
