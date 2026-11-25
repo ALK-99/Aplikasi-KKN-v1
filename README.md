@@ -197,3 +197,8 @@ Menu Jadwal Mengajar (hari, jam, lembaga/kelas, materi, pengajar, catatan) di An
 - Peta (Android): pencarian tempat terdekat kini menembak 3 server OpenStreetMap sekaligus (tercepat menang), punya cadangan Nominatim, batas total sekitar 45 detik, dan tombol "Cari lewat Google Maps" bila gagal.
 - AI di PC: panggilan ke Gemini/OpenRouter lewat jalur Electron (main.js, daftar host diizinkan), batas 50 detik per model dan 2 menit total, jadi tidak menggantung.
 - AI membuat dokumen (Android dan PC): minta "buatkan surat undangan rapat ..." atau "rekap kas jadi Excel". AI menyusun surat mengikuti struktur Template Surat (kop otomatis, nomor/lampiran/perihal, salam, isi, penutup, Ketua dan Sekretaris), lalu muncul tombol Unduh Word / PDF / Excel. Android: masuk folder Unduhan (Android 10+) dan bisa dibagikan; PC: diunduh/ disimpan lewat dialog. Tetap gratis, tanpa layanan tambahan.
+
+## Tahap N: Premium tahap kedua
+- Scan nota dan surat dengan AI: lampirkan foto (jpg/png/webp) di asisten; AI membaca nota (toko, rincian, total) lalu mengusulkan kas keluar dan inventaris, atau membaca surat lalu mengusulkan catatan register surat. Tetap perlu konfirmasi Simpan.
+- LPJ dan laporan akhir otomatis: ketuk chip "Buatkan LPJ..." atau minta sendiri; AI menyusun dokumen Word (kop, pendahuluan, proker, tabel anggaran, nota, rekap kas, penutup) dari data desa.
+- Bagikan ke WhatsApp dan Telegram: tombol di bawah balasan asisten (tautan bagikan resmi, tanpa bot dan tanpa biaya). Dokumen dibagikan lewat tombol Bagikan.

@@ -842,7 +842,7 @@ HAL.kendali = (el) => {
 const asistenLog = [];
 const MODEL_PREMIUM = "gemini-pro-latest, gemini-2.5-pro, gemini-flash-latest, gemini-2.5-flash, gemini-flash-lite-latest";
 const MODEL_BAWAAN = "gemini-flash-latest, gemini-2.5-flash, gemini-flash-lite-latest, gemini-2.5-flash-lite";
-const ASISTEN_CONTOH = ["Catat kas masuk 50 ribu iuran anggota", "Tugas buat poster untuk Fahmi besok", "Berapa saldo kas?", "Tugas apa yang belum selesai?", "Ringkasan hari ini"];
+const ASISTEN_CONTOH = ["Buatkan LPJ dan laporan akhir (Word) dari data proker, kas, dan nota", "Catat kas masuk 50 ribu iuran anggota", "Tugas buat poster untuk Fahmi besok", "Berapa saldo kas?", "Tugas apa yang belum selesai?", "Ringkasan hari ini"];
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const kunciIng = () => "kkn_as_ing_" + (me ? me.uid : "x"), kunciRiw = () => "kkn_as_riw_" + (me ? me.uid : "x");
@@ -982,7 +982,8 @@ function konteksAsisten() {
 Anggota: ${(data.users || []).map((u) => u.namaLengkap).join(", ")}.
 Saldo kas: ${s.saldo} (masuk ${s.m}, keluar ${s.o}). Total nota: ${aktif("nota").reduce((a, n) => a + (n.nominal || 0), 0)}.
 Tugas belum selesai: ${aktif("tugas").filter((t) => !t.selesai).slice(0, 15).map((t) => `${t.judul} (${t.untukNama || "-"}, tenggat ${t.deadlineMillis ? keInput(t.deadlineMillis) : "-"})`).join("; ") || "tidak ada"}.
-Proker: ${p.slice(0, 15).map((x) => `${x.namaProker} [${x.status}]`).join("; ") || "belum ada"}.
+Nota: ${aktif("nota").slice().sort((a, b) => (b.tanggalMillis || 0) - (a.tanggalMillis || 0)).slice(0, 40).map((n) => `${new Date(n.tanggalMillis || 0).toISOString().slice(0, 10)} ${n.keterangan || ""} ${n.nominal || 0}${n.prokerTerkait ? " (proker " + n.prokerTerkait + ")" : ""}`).join("; ") || "kosong"}.
+Proker: ${p.slice(0, 15).map((x) => `${x.namaProker} [${x.status}] anggaran ${x.anggaran || 0}, realisasi ${x.realisasi || 0}`).join("; ") || "belum ada"}.
 Catatan kas terbaru: ${aktif("kas").slice(0, 12).map((x) => `${x.masuk ? "+" : "-"}${x.jumlah} ${x.keterangan || x.kategori || ""}`).join("; ") || "kosong"}.`;
 }
 let kunciAi = {gemini: "", or: "", model: ""}, premiumSt = null;
@@ -1018,6 +1019,11 @@ async function ambil(url, header, badan, ms) {
   catch (e) { throw new Error(e.name === "AbortError" ? "Waktu habis" : "Tidak ada koneksi internet"); }
   finally { clearTimeout(t); }
 }
+async function gambarKeBase64(f) {
+  const bmp = await createImageBitmap(f), sk = Math.min(1, 1600 / Math.max(bmp.width, bmp.height)), c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * sk); c.height = Math.round(bmp.height * sk); c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.82).split(",")[1];
+}
 const tunggu = (ms) => new Promise((r) => setTimeout(r, ms));
 function bangunSistem() {
   const ing = ingatan();
@@ -1032,6 +1038,8 @@ Balas HANYA JSON: {"balasan": string, "aksi": [objek...], "ingat": [string...]}.
 {"jenis":"dokumen","format":"docx" atau "pdf" atau "xlsx","nama":"nama-berkas-tanpa-ekstensi","kop":true bila ini surat resmi,"blok":[{"t":"p","teks":string,"tebal":bool,"rata":"left|center|right"},{"t":"tabel","baris":[[sel,...],...],"kepala":true}],"lembar":[{"nama":string,"baris":[[sel,...],...]}]}
 Aksi "dokumen" dipakai bila pengguna minta dibuatkan surat/laporan/daftar/rekap sebagai file. docx/pdf memakai "blok"; xlsx memakai "lembar" (baris pertama = judul kolom, angka ditulis sebagai angka). Setelah aksi dokumen, pengguna menekan Unduh, jadi di "balasan" cukup jelaskan singkat apa yang dibuat dan minta periksa.
 Untuk SURAT resmi (kop=true, kop "KELOMPOK KKN AL-MUSHLIH 2027 / Desa ..." ditambahkan otomatis, jangan membuatnya) ikuti urutan template menu Template Surat: (1) paragraf rata kanan "Desa, tanggal"; (2) "Nomor : ...", "Lampiran : ...", "Perihal : ..." (3) "Kepada Yth." lalu nama/jabatan tujuan dan "di tempat"; (4) salam pembuka "Assalamu'alaikum Warahmatullahi Wabarakatuh"; (5) isi 1-3 paragraf sopan; untuk undangan sertakan "Hari/tanggal", "Waktu", "Tempat"; (6) penutup + "Wassalamu'alaikum Warahmatullahi Wabarakatuh"; (7) "Hormat kami," lalu Ketua dan Sekretaris dengan nama dari DATA bila ada (kosongkan baris untuk tanda tangan). Jenis surat: undangan, permohonan, pemberitahuan, ucapan terima kasih. Tanyakan dulu hal penting yang belum jelas (tujuan, tanggal, acara); jangan mengarang nama atau tanggal.
+FOTO: bila pengguna mengirim foto NOTA/KWITANSI, baca toko, tanggal, rincian, dan total; usulkan aksi kas (masuk=false, jumlah=total, kategori sesuai, keterangan memuat nama toko dan barang) dan inventaris bila ada barang yang dibeli; sebutkan bagian yang tidak terbaca dan jangan menebak angka. Bila foto SURAT, baca nomor, perihal, dan pengirim/tujuan lalu usulkan aksi surat (MASUK bila dikirim ke kita, KELUAR bila dari kita).
+LPJ / LAPORAN AKHIR: bila diminta, buat aksi dokumen (format docx, kop=true) dengan bagian: Pendahuluan (latar belakang, tujuan), Rincian Kegiatan/Proker (nama, status), Rincian Anggaran dan Realisasi (tabel: Proker | Anggaran | Realisasi | Selisih), Rincian Pengeluaran dari NOTA (tabel: Tanggal | Keterangan | Nominal), Rekapitulasi Kas (masuk, keluar, saldo), Penutup, dan tanda tangan Ketua dan Bendahara/Sekretaris. Pakai angka hanya dari DATA dan hitung selisih dengan benar; beri tanda "(isi manual)" untuk hal yang tidak ada di data.
 Jika ada file: ringkas isinya, lakukan screening (cek duplikat, angka janggal, total tidak cocok, tanggal aneh, data kurang), lalu usulkan entri bila relevan.
 "ingat": catatan singkat yang layak diingat jangka panjang tentang pengguna (kesulitan yang ia alami, kebiasaan, preferensi, konteks kegiatan). Kosongkan bila tidak ada hal baru.
 Jawab pertanyaan data hanya dari DATA; jangan mengarang angka yang tidak ada. Bila ragu atau data kurang, tanyakan di "balasan".
@@ -1049,7 +1057,7 @@ function jsonDariTeks(t) { t = String(t || "").trim().replace(/^```json|```$/g, 
 async function pahamiGemini(teks, kunci, lampiran) {
   const sistem = bangunSistem();
   const riw = bacaJson(kunciRiw()).slice(-12).map((x) => ({role: x.r === "u" ? "user" : "model", parts: [{text: x.t}]}));
-  const bagian = [{text: teks}]; if (lampiran && lampiran.pdf) bagian.push({inlineData: {mimeType: "application/pdf", data: lampiran.pdf}}); if (lampiran && lampiran.teks) bagian[0].text += `\n\n[ISI FILE ${lampiran.nama}]\n${lampiran.teks}`;
+  const bagian = [{text: teks}]; if (lampiran && lampiran.gambar) bagian.push({inlineData: {mimeType: "image/jpeg", data: lampiran.gambar}}); if (lampiran && lampiran.pdf) bagian.push({inlineData: {mimeType: "application/pdf", data: lampiran.pdf}}); if (lampiran && lampiran.teks) bagian[0].text += `\n\n[ISI FILE ${lampiran.nama}]\n${lampiran.teks}`;
   const badan = JSON.stringify({systemInstruction: {parts: [{text: sistem}]}, contents: [...riw, {role: "user", parts: bagian}], generationConfig: {responseMimeType: "application/json", temperature: 0.4}});
   let galat = "";
   for (const m of modelRantai()) for (let i = 0; i < 2; i++) {
@@ -1087,7 +1095,7 @@ async function pahamiOR(teks, kunci, lampiran) {
 }
 async function pahamiAI(t, lamp) {
   const g = kunciAi.gemini, o = kunciAi.or; let galat = "";
-  if (g) { try { return await pahamiGemini(t, g, lamp); } catch (e) { galat = "Gemini: " + e.message; if (!o || (lamp && lamp.pdf)) throw e; } }
+  if (g) { try { return await pahamiGemini(t, g, lamp); } catch (e) { galat = "Gemini: " + e.message; if (!o || (lamp && (lamp.pdf || lamp.gambar))) throw e; } }
   if (o) { try { return await pahamiOR(t, o, lamp); } catch (e) { galat += (galat ? " | " : "") + e.message; } }
   throw new Error(galat || "Belum ada kunci AI");
 }
@@ -1159,7 +1167,7 @@ async function jalankanAksi(a) {
   <div id="as-chat"></div><div id="as-set"></div>
   <div class="cps" id="as-cps">${ASISTEN_CONTOH.map((c) => `<button class="chip">${esc(c)}</button>`).join("")}</div>
   <div class="ft"><div id="as-file" style="font-size:12px;color:var(--mut);display:none;margin-bottom:4px"></div><div class="bar"><button class="sek" id="as-clip" title="Unggah PDF, Word, Excel">📎</button><input id="as-in" placeholder="Tulis atau tanya apa saja…"><button id="as-kirim">Kirim</button></div></div>
-  <input type="file" id="as-pilih" accept=".pdf,.docx,.xlsx,.xls,.csv,.txt" hidden>`;
+  <input type="file" id="as-pilih" accept=".pdf,.docx,.xlsx,.xls,.csv,.txt,.jpg,.jpeg,.png,.webp" hidden>`;
   document.body.append(fab, pan);
   const $a = (id) => document.getElementById(id);
   let pos = (() => { try { return JSON.parse(lsGet("kkn_as_pos", "")) || {}; } catch (e) { return {}; } })(), mini = lsGet("kkn_as_mini", "0") === "1", file = null, drag = null, lagi = false;
@@ -1181,6 +1189,7 @@ async function jalankanAksi(a) {
   function gelembung(peran, teks, aksi) {
     const d = document.createElement("div"); d.className = "gel"; d.style.cssText = `align-self:${peran === "u" ? "flex-end" : "flex-start"};background:${peran === "u" ? "var(--vio)" : "var(--s2)"};color:${peran === "u" ? "#fff" : "inherit"}`;
     d.textContent = teks;
+    if (peran === "b" && teks.length > 40) { const w = document.createElement("div"); w.className = "aksi"; w.style.cssText = "justify-content:flex-start;margin-top:6px"; [["WhatsApp", (t) => "https://wa.me/?text=" + encodeURIComponent(t)], ["Telegram", (t) => "https://t.me/share/url?url=%20&text=" + encodeURIComponent(t)]].forEach(([n, u]) => { const b = document.createElement("button"); b.className = "sek kecil"; b.textContent = n; b.onclick = () => window.open(u(teks), "_blank"); w.appendChild(b); }); d.appendChild(w); }
     if (aksi && aksi.length) {
       const sel = []; const tombolSemua = aksi.length > 1 ? document.createElement("button") : null;
       aksi.forEach((a, i) => { if (a.jenis === "dokumen") { const r = document.createElement("div"); r.style.cssText = "margin-top:8px;padding:7px 8px;border-radius:10px;background:rgba(0,0,0,.16)"; const fm = String(a.format || "docx").toLowerCase(); r.innerHTML = `<b>📄 ${esc(ringkasAksi(a))}</b><div class="aksi" style="justify-content:flex-start;margin-top:6px"></div>`; const w = r.lastChild; (fm === "xlsx" ? [["xlsx", "Unduh Excel"]] : [["docx", "Unduh Word"], ["pdf", "Unduh PDF"]]).forEach(([f, tx]) => { const b = document.createElement("button"); b.className = "kecil"; b.textContent = tx; b.onclick = async () => { b.disabled = true; try { await unduhDokumen(a, f); } catch (e) { toast("Gagal: " + e.message); } b.disabled = false; }; w.appendChild(b); }); d.appendChild(r); return; }
@@ -1204,7 +1213,7 @@ async function jalankanAksi(a) {
     const tampil = (f ? "📎 " + f.name + "\n" : "") + t; gelembung("u", tampil); simpanRiw("u", tampil); lagi = true;
     const tk = gelembung("b", "Berpikir…"); let h; const k = kunciAi.gemini || kunciAi.or;
     try {
-      let lamp = null; if (f) { if (/\.pdf$/i.test(f.name)) { if (f.size > 12e6) throw new Error("PDF terlalu besar (maks 12 MB)"); if (!kunciAi.gemini) throw new Error("Membaca PDF butuh Premium. Tukar kode lewat tombol ⚙."); lamp = {pdf: keBase64(await f.arrayBuffer()), nama: f.name}; } else lamp = {teks: await teksDariFile(f), nama: f.name}; }
+      let lamp = null; if (f) { if (/\.(jpe?g|png|webp)$/i.test(f.name)) { if (!kunciAi.gemini) throw new Error("Scan foto nota atau surat butuh Premium. Tukar kode lewat tombol ⚙."); lamp = {gambar: await gambarKeBase64(f), nama: f.name}; } else if (/\.pdf$/i.test(f.name)) { if (f.size > 12e6) throw new Error("PDF terlalu besar (maks 12 MB)"); if (!kunciAi.gemini) throw new Error("Membaca PDF butuh Premium. Tukar kode lewat tombol ⚙."); lamp = {pdf: keBase64(await f.arrayBuffer()), nama: f.name}; } else lamp = {teks: await teksDariFile(f), nama: f.name}; }
       if (k) { try { h = await Promise.race([pahamiAI(t, lamp), new Promise((_, no) => setTimeout(() => no(new Error("Terlalu lama menunggu AI (lebih dari 2 menit)")), 120000))]); } catch (e) { if (lamp) throw e; h = pahamiLokal(t); h.balasan = "(Mode pintar gagal: " + e.message + ". Saya jawab dengan cara biasa.)\n" + h.balasan; } }
       else { if (lamp) throw new Error("Membaca file butuh Premium. Tukar kode lewat tombol ⚙."); h = pahamiLokal(t); }
       if (h.ingat && h.ingat.length) tambahIngatan(h.ingat);
