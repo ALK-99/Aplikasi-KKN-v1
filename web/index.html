@@ -880,8 +880,8 @@ function saldoKas() { const k = aktif("kas"); const m = k.filter((x) => x.masuk)
 function sosialLokal(q) {
   const nama = me ? me.nama.split(" ")[0] : "";
   if (/^(halo|hai|hi|hey|assalamu|salam|selamat (pagi|siang|sore|malam))/.test(q)) return `Halo ${nama}. Ada yang mau dicatat atau ditanyakan hari ini?`;
-  if (/siapa (kamu|anda)|kamu siapa|nama (kamu|mu)/.test(q)) return "Saya asisten KKN Al-Mushlih. Saya bantu sekretaris dan bendahara mencatat kas, tugas, pengumuman, inventaris, dan surat, serta menjawab soal data desa. Aktifkan Mode pintar untuk ngobrol bebas dan membaca file.";
-  if (/bisa apa|bantuan|help|cara pakai|fitur/.test(q)) return "Saya bisa: catat kas masuk/keluar, buat tugas, pengumuman, inventaris, surat; jawab saldo, tugas, proker, absensi. Dengan Mode pintar saya juga bisa ngobrol, membaca PDF/Word/Excel, dan mengingat kesulitanmu.";
+  if (/siapa (kamu|anda)|kamu siapa|nama (kamu|mu)/.test(q)) return "Saya asisten KKN Al-Mushlih. Saya bantu sekretaris dan bendahara mencatat kas, tugas, pengumuman, inventaris, dan surat, serta menjawab soal data desa. Aktifkan Premium (tukar kode lewat ⚙) untuk ngobrol bebas dan membaca file.";
+  if (/bisa apa|bantuan|help|cara pakai|fitur/.test(q)) return "Saya bisa: catat kas masuk/keluar, buat tugas, pengumuman, inventaris, surat; jawab saldo, tugas, proker, absensi. Dengan Premium saya juga bisa ngobrol, membaca PDF/Word/Excel, dan mengingat kesulitanmu.";
   if (/terima kasih|makasih|thanks/.test(q)) return "Sama-sama. Panggil saya kapan saja.";
   let m = q.match(/^ingat(?:kan)?(?: bahwa| ya)?[\s:,]+(.+)/); if (m) { tambahIngatan([m[1]]); return "Siap, saya ingat: " + m[1]; }
   if (/apa (yang )?(kamu )?ingat|ingatanmu/.test(q)) { const a = ingatan(); return a.length ? "Yang saya ingat:\n" + a.map((x) => "• " + x).join("\n") : "Belum ada yang saya ingat. Katakan \"ingat bahwa ...\" untuk menyimpan."; }
@@ -925,7 +925,7 @@ function pahamiLokal(teks) {
     const perihal = kapital(bersihKata(teks, [/catat|tambah|input|bikin/ig, /surat (masuk|keluar)/i, /nomor\s*[:\-]?\s*[\w\/.\-]+/ig, /perihal|tentang/ig]));
     if (perihal) return {balasan: "Surat siap dicatat di register.", aksi: [{jenis: "surat", jenisSurat: jenis, nomor: no, perihal, pihak: ""}]};
   }
-  return {balasan: "Saya belum paham perintah itu dalam mode biasa. Contoh: \"Catat kas masuk 50 ribu iuran\", \"Tugas buat laporan untuk Fahmi besok\", \"Berapa saldo kas?\". Untuk ngobrol bebas dan membaca file, aktifkan Mode pintar (gratis) lewat tombol ⚙."};
+  return {balasan: "Saya belum paham perintah itu dalam mode biasa. Contoh: \"Catat kas masuk 50 ribu iuran\", \"Tugas buat laporan untuk Fahmi besok\", \"Berapa saldo kas?\". Untuk ngobrol bebas dan membaca file, fitur AI butuh Premium: tukar kode lewat tombol ⚙."};
 }
 
 /* ----- Baca file: PDF dikirim utuh ke Gemini; Word, Excel, CSV dibaca di komputer ini ----- */
@@ -975,7 +975,7 @@ async function teksDariFile(f) {
 const keBase64 = (buf) => { let s = "", d = new Uint8Array(buf); for (let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000)); return btoa(s); };
 
 /* ----- Gemini: rantai model cadangan, ulang saat sibuk (503/429) ----- */
-const modelRantai = () => lsGet("kkn_gemini_model", MODEL_BAWAAN).split(",").map((s) => s.trim()).filter(Boolean);
+const modelRantai = () => (kunciAi.model || MODEL_BAWAAN).split(",").map((s) => s.trim()).filter(Boolean);
 function konteksAsisten() {
   const s = saldoKas(), p = aktif("proker");
   return `Tanggal hari ini: ${new Date().toISOString().slice(0, 10)}. Desa: ${me.desa}. Pengguna: ${me.nama}.
@@ -984,6 +984,27 @@ Saldo kas: ${s.saldo} (masuk ${s.m}, keluar ${s.o}). Total nota: ${aktif("nota")
 Tugas belum selesai: ${aktif("tugas").filter((t) => !t.selesai).slice(0, 15).map((t) => `${t.judul} (${t.untukNama || "-"}, tenggat ${t.deadlineMillis ? keInput(t.deadlineMillis) : "-"})`).join("; ") || "tidak ada"}.
 Proker: ${p.slice(0, 15).map((x) => `${x.namaProker} [${x.status}]`).join("; ") || "belum ada"}.
 Catatan kas terbaru: ${aktif("kas").slice(0, 12).map((x) => `${x.masuk ? "+" : "-"}${x.jumlah} ${x.keterangan || x.kategori || ""}`).join("; ") || "kosong"}.`;
+}
+let kunciAi = {gemini: "", or: "", model: ""}, premiumSt = null;
+async function muatPremium() {
+  try {
+    const d = await db.collection("users").doc(me.uid).get(), t = d.data() && d.data().premiumSampai, sampai = t && t.toMillis ? t.toMillis() : 0;
+    premiumSt = {admin: !!admin, sampai, aktif: !!admin || sampai > Date.now()};
+    kunciAi = {gemini: "", or: "", model: ""};
+    if (premiumSt.aktif) { try { const c = await db.collection("config").doc("ai_premium").get(); if (c.exists) { const x = c.data(); kunciAi = {gemini: x.gemini || "", or: x.openrouter || "", model: x.model || ""}; } } catch (e) {} }
+  } catch (e) { premiumSt = premiumSt || {admin: !!admin, sampai: 0, aktif: !!admin}; }
+  return premiumSt;
+}
+async function tukarKode(mentah) {
+  const kode = String(mentah || "").trim().toUpperCase(); if (kode.length < 6) throw new Error("Isi kode dengan lengkap.");
+  const ref = db.collection("premium_kode").doc(kode), d = await ref.get({source: "server"});
+  if (!d.exists) throw new Error("Kode tidak ditemukan."); const x = d.data();
+  if (x.dicabut) throw new Error("Kode ini sudah dicabut."); if (x.dipakaiOleh) throw new Error("Kode ini sudah dipakai.");
+  const u = await db.collection("users").doc(me.uid).get(), lama = u.data() && u.data().premiumSampai ? u.data().premiumSampai.toMillis() : 0;
+  const sampai = Math.max(lama, Date.now()) + (+x.hari) * 864e5, b = db.batch();
+  b.update(ref, {dipakaiOleh: me.uid, dipakaiNama: me.nama, dipakaiMillis: Date.now()});
+  b.update(db.collection("users").doc(me.uid), {premiumSampai: firebase.firestore.Timestamp.fromMillis(sampai), premiumKode: kode});
+  await b.commit(); await muatPremium(); return sampai;
 }
 const tunggu = (ms) => new Promise((r) => setTimeout(r, ms));
 function bangunSistem() {
@@ -1050,7 +1071,7 @@ async function pahamiOR(teks, kunci, lampiran) {
   throw new Error("Model gratis OpenRouter sibuk (" + galat + ")");
 }
 async function pahamiAI(t, lamp) {
-  const g = lsGet("kkn_gemini", ""), o = lsGet("kkn_or", ""); let galat = "";
+  const g = kunciAi.gemini, o = kunciAi.or; let galat = "";
   if (g) { try { return await pahamiGemini(t, g, lamp); } catch (e) { galat = "Gemini: " + e.message; if (!o || (lamp && lamp.pdf)) throw e; } }
   if (o) { try { return await pahamiOR(t, o, lamp); } catch (e) { galat += (galat ? " | " : "") + e.message; } }
   throw new Error(galat || "Belum ada kunci AI");
@@ -1108,7 +1129,7 @@ async function jalankanAksi(a) {
   fab.addEventListener("pointerup", () => { if (!drag) return; const g = drag.geser; if (g) { pos = {kiri: fab.offsetLeft + 25 < innerWidth / 2, y: fab.offsetTop}; lsSet("kkn_as_pos", JSON.stringify(pos)); letak(); } else { if (mini) { mini = false; lsSet("kkn_as_mini", "0"); letak(); } else buka(true); } drag = null; });
   $a("as-min").onclick = () => { mini = true; lsSet("kkn_as_mini", "1"); buka(false); letak(); };
   $a("as-x").onclick = () => buka(false);
-  function buka(b) { pan.classList.toggle("buka", b); fab.style.display = b ? "none" : ""; if (b) { render(); $a("as-in").focus(); } }
+  function buka(b) { pan.classList.toggle("buka", b); fab.style.display = b ? "none" : ""; if (b) { render(); $a("as-in").focus(); muatPremium(); } }
   window.bukaAsisten = buka;
 
   const chat = $a("as-chat");
@@ -1135,11 +1156,11 @@ async function jalankanAksi(a) {
     if (!t) t = "Screening file ini: ringkas isinya, tandai kejanggalan, dan usulkan data yang bisa dimasukkan.";
     $a("as-in").value = ""; file = null; $a("as-file").style.display = "none";
     const tampil = (f ? "📎 " + f.name + "\n" : "") + t; gelembung("u", tampil); simpanRiw("u", tampil); lagi = true;
-    const tk = gelembung("b", "Berpikir…"); let h; const k = lsGet("kkn_gemini", "") || lsGet("kkn_or", "");
+    const tk = gelembung("b", "Berpikir…"); let h; const k = kunciAi.gemini || kunciAi.or;
     try {
-      let lamp = null; if (f) { if (/\.pdf$/i.test(f.name)) { if (f.size > 12e6) throw new Error("PDF terlalu besar (maks 12 MB)"); if (!lsGet("kkn_gemini", "")) throw new Error("Membaca PDF butuh kunci Gemini. Aktifkan lewat tombol ⚙."); lamp = {pdf: keBase64(await f.arrayBuffer()), nama: f.name}; } else lamp = {teks: await teksDariFile(f), nama: f.name}; }
+      let lamp = null; if (f) { if (/\.pdf$/i.test(f.name)) { if (f.size > 12e6) throw new Error("PDF terlalu besar (maks 12 MB)"); if (!kunciAi.gemini) throw new Error("Membaca PDF butuh Premium. Tukar kode lewat tombol ⚙."); lamp = {pdf: keBase64(await f.arrayBuffer()), nama: f.name}; } else lamp = {teks: await teksDariFile(f), nama: f.name}; }
       if (k) { try { h = await pahamiAI(t, lamp); } catch (e) { if (lamp) throw e; h = pahamiLokal(t); h.balasan = "(Mode pintar gagal: " + e.message + ". Saya jawab dengan cara biasa.)\n" + h.balasan; } }
-      else { if (lamp) throw new Error("Membaca file butuh Mode pintar. Aktifkan lewat tombol ⚙."); h = pahamiLokal(t); }
+      else { if (lamp) throw new Error("Membaca file butuh Premium. Tukar kode lewat tombol ⚙."); h = pahamiLokal(t); }
       if (h.ingat && h.ingat.length) tambahIngatan(h.ingat);
     } catch (e) { h = {balasan: "Maaf, " + e.message, aksi: []}; }
     tk.remove(); lagi = false; gelembung("b", h.balasan, h.aksi); simpanRiw("b", h.balasan + (h.aksi && h.aksi.length ? "\n[usulan: " + h.aksi.map(ringkasAksi).join("; ") + "]" : ""));
@@ -1153,14 +1174,26 @@ async function jalankanAksi(a) {
     if (mode === "ing") { const a = ingatan(); s.innerHTML = `<b style="color:var(--tx)">Ingatan asisten</b><p>Hal yang saya ingat tentangmu agar bantuan makin pas. Disimpan hanya di komputer ini.</p>${a.length ? a.map((x, i) => `<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><span style="flex:1;color:var(--tx)">• ${esc(x)}</span><button class="bahaya kecil" data-i="${i}">Hapus</button></div>`).join("") : "<p>Belum ada.</p>"}<button class="sek kecil" id="as-riwx">Hapus riwayat obrolan</button>`;
       s.querySelectorAll("[data-i]").forEach((b) => b.onclick = () => { const a2 = ingatan(); a2.splice(+b.dataset.i, 1); lsSet(kunciIng(), JSON.stringify(a2)); s.dataset.mode = ""; panelSet("ing"); });
       $a("as-riwx").onclick = () => { lsSet(kunciRiw(), "[]"); render(); toast("Riwayat dihapus"); }; }
-    else { s.innerHTML = `<b style="color:var(--tx)">Mode pintar ${lsGet("kkn_gemini", "") || lsGet("kkn_or", "") ? "· aktif" : "· belum aktif"}</b><p>Tanpa kunci asisten hanya paham perintah umum. Kunci dipakai hanya di komputer ini; pertanyaan, file, dan ringkasan data desa dikirim ke penyedia AI.</p>
-      <b style="color:var(--tx)">1. Google Gemini</b><p>Kunci dari aistudio.google.com/apikey. Kunci gratis memakai model Flash. Untuk model Pro: pakai kunci berbayar (lihat panduan klaim kredit Google AI Pro) lalu tekan Premium.</p>
-      <input type="password" id="as-key" placeholder="Kunci API Gemini" value="${esc(lsGet("kkn_gemini", ""))}"><input id="as-model" value="${esc(lsGet("kkn_gemini_model", MODEL_BAWAAN))}" title="Daftar model dipisah koma; dicoba berurutan bila sibuk">
-      <div style="display:flex;gap:6px;margin:4px 0"><button class="sek kecil" id="as-hemat">Hemat (Flash)</button><button class="sek kecil" id="as-prem">Premium (Pro dulu)</button></div>
-      <b style="color:var(--tx)">2. Cadangan gratis: OpenRouter (opsional)</b><p>Dipakai bila Gemini gagal/sibuk. Kunci gratis tanpa kartu dari openrouter.ai/keys. Hanya teks (tidak bisa membaca PDF).</p>
-      <input type="password" id="as-or" placeholder="Kunci OpenRouter" value="${esc(lsGet("kkn_or", ""))}"><button class="kecil" id="as-simpan">Simpan</button>`;
-      $a("as-hemat").onclick = () => { $a("as-model").value = MODEL_BAWAAN; }; $a("as-prem").onclick = () => { $a("as-model").value = MODEL_PREMIUM; };
-      $a("as-simpan").onclick = () => { lsSet("kkn_gemini", $a("as-key").value.trim()); lsSet("kkn_gemini_model", $a("as-model").value.trim() || MODEL_BAWAAN); lsSet("kkn_or", $a("as-or").value.trim()); s.style.display = "none"; toast("Pengaturan asisten disimpan"); }; }
+    else {
+      s.innerHTML = `<b style="color:var(--tx)">Premium</b><p id="as-pst">Memeriksa status…</p><p>Fitur premium (asisten AI, scan nota dan surat, laporan otomatis, bagikan ke Telegram/WA) butuh internet dan kode dari developer.</p>
+      <div style="display:flex;gap:6px"><input id="as-kode" placeholder="KKN-XXXX-XXXX" style="margin:0"><button class="kecil" id="as-tukar">Tukar</button></div><p id="as-pinfo"></p>
+      ${admin ? `<hr style="border:0;border-top:1px solid var(--line);margin:10px 0"><b style="color:var(--tx)">Developer: buat kode</b>
+      <div style="display:flex;gap:6px;margin:4px 0"><select id="as-hari"><option value="7">7 hari</option><option value="30" selected>30 hari</option><option value="90">90 hari</option><option value="180">180 hari</option><option value="365">365 hari</option></select><input id="as-cat" placeholder="Catatan (untuk siapa)" style="margin:0"><button class="kecil" id="as-buat">Buat</button></div><p id="as-baru" style="color:var(--tx);font-size:15px;user-select:all"></p>
+      <div id="as-daftar"></div>
+      <b style="color:var(--tx)">Kunci AI bersama</b><p>Dibagikan otomatis ke akun premium. Pakai kunci GRATIS (aistudio.google.com/apikey) tanpa menautkan akun penagihan, supaya tidak ada tagihan. Cadangan: openrouter.ai/keys.</p>
+      <input type="password" id="as-kg" placeholder="Kunci Gemini"><input type="password" id="as-ko" placeholder="Kunci OpenRouter (cadangan)"><input id="as-km" placeholder="Daftar model (kosong = bawaan)"><button class="kecil" id="as-ksimpan">Simpan kunci</button>` : ""}`;
+      const fmtT = (ms) => new Date(ms).toLocaleDateString("id-ID", {day: "2-digit", month: "short", year: "numeric"});
+      const tampilStatus = (st) => { $a("as-pst").textContent = !st ? "Status tidak terbaca." : st.admin ? "Developer: premium aktif tanpa batas." : st.aktif ? `Aktif sampai ${fmtT(st.sampai)} (sisa ${Math.max(0, Math.ceil((st.sampai - Date.now()) / 864e5))} hari).` : st.sampai ? `Masa aktif berakhir ${fmtT(st.sampai)}. Tukar kode baru.` : "Belum aktif. Minta kode ke developer."; };
+      muatPremium().then(tampilStatus);
+      $a("as-tukar").onclick = async () => { const b = $a("as-tukar"); b.disabled = true; $a("as-pinfo").textContent = "Menukar kode…"; try { const t = await tukarKode($a("as-kode").value); $a("as-pinfo").textContent = "Berhasil. Premium aktif sampai " + fmtT(t) + "."; $a("as-kode").value = ""; tampilStatus(premiumSt); } catch (e) { $a("as-pinfo").textContent = e.message + (/permission|insufficient/i.test(e.message) ? " (periksa aturan Firestore terbaru)" : ""); } b.disabled = false; };
+      if (admin) {
+        const muatDaftar = async () => { try { const q = await db.collection("premium_kode").orderBy("dibuatMillis", "desc").limit(60).get(); $a("as-daftar").innerHTML = q.docs.map((d) => { const x = d.data(); const st = x.dicabut ? "Dicabut" : x.dipakaiOleh ? "Dipakai " + esc(x.dipakaiNama || "pengguna") + " · " + fmtT(x.dipakaiMillis) : "Belum dipakai"; return `<div style="margin:4px 0;color:var(--tx)"><b style="user-select:all">${esc(d.id)}</b> · ${x.hari} hari${x.catatan ? " · " + esc(x.catatan) : ""}<br><span style="color:var(--mut)">${st}</span>${!x.dicabut && !x.dipakaiOleh ? ` <button class="bahaya kecil" data-cabut="${esc(d.id)}">Cabut</button>` : ""}</div>`; }).join("") || "<p>Belum ada kode.</p>"; $a("as-daftar").querySelectorAll("[data-cabut]").forEach((b) => b.onclick = async () => { await db.collection("premium_kode").doc(b.dataset.cabut).update({dicabut: true}); muatDaftar(); }); } catch (e) { $a("as-daftar").textContent = "Gagal memuat kode: " + e.message; } };
+        muatDaftar();
+        $a("as-buat").onclick = async () => { const ab = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", acak = () => Array.from(crypto.getRandomValues(new Uint8Array(4)), (v) => ab[v % ab.length]).join(""), kode = `KKN-${acak()}-${acak()}`; try { await db.collection("premium_kode").doc(kode).set({hari: +$a("as-hari").value, catatan: $a("as-cat").value.trim(), dibuatMillis: Date.now(), dipakaiOleh: "", dipakaiNama: "", dipakaiMillis: 0, dicabut: false}); $a("as-baru").textContent = kode; $a("as-cat").value = ""; muatDaftar(); } catch (e) { $a("as-baru").textContent = "Gagal: " + e.message; } };
+        db.collection("config").doc("ai_premium").get().then((c) => { if (c.exists) { const x = c.data(); $a("as-kg").value = x.gemini || ""; $a("as-ko").value = x.openrouter || ""; $a("as-km").value = x.model || ""; } }).catch(() => {});
+        $a("as-ksimpan").onclick = async () => { try { await db.collection("config").doc("ai_premium").set({gemini: $a("as-kg").value.trim(), openrouter: $a("as-ko").value.trim(), model: $a("as-km").value.trim()}); toast("Kunci AI tersimpan"); await muatPremium(); } catch (e) { toast("Gagal: " + e.message); } };
+      }
+    }
   }
   $a("as-gear").onclick = () => panelSet("set"); $a("as-ing").onclick = () => panelSet("ing");
 })();

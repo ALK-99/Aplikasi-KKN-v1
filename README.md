@@ -185,3 +185,10 @@ Menu Jadwal Mengajar (hari, jam, lembaga/kelas, materi, pengajar, catatan) di An
 - Unggah PDF, Word (.docx), Excel (.xlsx), CSV, TXT untuk screening dan entri banyak data sekaligus (butuh Mode pintar).
 - Riwayat obrolan dan ingatan pribadi tersimpan di perangkat; bisa dilihat dan dihapus.
 - Asisten tanpa kunci kini juga bisa sapaan, perkenalan, "ingat bahwa ...".
+
+## Tahap L: Premium (kode akses)
+- Developer membuat kode (7/30/90/180/365 hari atau bebas) di Developer > Premium dan Kode (Android) atau asisten > ⚙ (PC, hanya admin). Kode sekali pakai, bisa dicabut, tampil siapa yang memakai.
+- Pengguna menukar kode di Profil (Android) atau asisten > ⚙. Masa aktif tersimpan di users/{uid}.premiumSampai dan hanya bisa terisi lewat penukaran kode valid (aturan Firestore). Perpanjangan menumpuk.
+- Kunci AI bersama disimpan di config/ai_premium (hanya terbaca akun premium, jam server). Pakai kunci GRATIS tanpa akun penagihan supaya tidak ada tagihan.
+- Asisten AI (obrolan, baca file) dikunci premium; mode perintah dasar tetap gratis dan offline.
+- WAJIB publish ulang firestore.rules.
