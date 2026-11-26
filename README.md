@@ -203,6 +203,9 @@ Menu Jadwal Mengajar (hari, jam, lembaga/kelas, materi, pengajar, catatan) di An
 - LPJ dan laporan akhir otomatis: ketuk chip "Buatkan LPJ..." atau minta sendiri; AI menyusun dokumen Word (kop, pendahuluan, proker, tabel anggaran, nota, rekap kas, penutup) dari data desa.
 - Bagikan ke WhatsApp dan Telegram: tombol di bawah balasan asisten (tautan bagikan resmi, tanpa bot dan tanpa biaya). Dokumen dibagikan lewat tombol Bagikan.
 
+## Tahap O: Tampilan baru (buku folio bergaris)
+Tampilan Android dan PC diganti total: kertas putih kebiruan dengan garis margin merah, tinta biru, satu warna mencolok (stabilo kuning) untuk status aktif, satu keluarga huruf (Bricolage Grotesque), kotak datar tanpa bayangan dan gradasi, menu PC berupa daftar teks tanpa emoji. Tema gelap berwarna papan tulis hijau tua. Nama variabel warna lama dipertahankan, jadi semua layar ikut berganti.
+
 ## Cara copot aplikasi PC dan hapus datanya
 Tiga jalan, pilih yang paling mudah:
 1. **Dari dalam aplikasi:** Pengaturan, kartu "Hapus data dan copot aplikasi". Tombol "Hapus data lokal saja" mengosongkan login, cache, dan ingatan asisten lalu memulai ulang aplikasi. Tombol "Hapus data dan copot aplikasi" juga menjalankan pencopot Windows.
