@@ -138,7 +138,7 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
 /** Kotak kecil ringkasan program kerja (menggantikan kartu besar sebelumnya). */
 @Composable
 private fun ProkerKotak(persen: Int, frac: Float, selesai: Int, total: Int, onClick: () -> Unit) {
-    val bentuk = RoundedCornerShape(22.dp)
+    val bentuk = RoundedCornerShape(3.dp)
     Column(
         Modifier.size(TINGGI_KARTU_ATAS.dp).tekanPegas(onClick)
             .clip(bentuk).background(GradUtama).padding(12.dp),
@@ -232,12 +232,15 @@ private fun SholatYogyakarta(onClick: () -> Unit) {
         Row(Modifier.fillMaxWidth()) {
             waktu.forEach { (nama, jam) ->
                 val aktif = nama == namaBerikut
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(nama, fontSize = 10.sp, color = if (aktif) Mint else TeksRedup, textAlign = TextAlign.Center)
+                Column(
+                    Modifier.weight(1f).then(if (aktif) Modifier.background(Stabilo) else Modifier).padding(vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(nama, fontSize = 10.sp, color = if (aktif) TintaStabilo else TeksRedup, textAlign = TextAlign.Center)
                     Text(
                         WaktuSholat.format(jam), fontSize = 13.sp,
                         fontWeight = if (aktif) FontWeight.ExtraBold else FontWeight.Medium,
-                        color = if (aktif) Mint else TeksUtama
+                        color = if (aktif) TintaStabilo else TeksUtama
                     )
                 }
             }
@@ -258,11 +261,11 @@ private fun KategoriKartu(
         KartuGelap(Modifier.fillMaxWidth().tekanPegas(onKlik)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
-                        .background(Brush.linearGradient(listOf(a, b))),
+                    Modifier.size(44.dp).clip(RoundedCornerShape(3.dp))
+                        .background(Surface2),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(kategori.ikon, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(kategori.ikon, null, tint = VioletTerang, modifier = Modifier.size(24.dp))
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
@@ -300,7 +303,7 @@ private fun DivisiKartu(divisi: DivisiMenu, kolom: Int, onBuka: (Tujuan) -> Unit
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(Surface2),
+                    Modifier.size(38.dp).clip(RoundedCornerShape(3.dp)).background(Surface2),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -319,7 +322,7 @@ private fun DivisiKartu(divisi: DivisiMenu, kolom: Int, onBuka: (Tujuan) -> Unit
                 if (divisi.segera) {
                     Text(
                         "Segera", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Gold,
-                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Surface2)
+                        modifier = Modifier.clip(RoundedCornerShape(3.dp)).background(Surface2)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 } else {
@@ -378,11 +381,11 @@ private fun MenuKartu(tujuan: Tujuan, modifier: Modifier, onClick: () -> Unit) {
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Box(
-            Modifier.size(42.dp).clip(RoundedCornerShape(14.dp))
-                .background(Brush.linearGradient(listOf(a, b))),
+            Modifier.size(42.dp).clip(RoundedCornerShape(3.dp))
+                .background(Surface2),
             contentAlignment = Alignment.Center
         ) {
-            Icon(tujuan.ikon, null, tint = Color.White, modifier = Modifier.size(22.dp))
+            Icon(tujuan.ikon, null, tint = VioletTerang, modifier = Modifier.size(22.dp))
         }
         Text(tujuan.judul, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }

@@ -96,7 +96,7 @@ private fun KartuBarang(barang: InventarisDesa, modifier: Modifier, onUbah: () -
     KartuGelap(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(GradUtama),
+                Modifier.size(46.dp).clip(RoundedCornerShape(3.dp)).background(GradUtama),
                 contentAlignment = Alignment.Center
             ) {
                 Text("${barang.jumlah}", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)

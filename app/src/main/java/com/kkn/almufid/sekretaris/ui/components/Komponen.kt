@@ -2,6 +2,7 @@ package com.kkn.almufid.sekretaris.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -14,7 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -63,11 +64,11 @@ fun inisialDari(nama: String): String =
 @Composable
 fun AvatarGradien(inisial: String, ukuran: Dp = 42.dp, modifier: Modifier = Modifier) {
     Box(
-        modifier.size(ukuran).clip(CircleShape).background(GradStory),
+        modifier.size(ukuran).clip(RoundedCornerShape(3.dp)).background(Stabilo),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            inisial.take(2).uppercase(), color = Color.White,
+            inisial.take(2).uppercase(), color = TintaStabilo,
             fontWeight = FontWeight.ExtraBold, fontSize = (ukuran.value * 0.32f).sp
         )
     }
@@ -79,15 +80,14 @@ fun KartuGelap(
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val bentuk = RoundedCornerShape(22.dp)
+    val bentuk = RoundedCornerShape(3.dp)
     Column(
         modifier
-            .shadow(
-                10.dp, bentuk,
-                ambientColor = if (Palet.gelap) Color.Black else Color(0x663B4580),
-                spotColor = if (Palet.gelap) Color.Black else Color(0x663B4580)
-            )
-            .clip(bentuk).background(Surface1).padding(16.dp),
+            .clip(bentuk).background(Surface1)
+            .drawBehind {
+                drawRect(TeksUtama, size = androidx.compose.ui.geometry.Size(size.width, 2.dp.toPx()))
+            }
+            .padding(16.dp),
         verticalArrangement = verticalArrangement,
         content = content
     )
@@ -95,34 +95,30 @@ fun KartuGelap(
 
 @Composable
 fun FabGradien(ikon: ImageVector, deskripsi: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val transisi = rememberInfiniteTransition(label = "fab")
-    val denyut by transisi.animateFloat(
-        initialValue = 1f, targetValue = 1.07f,
-        animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "denyut"
-    )
+    val bentuk = RoundedCornerShape(3.dp)
     Box(
         modifier.tekanPegas(onClick)
-            .graphicsLayer { scaleX = denyut; scaleY = denyut }
-            .size(60.dp)
-            .shadow(14.dp, CircleShape, ambientColor = Pink, spotColor = Pink)
-            .clip(CircleShape).background(GradUtama),
+            .size(56.dp)
+            .clip(bentuk).background(Stabilo)
+            .border(2.dp, TintaStabilo, bentuk),
         contentAlignment = Alignment.Center
     ) {
-        Icon(ikon, deskripsi, tint = Color.White, modifier = Modifier.size(26.dp))
+        Icon(ikon, deskripsi, tint = TintaStabilo, modifier = Modifier.size(26.dp))
     }
 }
 
 @Composable
 fun PilChip(teks: String, aktif: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val latar = if (aktif) Modifier.background(GradUtama) else Modifier.background(Surface1)
+    val bentuk = RoundedCornerShape(3.dp)
+    val latar = if (aktif) Modifier.background(Stabilo).border(1.5.dp, TintaStabilo, bentuk)
+        else Modifier.border(1.5.dp, Garis, bentuk)
     Box(
-        modifier.tekanPegas(onClick).clip(RoundedCornerShape(20.dp)).then(latar)
+        modifier.tekanPegas(onClick).clip(bentuk).then(latar)
             .padding(horizontal = 16.dp, vertical = 9.dp)
     ) {
         Text(
             teks, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-            color = if (aktif) Color.White else TeksSoft
+            color = if (aktif) TintaStabilo else TeksSoft
         )
     }
 }
@@ -130,7 +126,7 @@ fun PilChip(teks: String, aktif: Boolean, onClick: () -> Unit, modifier: Modifie
 @Composable
 fun PilKecil(teks: String, aktif: Boolean, warnaAktif: Color, onClick: () -> Unit) {
     Box(
-        Modifier.tekanPegas(onClick).clip(RoundedCornerShape(14.dp))
+        Modifier.tekanPegas(onClick).clip(RoundedCornerShape(3.dp))
             .background(if (aktif) warnaAktif else Surface2)
             .padding(horizontal = 12.dp, vertical = 9.dp)
     ) {
@@ -144,7 +140,7 @@ fun PilKecil(teks: String, aktif: Boolean, warnaAktif: Color, onClick: () -> Uni
 @Composable
 fun TagKecil(teks: String, warna: Color = VioletTerang, modifier: Modifier = Modifier) {
     Box(
-        modifier.clip(RoundedCornerShape(10.dp)).background(warna.copy(alpha = 0.18f))
+        modifier.clip(RoundedCornerShape(2.dp)).background(warna.copy(alpha = 0.18f))
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Text(teks, color = warna, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -158,10 +154,10 @@ fun BatangProgres(
     latar: Color = Surface2,
     isi: Brush = GradUtama
 ) {
-    Box(modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(latar)) {
+    Box(modifier.fillMaxWidth().height(6.dp).background(latar)) {
         Box(
             Modifier.fillMaxWidth(fraksi.coerceIn(0f, 1f)).fillMaxHeight()
-                .clip(RoundedCornerShape(4.dp)).background(isi)
+                .background(isi)
         )
     }
 }

@@ -121,9 +121,9 @@ fun ArsipScreen(viewModel: NotaViewModel) {
 
 @Composable
 private fun KartuTotal(total: Long, jumlah: Int) {
-    val bentuk = RoundedCornerShape(26.dp)
+    val bentuk = RoundedCornerShape(3.dp)
     Box(
-        Modifier.fillMaxWidth().shadow(20.dp, bentuk, ambientColor = Pink, spotColor = Pink)
+        Modifier.fillMaxWidth()
             .clip(bentuk).background(GradUtama).padding(20.dp)
     ) {
         Box(
@@ -140,10 +140,10 @@ private fun KartuTotal(total: Long, jumlah: Int) {
 
 @Composable
 private fun TileNota(nota: NotaDesa, rasio: Float, modifier: Modifier, onUbah: () -> Unit, onHapus: () -> Unit) {
-    val bentuk = RoundedCornerShape(20.dp)
+    val bentuk = RoundedCornerShape(3.dp)
     Box(
-        modifier.fillMaxWidth().aspectRatio(rasio).shadow(10.dp, bentuk).clip(bentuk)
-            .background(Brush.linearGradient(listOf(Surface2, Violet)))
+        modifier.fillMaxWidth().aspectRatio(rasio).clip(bentuk)
+            .background(Surface2)
     ) {
         val gambar = remember(nota.id, nota.fotoBase64) { FotoUtil.dekode(nota.fotoBase64) }
         if (gambar != null) {
@@ -155,7 +155,7 @@ private fun TileNota(nota: NotaDesa, rasio: Float, modifier: Modifier, onUbah: (
             Text("Tanpa foto", Modifier.align(Alignment.Center), color = TeksSoft, fontSize = 12.sp)
         }
         Column(
-            Modifier.align(Alignment.BottomStart).padding(10.dp).clip(RoundedCornerShape(12.dp))
+            Modifier.align(Alignment.BottomStart).padding(10.dp).clip(RoundedCornerShape(3.dp))
                 .background(Ground.copy(alpha = 0.82f)).padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Text(formatRupiah(nota.nominal), color = TeksUtama, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)

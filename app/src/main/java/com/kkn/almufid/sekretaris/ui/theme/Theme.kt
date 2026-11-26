@@ -2,7 +2,10 @@ package com.kkn.almufid.sekretaris.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -18,6 +21,12 @@ import androidx.core.view.WindowCompat
  * Catatan 120Hz: semua animasi di app ini memakai graphicsLayer / state
  * yang dibaca di fase draw, jadi tidak memicu recomposition tiap frame.
  */
+/** Bentuk kotak hampir tajam, seperti kertas dan stabilo. */
+val Bentuk = Shapes(
+    extraSmall = RoundedCornerShape(2.dp), small = RoundedCornerShape(3.dp),
+    medium = RoundedCornerShape(3.dp), large = RoundedCornerShape(4.dp), extraLarge = RoundedCornerShape(4.dp)
+)
+
 @Composable
 fun SekretarisKKNTheme(content: @Composable () -> Unit) {
     Palet.sistemGelap = isSystemInDarkTheme()
@@ -25,7 +34,7 @@ fun SekretarisKKNTheme(content: @Composable () -> Unit) {
 
     val skema = if (gelap) {
         darkColorScheme(
-            primary = VioletTerang, onPrimary = Color.White, secondary = Pink,
+            primary = VioletTerang, onPrimary = TintaStabilo, secondary = Pink,
             background = Ground, onBackground = TeksUtama, surface = Surface1, onSurface = TeksUtama,
             surfaceVariant = Surface2, onSurfaceVariant = TeksRedup, outline = TeksRedup, error = Merah,
             secondaryContainer = Surface2, onSecondaryContainer = TeksUtama,
@@ -52,5 +61,5 @@ fun SekretarisKKNTheme(content: @Composable () -> Unit) {
             kontrol.isAppearanceLightNavigationBars = !gelap
         }
     }
-    MaterialTheme(colorScheme = skema, typography = Typography, content = content)
+    MaterialTheme(colorScheme = skema, typography = Typography, shapes = Bentuk, content = content)
 }

@@ -170,7 +170,7 @@ internal fun LogoBulat() {
 
 @Composable
 internal fun TombolUtama(teks: String, sedangProses: Boolean, onClick: () -> Unit) {
-    val bentuk = RoundedCornerShape(16.dp)
+    val bentuk = RoundedCornerShape(3.dp)
     Box(
         Modifier.fillMaxWidth().height(52.dp)
             .tekanPegas(onClick = { if (!sedangProses) onClick() })

@@ -174,7 +174,7 @@ private fun BerandaDeveloper(
                     }
                 }
                 Row(
-                    Modifier.tekanPegas(onLogout).background(Surface1, RoundedCornerShape(14.dp))
+                    Modifier.tekanPegas(onLogout).background(Surface1, RoundedCornerShape(3.dp))
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -229,10 +229,10 @@ private fun BerandaDeveloper(
             }
         }
         item {
-            val bentuk = RoundedCornerShape(24.dp)
+            val bentuk = RoundedCornerShape(3.dp)
             Row(
                 Modifier.fillMaxWidth().tekanPegas { onBuka(HalamanDev.ONE_EYE) }
-                    .clip(bentuk).background(Brush.linearGradient(listOf(Violet, Pink))).padding(18.dp),
+                    .clip(bentuk).background(Violet).padding(18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -270,11 +270,11 @@ private fun BarisMenu(pasang: List<MenuDev>, lencanaKotak: Int, onBuka: (Halaman
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(40.dp).clip(RoundedCornerShape(13.dp))
-                            .background(Brush.linearGradient(listOf(m.warnaA, m.warnaB))),
+                        Modifier.size(40.dp).clip(RoundedCornerShape(3.dp))
+                            .background(Surface2),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(m.ikon, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                        Icon(m.ikon, null, tint = VioletTerang, modifier = Modifier.size(22.dp))
                     }
                     if (m.halaman == HalamanDev.KOTAK && lencanaKotak > 0) {
                         Spacer(Modifier.width(8.dp))

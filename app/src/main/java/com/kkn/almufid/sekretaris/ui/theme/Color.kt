@@ -39,19 +39,25 @@ object Palet {
     }
 }
 
-val Ground: Color get() = if (Palet.gelap) Color(0xFF0E1020) else Color(0xFFF2F3FA)
-val Surface1: Color get() = if (Palet.gelap) Color(0xFF181B30) else Color(0xFFFFFFFF)
-val Surface2: Color get() = if (Palet.gelap) Color(0xFF232846) else Color(0xFFE6E8F4)
-val Violet = Color(0xFF5B4BDB)
-val VioletTerang: Color get() = if (Palet.gelap) Color(0xFF8B7BFF) else Color(0xFF4A3BC4)
-val Pink = Color(0xFFD92B6B)
-val Gold: Color get() = if (Palet.gelap) Color(0xFFFFB84D) else Color(0xFF9A5B00)
-val Mint: Color get() = if (Palet.gelap) Color(0xFF2BD4A0) else Color(0xFF0B8A66)
+val Ground: Color get() = if (Palet.gelap) Color(0xFF16211F) else Color(0xFFFBFCFF)
+val Surface1: Color get() = if (Palet.gelap) Color(0xFF1B2825) else Color(0xFFFBFCFF)
+val Surface2: Color get() = if (Palet.gelap) Color(0xFF1F2D2A) else Color(0xFFEEF2FB)
+val Violet: Color get() = if (Palet.gelap) Color(0xFF3F63CC) else Color(0xFF1D3F9C)
+val VioletTerang: Color get() = if (Palet.gelap) Color(0xFF8FB0FF) else Color(0xFF1D3F9C)
+val Pink: Color get() = if (Palet.gelap) Color(0xFFFF8A7A) else Color(0xFFD9443B)
+val Gold: Color get() = if (Palet.gelap) Color(0xFFF0C75A) else Color(0xFF8A5A00)
+val Mint: Color get() = if (Palet.gelap) Color(0xFF6FDBA8) else Color(0xFF0B7A4E)
 val HijauTua = Color(0xFF0B7A5C)
-val Merah: Color get() = if (Palet.gelap) Color(0xFFFF6B6B) else Color(0xFFD13434)
-val TeksUtama: Color get() = if (Palet.gelap) Color(0xFFF4F5FB) else Color(0xFF14172B)
-val TeksSoft: Color get() = if (Palet.gelap) Color(0xFFC3C8E3) else Color(0xFF3D4260)
-val TeksRedup: Color get() = if (Palet.gelap) Color(0xFF9AA0BF) else Color(0xFF5F6586)
+val Merah: Color get() = if (Palet.gelap) Color(0xFFFF8D84) else Color(0xFFC42F2F)
+val TeksUtama: Color get() = if (Palet.gelap) Color(0xFFEDF3EE) else Color(0xFF1B2240)
+val TeksSoft: Color get() = if (Palet.gelap) Color(0xFFC5D2C9) else Color(0xFF464F70)
+val TeksRedup: Color get() = if (Palet.gelap) Color(0xFF9FB0A6) else Color(0xFF646E8C)
+/** Stabilo kuning: satu-satunya warna mencolok, dipakai untuk status aktif. */
+val Stabilo: Color get() = if (Palet.gelap) Color(0xFFE9D56A) else Color(0xFFFFE66B)
+val TintaStabilo = Color(0xFF1B2240)
+/** Garis tipis ala buku bergaris. */
+val Garis: Color get() = if (Palet.gelap) Color(0xFF2F413D) else Color(0xFFD3DCF0)
 
-val GradUtama = Brush.linearGradient(listOf(Violet, Pink))
-val GradStory = Brush.linearGradient(listOf(Color(0xFFFFB84D), Pink, Violet))
+// Gradasi dihapus: nama dipertahankan agar semua layar tetap jalan, isinya warna rata.
+val GradUtama: Brush get() = Brush.linearGradient(listOf(Violet, Violet))
+val GradStory: Brush get() = Brush.linearGradient(listOf(Stabilo, Stabilo))

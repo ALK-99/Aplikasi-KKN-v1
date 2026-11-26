@@ -155,10 +155,10 @@ private fun BuktiKecil(b: BuktiDesa, onHapus: () -> Unit) {
         if (gambar != null) {
             Image(
                 bitmap = gambar.asImageBitmap(), contentDescription = "Bukti kegiatan",
-                modifier = Modifier.size(84.dp).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop
+                modifier = Modifier.size(84.dp).clip(RoundedCornerShape(3.dp)), contentScale = ContentScale.Crop
             )
         } else {
-            Box(Modifier.size(84.dp).clip(RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(84.dp).clip(RoundedCornerShape(3.dp)), contentAlignment = Alignment.Center) {
                 Text("Tanpa foto", fontSize = 10.sp, color = TeksRedup)
             }
         }

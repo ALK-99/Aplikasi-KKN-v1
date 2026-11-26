@@ -69,7 +69,7 @@ fun AbsensiScreen(viewModel: AbsensiViewModel) {
                     val dipilih = hari == tanggal
                     Column(
                         Modifier.weight(1f).tekanPegas { viewModel.pilihTanggal(hari) }
-                            .height(64.dp).clip(RoundedCornerShape(16.dp))
+                            .height(64.dp).clip(RoundedCornerShape(3.dp))
                             .then(if (dipilih) Modifier.background(GradUtama) else Modifier.background(Surface1)),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
@@ -207,7 +207,7 @@ private fun BarisAbsensi(
     onUbahData: () -> Unit = {},
     onAturAktif: () -> Unit
 ) {
-    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Surface1).padding(12.dp)) {
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(3.dp)).background(Surface1).padding(12.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         AvatarGradien(inisialDari(nama), 42.dp)
         Spacer(Modifier.width(10.dp))
