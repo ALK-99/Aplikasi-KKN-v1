@@ -21,10 +21,10 @@ import androidx.core.view.WindowCompat
  * Catatan 120Hz: semua animasi di app ini memakai graphicsLayer / state
  * yang dibaca di fase draw, jadi tidak memicu recomposition tiap frame.
  */
-/** Bentuk kotak hampir tajam, seperti kertas dan stabilo. */
+/** Bentuk membulat modern. */
 val Bentuk = Shapes(
-    extraSmall = RoundedCornerShape(2.dp), small = RoundedCornerShape(3.dp),
-    medium = RoundedCornerShape(3.dp), large = RoundedCornerShape(4.dp), extraLarge = RoundedCornerShape(4.dp)
+    extraSmall = RoundedCornerShape(8.dp), small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp), large = RoundedCornerShape(24.dp), extraLarge = RoundedCornerShape(28.dp)
 )
 
 @Composable

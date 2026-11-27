@@ -93,7 +93,7 @@ fun Onboarding(onSelesai: () -> Unit) {
             verticalArrangement = Arrangement.Center
         ) {
             Box(
-                Modifier.size(110.dp).clip(RoundedCornerShape(3.dp)).background(GradUtama),
+                Modifier.size(110.dp).clip(RoundedCornerShape(16.dp)).background(GradUtama),
                 contentAlignment = Alignment.Center
             ) { Icon(h.ikon, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(56.dp)) }
             Spacer(Modifier.height(32.dp))
@@ -111,7 +111,7 @@ fun Onboarding(onSelesai: () -> Unit) {
         }
         Box(
             Modifier.fillMaxWidth().tekanPegas { if (terakhir) onSelesai() else indeks++ }
-                .clip(RoundedCornerShape(3.dp)).background(GradUtama).padding(vertical = 16.dp),
+                .clip(RoundedCornerShape(16.dp)).background(GradUtama).padding(vertical = 16.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(

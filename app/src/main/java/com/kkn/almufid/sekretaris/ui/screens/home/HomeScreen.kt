@@ -138,19 +138,19 @@ fun HomeScreen(viewModel: HomeViewModel, onBuka: (Tujuan) -> Unit) {
 /** Kotak kecil ringkasan program kerja (menggantikan kartu besar sebelumnya). */
 @Composable
 private fun ProkerKotak(persen: Int, frac: Float, selesai: Int, total: Int, onClick: () -> Unit) {
-    val bentuk = RoundedCornerShape(3.dp)
+    val bentuk = RoundedCornerShape(22.dp)
     Column(
         Modifier.size(TINGGI_KARTU_ATAS.dp).tekanPegas(onClick)
-            .clip(bentuk).background(GradUtama).padding(12.dp),
+            .clip(bentuk).background(Stabilo).padding(12.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Text("Proker", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        Text("$persen%", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+        Text("Proker", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TintaStabilo)
+        Text("$persen%", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = TintaStabilo)
         Text(
             if (total == 0) "Belum ada" else "$selesai/$total selesai",
-            fontSize = 11.sp, color = Color.White
+            fontSize = 11.sp, color = TintaStabilo
         )
-        BatangProgres(frac, latar = Color.White.copy(alpha = 0.3f), isi = SolidColor(Color.White))
+        BatangProgres(frac, latar = TintaStabilo.copy(alpha = 0.18f), isi = SolidColor(TintaStabilo))
     }
 }
 
@@ -213,34 +213,37 @@ private fun SholatYogyakarta(onClick: () -> Unit) {
         else menit(waktu.first().second) + 1440 - menitSekarang
     val teksSisa = if (sisaMenit >= 60) "${sisaMenit / 60} j ${sisaMenit % 60} m lagi" else "$sisaMenit menit lagi"
 
-    KartuGelap(Modifier.fillMaxWidth().tekanPegas(onClick)) {
+    Column(
+        Modifier.fillMaxWidth().tekanPegas(onClick).clip(RoundedCornerShape(26.dp)).background(Hutan).padding(18.dp)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.AccessTime, null, tint = Mint, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.AccessTime, null, tint = Stabilo, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Jadwal sholat · Yogyakarta", fontSize = 11.sp, color = TeksRedup, fontWeight = FontWeight.Bold)
+            Text("Jadwal sholat · Yogyakarta", fontSize = 11.sp, color = Color(0xFF9FBDB0), fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 "$namaBerikut ${WaktuSholat.format((berikutnya ?: waktu.first()).second)}",
-                fontSize = 20.sp, fontWeight = FontWeight.ExtraBold
+                fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = Stabilo
             )
             Spacer(Modifier.width(10.dp))
-            Text(teksSisa, fontSize = 12.sp, color = Mint, modifier = Modifier.padding(bottom = 3.dp))
+            Text(teksSisa, fontSize = 12.sp, color = Color(0xFF9FBDB0), modifier = Modifier.padding(bottom = 3.dp))
         }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth()) {
             waktu.forEach { (nama, jam) ->
                 val aktif = nama == namaBerikut
                 Column(
-                    Modifier.weight(1f).then(if (aktif) Modifier.background(Stabilo) else Modifier).padding(vertical = 4.dp),
+                    Modifier.weight(1f).padding(horizontal = 2.dp).clip(RoundedCornerShape(12.dp))
+                        .background(if (aktif) Stabilo else Color.White.copy(alpha = 0.08f)).padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(nama, fontSize = 10.sp, color = if (aktif) TintaStabilo else TeksRedup, textAlign = TextAlign.Center)
+                    Text(nama, fontSize = 10.sp, color = if (aktif) TintaStabilo else Color(0xFF9FBDB0), textAlign = TextAlign.Center)
                     Text(
                         WaktuSholat.format(jam), fontSize = 13.sp,
                         fontWeight = if (aktif) FontWeight.ExtraBold else FontWeight.Medium,
-                        color = if (aktif) TintaStabilo else TeksUtama
+                        color = if (aktif) TintaStabilo else Color.White
                     )
                 }
             }
@@ -261,7 +264,7 @@ private fun KategoriKartu(
         KartuGelap(Modifier.fillMaxWidth().tekanPegas(onKlik)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(44.dp).clip(RoundedCornerShape(3.dp))
+                    Modifier.size(44.dp).clip(RoundedCornerShape(16.dp))
                         .background(Surface2),
                     contentAlignment = Alignment.Center
                 ) {
@@ -303,7 +306,7 @@ private fun DivisiKartu(divisi: DivisiMenu, kolom: Int, onBuka: (Tujuan) -> Unit
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(38.dp).clip(RoundedCornerShape(3.dp)).background(Surface2),
+                    Modifier.size(38.dp).clip(RoundedCornerShape(16.dp)).background(Surface2),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -322,7 +325,7 @@ private fun DivisiKartu(divisi: DivisiMenu, kolom: Int, onBuka: (Tujuan) -> Unit
                 if (divisi.segera) {
                     Text(
                         "Segera", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Gold,
-                        modifier = Modifier.clip(RoundedCornerShape(3.dp)).background(Surface2)
+                        modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(Surface2)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 } else {
@@ -381,7 +384,7 @@ private fun MenuKartu(tujuan: Tujuan, modifier: Modifier, onClick: () -> Unit) {
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Box(
-            Modifier.size(42.dp).clip(RoundedCornerShape(3.dp))
+            Modifier.size(42.dp).clip(RoundedCornerShape(16.dp))
                 .background(Surface2),
             contentAlignment = Alignment.Center
         ) {

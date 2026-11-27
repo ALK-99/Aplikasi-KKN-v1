@@ -64,7 +64,7 @@ fun inisialDari(nama: String): String =
 @Composable
 fun AvatarGradien(inisial: String, ukuran: Dp = 42.dp, modifier: Modifier = Modifier) {
     Box(
-        modifier.size(ukuran).clip(RoundedCornerShape(3.dp)).background(Stabilo),
+        modifier.size(ukuran).clip(CircleShape).background(Stabilo),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -80,13 +80,11 @@ fun KartuGelap(
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val bentuk = RoundedCornerShape(3.dp)
+    val bentuk = RoundedCornerShape(22.dp)
     Column(
         modifier
             .clip(bentuk).background(Surface1)
-            .drawBehind {
-                drawRect(TeksUtama, size = androidx.compose.ui.geometry.Size(size.width, 2.dp.toPx()))
-            }
+            .border(1.dp, Garis, bentuk)
             .padding(16.dp),
         verticalArrangement = verticalArrangement,
         content = content
@@ -95,12 +93,10 @@ fun KartuGelap(
 
 @Composable
 fun FabGradien(ikon: ImageVector, deskripsi: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val bentuk = RoundedCornerShape(3.dp)
     Box(
         modifier.tekanPegas(onClick)
             .size(56.dp)
-            .clip(bentuk).background(Stabilo)
-            .border(2.dp, TintaStabilo, bentuk),
+            .clip(CircleShape).background(Stabilo),
         contentAlignment = Alignment.Center
     ) {
         Icon(ikon, deskripsi, tint = TintaStabilo, modifier = Modifier.size(26.dp))
@@ -109,9 +105,9 @@ fun FabGradien(ikon: ImageVector, deskripsi: String, modifier: Modifier = Modifi
 
 @Composable
 fun PilChip(teks: String, aktif: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val bentuk = RoundedCornerShape(3.dp)
-    val latar = if (aktif) Modifier.background(Stabilo).border(1.5.dp, TintaStabilo, bentuk)
-        else Modifier.border(1.5.dp, Garis, bentuk)
+    val bentuk = RoundedCornerShape(50)
+    val latar = if (aktif) Modifier.background(Stabilo)
+        else Modifier.background(Surface1).border(1.dp, Garis, bentuk)
     Box(
         modifier.tekanPegas(onClick).clip(bentuk).then(latar)
             .padding(horizontal = 16.dp, vertical = 9.dp)
@@ -126,7 +122,7 @@ fun PilChip(teks: String, aktif: Boolean, onClick: () -> Unit, modifier: Modifie
 @Composable
 fun PilKecil(teks: String, aktif: Boolean, warnaAktif: Color, onClick: () -> Unit) {
     Box(
-        Modifier.tekanPegas(onClick).clip(RoundedCornerShape(3.dp))
+        Modifier.tekanPegas(onClick).clip(RoundedCornerShape(50))
             .background(if (aktif) warnaAktif else Surface2)
             .padding(horizontal = 12.dp, vertical = 9.dp)
     ) {
@@ -140,7 +136,7 @@ fun PilKecil(teks: String, aktif: Boolean, warnaAktif: Color, onClick: () -> Uni
 @Composable
 fun TagKecil(teks: String, warna: Color = VioletTerang, modifier: Modifier = Modifier) {
     Box(
-        modifier.clip(RoundedCornerShape(2.dp)).background(warna.copy(alpha = 0.18f))
+        modifier.clip(RoundedCornerShape(50)).background(warna.copy(alpha = 0.18f))
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
         Text(teks, color = warna, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -154,10 +150,10 @@ fun BatangProgres(
     latar: Color = Surface2,
     isi: Brush = GradUtama
 ) {
-    Box(modifier.fillMaxWidth().height(6.dp).background(latar)) {
+    Box(modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)).background(latar)) {
         Box(
             Modifier.fillMaxWidth(fraksi.coerceIn(0f, 1f)).fillMaxHeight()
-                .background(isi)
+                .clip(RoundedCornerShape(50)).background(isi)
         )
     }
 }

@@ -179,7 +179,7 @@ private fun ItemPengaturan(ikon: ImageVector, judul: String, sub: String, warna:
     KartuGelap(Modifier.fillMaxWidth().padding(bottom = 12.dp).tekanPegas(onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(42.dp).clip(RoundedCornerShape(3.dp)).background(Surface2),
+                Modifier.size(42.dp).clip(RoundedCornerShape(16.dp)).background(Surface2),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(ikon, null, tint = warna, modifier = Modifier.size(22.dp))
@@ -325,7 +325,7 @@ private fun ColumnScope.NomorDaruratIsi() {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
-                            Modifier.size(42.dp).clip(RoundedCornerShape(3.dp)).background(k.warna.copy(alpha = 0.22f)),
+                            Modifier.size(42.dp).clip(RoundedCornerShape(16.dp)).background(k.warna.copy(alpha = 0.22f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(k.ikon, null, tint = k.warna, modifier = Modifier.size(22.dp))

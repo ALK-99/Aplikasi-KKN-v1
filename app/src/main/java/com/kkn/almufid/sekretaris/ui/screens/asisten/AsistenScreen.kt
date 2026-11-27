@@ -135,7 +135,7 @@ fun AsistenOverlay(vm: KoordinasiViewModel, desa: DesaRepository) {
                     .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
                     .size(with(LocalDensity.current) { lebarBola.toDp() }, with(LocalDensity.current) { tinggiBola.toDp() })
                     .alpha(if (mini) 0.55f else 0.9f)
-                    .clip(if (mini) RoundedCornerShape(3.dp) else CircleShape)
+                    .clip(if (mini) RoundedCornerShape(16.dp) else CircleShape)
                     .background(GradUtama)
                     .pointerInput(mini) {
                         detectTapGestures(onTap = { if (mini) { mini = false; AsistenStore.simpanMini(context, false) } else buka = true })
@@ -338,7 +338,7 @@ private fun AsistenPanel(vm: KoordinasiViewModel, desa: DesaRepository, chat: an
             items(chat) { c ->
                 Box(Modifier.fillMaxWidth(), contentAlignment = if (c.saya) Alignment.CenterEnd else Alignment.CenterStart) {
                     Column(
-                        Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(3.dp))
+                        Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(16.dp))
                             .background(if (c.saya) Violet else Surface1).padding(12.dp)
                     ) {
                         Text(c.teks, color = if (c.saya) Color.White else TeksUtama, fontSize = 14.sp)
